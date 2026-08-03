@@ -250,3 +250,42 @@ Risk and rollback: modifiers can drift when repeatedly installing/loading. Alway
 - Enemy-death integration verifies the shard exists as a world pickup alongside equipment.
 - Reproducible evidence captured at 1280x800 in `evidence/island-shard-1280x800.png` with Replace focused and the installed eastern island visible.
 - Visual review confirms readable name/biome/seed/risk/reward/status, clear controller focus, no clipping/overlap, correct modal layering, and visible world change.
+
+## Milestone 7: ranged enemy and elite variation
+
+Goal: broaden combat pressure with a telegraphed ranged archetype and an elite behavior change, while preserving deterministic scene configuration and island-modifier interaction.
+
+Assumptions:
+
+- The ordinary Tide Slinger maintains distance and fires one projectile after a 0.55-second telegraph.
+- The elite Stormcaller uses the same readable telegraph but fires a three-projectile spread; this behavioral difference is the elite proof, not extra health alone.
+- Both have fixed spawn positions and explicit loot seeds.
+- Verdant Crucible multiplies every enemy movement speed from immutable archetype baselines.
+
+Acceptance criteria:
+
+- Ordinary and elite ranged enemies spawn at documented deterministic coordinates.
+- Ranged attacks visibly telegraph before projectiles exist.
+- Ordinary volleys contain one projectile; elite volleys contain three deterministic spread angles.
+- Projectiles move, damage the player once, and clean themselves up out of bounds.
+- Both variants can be defeated by the existing attack and emit deterministic equipment loot.
+- Verdant Crucible accelerates chaser, ordinary ranged, and elite movement without stacking.
+- Automated tests and 1280x800 combat evidence cover telegraph readability and elite identity.
+
+Tests defined before production changes:
+
+- Unit: ordinary/elite angle patterns, symmetry, fixed telegraph duration, and deterministic attack parameters.
+- Integration: fixed spawns, telegraph-before-volley timing, one-versus-three projectile requests, projectile damage, deterministic death loot, and shard speed modifier/reset across all archetypes.
+
+Expected changes: pure ranged attack pattern, ranged enemy scene behavior, projectile, fixed scene instances, world projectile/loot wiring, modifier propagation, tests, combat docs, and evidence.
+
+Risk and rollback: visual telegraphs and projectile collision can become frame-dependent. Keep pattern/timing explicit, test the state transition directly, and use distance-based single-hit projectile behavior suitable for the current collision-light prototype.
+
+### Milestone 7 evidence — 2026-08-03
+
+- Ranged-pattern unit tests pass: 5 assertions for ordinary shot count, elite three-shot count/symmetry, 0.55-second telegraph, and 1.65-second cooldown.
+- Ranged integration tests pass: fixed spawns, telegraph-before-volley timing, one-versus-three requests, projectile single-hit damage, deterministic ordinary/elite loot, and all-enemy Verdant speed application/reset.
+- The initial implementation exposed an untyped array at the typed volley signal boundary; explicit `Array[float]` construction corrected it and both targeted suites passed afterward.
+- Reproducible combat evidence captured at 1280x800 in `evidence/ranged-combat-1280x800.png` with both enemies telegraphing.
+- The first capture exposed the ordinary enemy partially under the HUD. Its deterministic spawn moved from `(-390, -190)` to `(-390, -120)` and the artifact was recaptured.
+- Final visual review confirms unobscured silhouettes, readable yellow aim lines/wind-up rings, distinct elite crown/ring, bounded arena, no clipping/overlap, and no missing assets.

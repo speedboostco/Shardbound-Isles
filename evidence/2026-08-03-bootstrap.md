@@ -67,3 +67,11 @@ Seed `424242` scripted two tree hits, wood collection, three enemy hits, and equ
 - Integration verifies enemy shard drop, inspect/focus, install/replace/remove, physical slot state, non-stacking +1 tree yield and ×1.25 enemy speed, reset, persistence, and restoration.
 - `tests/visual/capture_island_shard.gd` — exit 0; captured `island-shard-1280x800.png` with Verdant Crucible installed.
 - Visual inspection verifies risk/reward distinction, seed/biome readability, Replace focus, modal fit/layering, physical eastern island visibility, and no missing assets.
+
+## Ranged-combat milestone evidence
+
+- Pattern tests add 5 passing assertions for ordinary/elite shot patterns, symmetry, telegraph, and cooldown constants.
+- Integration covers fixed spawns, pre-fire telegraphs, one-versus-three volleys, single-hit projectile damage, deterministic death loot, and Verdant speed interaction for every enemy archetype.
+- Typed signal validation initially failed because a conditional literal returned untyped `Array`; explicit `Array[float]` construction fixed the boundary and targeted suites passed.
+- `tests/visual/capture_ranged_combat.gd` — exit 0; captured `ranged-combat-1280x800.png` with both attack telegraphs active.
+- Initial capture found Tide Slinger partly beneath the HUD; the spawn was moved down and recaptured. Final review verifies clear silhouettes/telegraphs, elite identity, no clipping or overlap, and no missing assets.

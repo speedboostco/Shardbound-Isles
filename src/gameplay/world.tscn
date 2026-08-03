@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource path="res://src/gameplay/world.gd" type="Script" id="1"]
 [ext_resource path="res://src/gameplay/player.gd" type="Script" id="2"]
@@ -8,6 +8,7 @@
 [ext_resource path="res://src/gameplay/workbench.gd" type="Script" id="6"]
 [ext_resource path="res://src/gameplay/tidecatcher.gd" type="Script" id="7"]
 [ext_resource path="res://src/gameplay/island_slot.gd" type="Script" id="8"]
+[ext_resource path="res://src/gameplay/ranged_enemy.gd" type="Script" id="9"]
 
 [node name="FirstPlayableWorld" type="Node2D"]
 script = ExtResource("1")
@@ -40,5 +41,16 @@ script = ExtResource("7")
 [node name="IslandSlot" type="Node2D" parent="."]
 position = Vector2(505, 175)
 script = ExtResource("8")
+
+[node name="RangedEnemy" type="CharacterBody2D" parent="."]
+position = Vector2(-390, -120)
+script = ExtResource("9")
+
+[node name="EliteRangedEnemy" type="CharacterBody2D" parent="."]
+position = Vector2(360, 245)
+script = ExtResource("9")
+elite = true
+move_speed = 85.0
+loot_seed = 424244
 
 [node name="HUD" parent="." instance=ExtResource("5")]

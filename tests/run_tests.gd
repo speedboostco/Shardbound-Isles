@@ -20,6 +20,8 @@ func _run() -> void:
 		save_test.run(support)
 		var shard_test: Variant = load("res://tests/unit/island_shard_generator_test.gd").new()
 		shard_test.run(support)
+		var ranged_pattern_test: Variant = load("res://tests/unit/ranged_attack_pattern_test.gd").new()
+		ranged_pattern_test.run(support)
 	if suite in ["all", "integration"]:
 		var integration_test: Variant = load("res://tests/integration/gameplay_flow_test.gd").new()
 		await integration_test.run(support, self)
@@ -33,6 +35,8 @@ func _run() -> void:
 		await save_load_test.run(support, self)
 		var shard_flow_test: Variant = load("res://tests/integration/island_shard_flow_test.gd").new()
 		await shard_flow_test.run(support, self)
+		var ranged_combat_test: Variant = load("res://tests/integration/ranged_combat_flow_test.gd").new()
+		await ranged_combat_test.run(support, self)
 	if suite in ["all", "simulation"]:
 		var simulation_test: Variant = load("res://tests/simulation/first_playable_smoke_test.gd").new()
 		var metrics: Dictionary = await simulation_test.run(support, self)

@@ -6,6 +6,10 @@ const DEFAULT_SAVE_PATH: String = "user://shardbound-save.json"
 const ISLAND_SHARD_SEED: int = 9001
 const BASE_TREE_YIELD: int = 3
 const BASE_ENEMY_SPEED: float = 75.0
+const BASE_RANGED_SPEED: float = 65.0
+const BASE_ELITE_SPEED: float = 85.0
+const RANGED_LOOT_SEED: int = 424243
+const ELITE_LOOT_SEED: int = 424244
 
 @onready var player: PlayerCharacter = $Player
 @onready var tree: ResourceNode = $Tree
@@ -13,6 +17,8 @@ const BASE_ENEMY_SPEED: float = 75.0
 @onready var workbench: Workbench = $Workbench
 @onready var tidecatcher: Tidecatcher = $Tidecatcher
 @onready var island_slot: IslandSlot = $IslandSlot
+@onready var ranged_enemy: RangedEnemy = $RangedEnemy
+@onready var elite_ranged_enemy: RangedEnemy = $EliteRangedEnemy
 @onready var hud: GameHud = $HUD
 
 var wood: int = 0
@@ -32,6 +38,12 @@ func _ready() -> void:
 	tree.depleted.connect(_on_tree_depleted)
 	enemy.target = player
 	enemy.defeated.connect(_on_enemy_defeated)
+	ranged_enemy.target = player
+	elite_ranged_enemy.target = player
+	ranged_enemy.volley_requested.connect(_on_enemy_volley_requested)
+	elite_ranged_enemy.volley_requested.connect(_on_enemy_volley_requested)
+	ranged_enemy.defeated.connect(_on_ranged_enemy_defeated)
+	elite_ranged_enemy.defeated.connect(_on_ranged_enemy_defeated)
 	hud.set_health(player.health, player.maximum_health)
 	hud.set_wood(wood)
 	hud.equipment_panel_requested.connect(open_equipment_panel)
@@ -80,6 +92,23 @@ func _on_enemy_defeated(drop_position: Vector2) -> void:
 	_spawn_pickup(drop_position, "equipment", EquipmentGenerator.generate(EQUIPMENT_SEED))
 	_spawn_pickup(drop_position + Vector2(25.0, 0.0), "island_shard", IslandShardGenerator.generate(ISLAND_SHARD_SEED))
 
+func _on_ranged_enemy_defeated(drop_position: Vector2, loot_seed: int) -> void:
+	enemies_defeated += 1
+	_spawn_pickup(drop_position, "equipment", EquipmentGenerator.generate(loot_seed))
+
+func _on_enemy_volley_requested(origin: Vector2, base_direction: Vector2, angles: Array[float], damage: int) -> void:
+	for angle: float in angles:
+		spawn_enemy_projectile(origin, base_direction.rotated(angle), damage)
+
+func spawn_enemy_projectile(origin: Vector2, projectile_direction: Vector2, projectile_damage: int) -> EnemyProjectile:
+	var projectile := EnemyProjectile.new()
+	projectile.target = player
+	projectile.global_position = origin
+	projectile.direction = projectile_direction
+	projectile.damage = projectile_damage
+	add_child(projectile)
+	return projectile
+
 func _spawn_pickup(drop_position: Vector2, kind: String, payload: Variant) -> WorldPickup:
 	var pickup := WorldPickup.new()
 	pickup.kind = kind
@@ -111,8 +140,7 @@ func open_equipment_panel() -> void:
 	_refresh_equipment_ui()
 	hud.open_equipment_panel()
 	player.input_enabled = false
-	if is_instance_valid(enemy):
-		enemy.set_physics_process(false)
+	_set_combat_processing(false)
 
 func close_equipment_panel() -> void:
 	hud.close_equipment_panel()
@@ -149,8 +177,7 @@ func try_open_workbench() -> bool:
 	_refresh_workbench_ui()
 	hud.open_workbench_panel()
 	player.input_enabled = false
-	if is_instance_valid(enemy):
-		enemy.set_physics_process(false)
+	_set_combat_processing(false)
 	return true
 
 func close_workbench_panel() -> void:
@@ -204,16 +231,14 @@ func _restore_gameplay_if_no_modal() -> void:
 	if hud.is_equipment_panel_open() or hud.is_workbench_panel_open() or hud.is_system_menu_open() or hud.is_island_panel_open():
 		return
 	player.input_enabled = true
-	if is_instance_valid(enemy):
-		enemy.set_physics_process(true)
+	_set_combat_processing(true)
 	if tidecatcher_built:
 		tidecatcher.set_process(true)
 
 func open_system_menu() -> void:
 	hud.open_system_menu()
 	player.input_enabled = false
-	if is_instance_valid(enemy):
-		enemy.set_physics_process(false)
+	_set_combat_processing(false)
 	if tidecatcher_built:
 		tidecatcher.set_process(false)
 
@@ -305,8 +330,7 @@ func open_island_panel() -> void:
 	_refresh_island_ui()
 	hud.open_island_panel()
 	player.input_enabled = false
-	if is_instance_valid(enemy):
-		enemy.set_physics_process(false)
+	_set_combat_processing(false)
 
 func close_island_panel() -> void:
 	hud.close_island_panel()
@@ -337,6 +361,10 @@ func _apply_island_modifiers() -> void:
 		tree.wood_yield = BASE_TREE_YIELD + yield_bonus
 	if is_instance_valid(enemy):
 		enemy.move_speed = BASE_ENEMY_SPEED * speed_multiplier
+	if is_instance_valid(ranged_enemy):
+		ranged_enemy.move_speed = BASE_RANGED_SPEED * speed_multiplier
+	if is_instance_valid(elite_ranged_enemy):
+		elite_ranged_enemy.move_speed = BASE_ELITE_SPEED * speed_multiplier
 	island_slot.set_installed(not installed_shard.is_empty(), String(installed_shard.get("name", "")))
 
 func _refresh_island_ui() -> void:
@@ -347,6 +375,14 @@ func _has_shard(shard_id: String) -> bool:
 		if String(shard.get("id", "")) == shard_id:
 			return true
 	return false
+
+func _set_combat_processing(enabled: bool) -> void:
+	for combatant: Node in [enemy, ranged_enemy, elite_ranged_enemy]:
+		if is_instance_valid(combatant):
+			combatant.set_physics_process(enabled)
+	for child: Node in get_children():
+		if child is EnemyProjectile:
+			child.set_process(enabled)
 
 func run_scripted_smoke() -> Dictionary:
 	tree.receive_attack(1)

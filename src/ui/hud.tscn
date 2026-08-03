@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource path="res://src/ui/hud.gd" type="Script" id="1"]
 
@@ -33,6 +33,18 @@ border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
 border_color = Color(0.42, 0.67, 0.95, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="IslandPanelStyle"]
+bg_color = Color(0.025, 0.075, 0.06, 0.99)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.42, 0.9, 0.62, 1)
 corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
@@ -85,7 +97,7 @@ offset_right = 1254.0
 offset_bottom = 88.0
 theme_override_colors/font_color = Color(1, 0.87, 0.42, 1)
 theme_override_font_sizes/font_size = 19
-text = "BREAK THE TREE • DEFEAT THE WISP\nMOVE: LEFT STICK / WASD   ATTACK: A / SPACE\nEQUIPMENT: Y / I    WORKBENCH: X / C"
+text = "BREAK THE TREE • DEFEAT THE WISP\nMOVE: LEFT STICK / WASD   ATTACK: A / SPACE\nEQUIPMENT: Y / I  WORKBENCH: X / C  ISLANDS: RB / J"
 horizontal_alignment = 2
 
 [node name="EquipmentPanel" type="PanelContainer" parent="."]
@@ -254,7 +266,7 @@ horizontal_alignment = 1
 
 [node name="Slot" type="Label" parent="SystemPanel/Margin/VBox"]
 theme_override_font_sizes/font_size = 17
-text = "LOCAL SLOT • SCHEMA VERSION 1"
+text = "LOCAL SLOT • SCHEMA VERSION 2"
 horizontal_alignment = 1
 
 [node name="Feedback" type="Label" parent="SystemPanel/Margin/VBox"]
@@ -272,5 +284,72 @@ custom_minimum_size = Vector2(0, 55)
 text = "LOAD GAME"
 
 [node name="Close" type="Button" parent="SystemPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 50)
+text = "CLOSE  (B / ESC)"
+
+[node name="IslandPanel" type="PanelContainer" parent="."]
+visible = false
+offset_left = 315.0
+offset_top = 175.0
+offset_right = 965.0
+offset_bottom = 650.0
+theme_override_styles/panel = SubResource("IslandPanelStyle")
+
+[node name="Margin" type="MarginContainer" parent="IslandPanel"]
+theme_override_constants/margin_left = 34
+theme_override_constants/margin_top = 27
+theme_override_constants/margin_right = 34
+theme_override_constants/margin_bottom = 27
+
+[node name="VBox" type="VBoxContainer" parent="IslandPanel/Margin"]
+theme_override_constants/separation = 17
+
+[node name="Title" type="Label" parent="IslandPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(0.48, 0.95, 0.66, 1)
+theme_override_font_sizes/font_size = 28
+text = "ISLAND SHARD"
+horizontal_alignment = 1
+
+[node name="ShardName" type="Label" parent="IslandPanel/Margin/VBox"]
+theme_override_font_sizes/font_size = 24
+text = "NO ISLAND SHARDS"
+horizontal_alignment = 1
+
+[node name="Biome" type="Label" parent="IslandPanel/Margin/VBox"]
+theme_override_font_sizes/font_size = 18
+text = "Defeat enemies to discover world loot."
+horizontal_alignment = 1
+
+[node name="Positive" type="Label" parent="IslandPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(0.52, 0.95, 0.66, 1)
+theme_override_font_sizes/font_size = 19
+horizontal_alignment = 1
+
+[node name="Negative" type="Label" parent="IslandPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(1, 0.55, 0.42, 1)
+theme_override_font_sizes/font_size = 19
+horizontal_alignment = 1
+
+[node name="Status" type="Label" parent="IslandPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(1, 0.86, 0.4, 1)
+theme_override_font_sizes/font_size = 18
+text = "INSTALLED  None"
+horizontal_alignment = 1
+
+[node name="Actions" type="HBoxContainer" parent="IslandPanel/Margin/VBox"]
+alignment = 1
+theme_override_constants/separation = 14
+
+[node name="Install" type="Button" parent="IslandPanel/Margin/VBox/Actions"]
+custom_minimum_size = Vector2(270, 55)
+disabled = true
+text = "INSTALL EASTERN ISLAND"
+
+[node name="Remove" type="Button" parent="IslandPanel/Margin/VBox/Actions"]
+custom_minimum_size = Vector2(180, 55)
+disabled = true
+text = "REMOVE"
+
+[node name="Close" type="Button" parent="IslandPanel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 50)
 text = "CLOSE  (B / ESC)"

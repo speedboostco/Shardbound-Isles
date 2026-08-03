@@ -57,5 +57,13 @@ Seed `424242` scripted two tree hits, wood collection, three enemy hits, and equ
 
 - Save-service unit coverage adds 8 passing assertions for versioning, round trip, malformed/unsupported/missing-state rejection, and local disk IO.
 - Save/load integration adds 13 passing assertions for every scoped field, system-menu focus/feedback, stable equipment identity and damage, stored production, and mutation-free rejection.
-- `tests/visual/capture_system_menu.gd` — exit 0; captured `system-menu-1280x800.png` showing successful schema-v1 save state.
+- `tests/visual/capture_system_menu.gd` — exit 0; current `system-menu-1280x800.png` was recaptured after migration and shows successful schema-v2 save state.
 - Visual inspection verifies 12/12 health, 5 wood, 4/6 stored production, Save focus, schema/result readability, modal fit/layering, and no missing assets.
+
+## Island-shard milestone evidence
+
+- Generator tests add 5 passing assertions for deterministic identity and exact risk/reward fields.
+- Save coverage advances to schema 2 and verifies explicit migration of valid schema-1 state to empty island state.
+- Integration verifies enemy shard drop, inspect/focus, install/replace/remove, physical slot state, non-stacking +1 tree yield and ×1.25 enemy speed, reset, persistence, and restoration.
+- `tests/visual/capture_island_shard.gd` — exit 0; captured `island-shard-1280x800.png` with Verdant Crucible installed.
+- Visual inspection verifies risk/reward distinction, seed/biome readability, Replace focus, modal fit/layering, physical eastern island visibility, and no missing assets.

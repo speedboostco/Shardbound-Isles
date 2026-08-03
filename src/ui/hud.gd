@@ -14,6 +14,10 @@ signal system_menu_requested
 signal system_menu_closed
 signal save_requested
 signal load_requested
+signal island_panel_requested
+signal island_panel_closed
+signal island_install_requested(index: int)
+signal island_remove_requested
 
 @onready var health_label: Label = $Margin/VBox/Health
 @onready var wood_label: Label = $Margin/VBox/Wood
@@ -36,6 +40,11 @@ signal load_requested
 @onready var system_panel: PanelContainer = $SystemPanel
 @onready var system_feedback_label: Label = $SystemPanel/Margin/VBox/Feedback
 @onready var save_button: Button = $SystemPanel/Margin/VBox/Save
+@onready var island_panel: PanelContainer = $IslandPanel
+@onready var island_name_label: Label = $IslandPanel/Margin/VBox/ShardName
+@onready var island_status_label: Label = $IslandPanel/Margin/VBox/Status
+@onready var island_install_button: Button = $IslandPanel/Margin/VBox/Actions/Install
+@onready var island_remove_button: Button = $IslandPanel/Margin/VBox/Actions/Remove
 
 var _items: Array[Dictionary] = []
 var _equipped_id: String = ""
@@ -53,6 +62,9 @@ func _ready() -> void:
 	save_button.pressed.connect(func() -> void: save_requested.emit())
 	$SystemPanel/Margin/VBox/Load.pressed.connect(func() -> void: load_requested.emit())
 	$SystemPanel/Margin/VBox/Close.pressed.connect(close_system_menu)
+	island_install_button.pressed.connect(func() -> void: island_install_requested.emit(0))
+	island_remove_button.pressed.connect(func() -> void: island_remove_requested.emit())
+	$IslandPanel/Margin/VBox/Close.pressed.connect(close_island_panel)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
@@ -64,14 +76,20 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("equipment"):
 		if equipment_panel.visible:
 			close_equipment_panel()
-		else:
+		elif not workbench_panel.visible and not system_panel.visible and not island_panel.visible:
 			equipment_panel_requested.emit()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("craft"):
 		if workbench_panel.visible:
 			close_workbench_panel()
-		elif not equipment_panel.visible:
+		elif not equipment_panel.visible and not system_panel.visible and not island_panel.visible:
 			workbench_panel_requested.emit()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("islands"):
+		if island_panel.visible:
+			close_island_panel()
+		elif not equipment_panel.visible and not workbench_panel.visible and not system_panel.visible:
+			island_panel_requested.emit()
 		get_viewport().set_input_as_handled()
 	elif equipment_panel.visible and event.is_action_pressed("ui_cancel"):
 		close_equipment_panel()
@@ -81,6 +99,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif system_panel.visible and event.is_action_pressed("ui_cancel"):
 		close_system_menu()
+		get_viewport().set_input_as_handled()
+	elif island_panel.visible and event.is_action_pressed("ui_cancel"):
+		close_island_panel()
 		get_viewport().set_input_as_handled()
 
 func set_health(current: int, maximum: int) -> void:
@@ -206,6 +227,7 @@ func is_tidecatcher_build_focused() -> bool:
 func open_system_menu() -> void:
 	equipment_panel.visible = false
 	workbench_panel.visible = false
+	island_panel.visible = false
 	system_panel.visible = true
 	save_button.grab_focus()
 
@@ -221,6 +243,40 @@ func set_system_feedback(message: String) -> void:
 
 func get_system_feedback() -> String:
 	return system_feedback_label.text
+
+func refresh_islands(shards: Array[Dictionary], installed: Dictionary) -> void:
+	if shards.is_empty():
+		island_name_label.text = "NO ISLAND SHARDS"
+		$IslandPanel/Margin/VBox/Biome.text = "Defeat enemies to discover world loot."
+		$IslandPanel/Margin/VBox/Positive.text = ""
+		$IslandPanel/Margin/VBox/Negative.text = ""
+		island_install_button.disabled = true
+	else:
+		var shard := shards[0]
+		island_name_label.text = String(shard.get("name", "Unknown Shard")).to_upper()
+		$IslandPanel/Margin/VBox/Biome.text = "BIOME  %s    •    SEED %d" % [String(shard.get("biome", "unknown")).to_upper(), int(shard.get("seed", 0))]
+		$IslandPanel/Margin/VBox/Positive.text = "REWARD  Tree nodes yield +%d wood" % int(shard.get("tree_yield_bonus", 0))
+		$IslandPanel/Margin/VBox/Negative.text = "RISK  Enemies move %d%% faster" % int(round((float(shard.get("enemy_speed_multiplier", 1.0)) - 1.0) * 100.0))
+		island_install_button.text = "REPLACE INSTALLED SHARD" if not installed.is_empty() else "INSTALL EASTERN ISLAND"
+		island_install_button.disabled = false
+	island_remove_button.disabled = installed.is_empty()
+	island_status_label.text = "INSTALLED  %s" % String(installed.get("name", "None"))
+
+func open_island_panel() -> void:
+	island_panel.visible = true
+	if not island_install_button.disabled:
+		island_install_button.grab_focus()
+	elif not island_remove_button.disabled:
+		island_remove_button.grab_focus()
+	else:
+		$IslandPanel/Margin/VBox/Close.grab_focus()
+
+func close_island_panel() -> void:
+	island_panel.visible = false
+	island_panel_closed.emit()
+
+func is_island_panel_open() -> bool:
+	return island_panel.visible
 
 func _salvage_value(rarity: String) -> int:
 	return 2 if rarity == "uncommon" else 1

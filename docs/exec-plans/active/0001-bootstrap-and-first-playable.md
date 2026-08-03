@@ -209,5 +209,44 @@ Risk and rollback: partial load mutation could corrupt an active run. Decode and
 - Save-service unit tests pass: 8 assertions covering schema emission, semantic round trip, malformed/unsupported/missing-state rejection, and disk round trip.
 - Save/load integration tests pass: 13 assertions covering disk IO, health/position/resources, stable item seed/equipped ID/derived damage, progression, construction, stored wood, menu focus/feedback, and mutation-free malformed rejection.
 - JSON numeric fields are canonicalized after decoding so integer domain values remain typed and deterministic.
-- Reproducible system-menu evidence captured at 1280x800 in `evidence/system-menu-1280x800.png` showing schema version 1, saved 12/12 health, 5 wood, 4/6 stored wood, success feedback, and Save focus.
+- Reproducible system-menu evidence at `evidence/system-menu-1280x800.png` was recaptured after the island migration and now shows current schema version 2, saved 12/12 health, 5 wood, 4/6 stored wood, success feedback, and Save focus.
 - Visual review confirms readable labels, no clipping/overlap, correct modal layering, visible focus, consistent background HUD state, and no missing assets.
+
+## Milestone 6: first island shard
+
+Goal: prove “the world itself is loot” with one deterministic shard, one physical neighboring slot, and an immediately visible risk/reward modifier.
+
+Assumptions:
+
+- The first enemy drops both its deterministic equipment and the Verdant Crucible shard so the complete decision path is reachable in the existing arena.
+- Verdant Crucible adds +1 tree wood yield and multiplies enemy movement speed by 1.25.
+- One eastern slot is enough to prove inspect/install/replace/remove architecture; additional slots and adjacency remain later work.
+- Save schema advances to 2; schema-1 saves migrate by adding an empty shard inventory and empty installed slot.
+
+Acceptance criteria:
+
+- The fixed shard has stable ID, seed, biome, positive modifier, and negative modifier.
+- Controller-only UI inspects and installs, replaces, or removes the shard without pointer input.
+- The eastern slot visibly changes when installed.
+- Install immediately changes authoritative tree yield and enemy speed; removal restores baseline values.
+- Schema 2 persists inventory and installed shard, while valid schema-1 saves migrate without losing prior state.
+- Unit, integration, migration, and 1280x800 visual evidence cover the flow.
+
+Tests defined before production changes:
+
+- Unit: deterministic shard generation, stable fields, and explicit modifier values.
+- Save unit: schema-2 emission/round trip, schema-1 migration with empty island state, and unsupported schema rejection.
+- Integration: shard pickup/panel focus/install/remove, visible slot state, modifier application/reset, and persisted restoration.
+
+Expected changes: shard definition/generator, physical slot, enemy drop, pickup/inventory state, controller panel, modifier wiring, save schema/migration, tests, docs, and evidence.
+
+Risk and rollback: modifiers can drift when repeatedly installing/loading. Always recompute affected values from immutable baselines rather than stacking multipliers.
+
+### Milestone 6 evidence — 2026-08-03
+
+- Island generation unit tests pass: 5 assertions for repeatability, stable seed-based ID, biome, +1 yield reward, and 1.25 speed risk.
+- Save tests cover schema-2 emission/round trip and explicit schema-1 migration to empty island state.
+- Island integration tests cover pickup/panel focus, install, physical slot state, both modifiers, replace without stacking, removal/reset, schema-2 save/load, and deterministic modifier restoration.
+- Enemy-death integration verifies the shard exists as a world pickup alongside equipment.
+- Reproducible evidence captured at 1280x800 in `evidence/island-shard-1280x800.png` with Replace focused and the installed eastern island visible.
+- Visual review confirms readable name/biome/seed/risk/reward/status, clear controller focus, no clipping/overlap, correct modal layering, and visible world change.

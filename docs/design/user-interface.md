@@ -6,4 +6,6 @@ The equipment modal shows the first collected item, equipped state, signed power
 
 The workbench modal shows one recipe, its permanent effect, owned versus required resources, affordability, and success or rejection feedback. Only one modal can be open. The first valid action receives focus, and closing restores gameplay.
 
-The system modal exposes a single local Save and Load slot, displays schema version 1 and explicit results, and focuses Save when opened. Opening it suspends movement, combat, and production. It requires no pointer or text entry.
+The system modal exposes a single local Save and Load slot, displays schema version 2 and explicit results, and focuses Save when opened. Opening it suspends movement, combat, and production. It requires no pointer or text entry.
+
+The island-shard modal displays shard name, biome, seed, explicit reward and risk, installed state, and install/replace/remove actions. The focused action and physical eastern island slot make world changes visible without pointer input.

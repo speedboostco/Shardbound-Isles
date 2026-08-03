@@ -19,6 +19,8 @@ func run(support: TestSupport, scene_tree: SceneTree) -> void:
 	await scene_tree.process_frame
 	var item_pickup := _find_pickup(world, "equipment")
 	support.expect(item_pickup != null, "defeated enemy must create equipment pickup")
+	var shard_pickup := _find_pickup(world, "island_shard")
+	support.expect(shard_pickup != null, "defeated enemy must create island shard world loot")
 	item_pickup.collect_immediately()
 	await scene_tree.process_frame
 	support.expect(world.enemies_defeated == 1, "enemy defeat must be counted")
@@ -32,4 +34,3 @@ func _find_pickup(world: Node, kind: String) -> WorldPickup:
 		if child is WorldPickup and (child as WorldPickup).kind == kind:
 			return child as WorldPickup
 	return null
-

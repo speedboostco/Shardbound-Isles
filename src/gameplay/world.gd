@@ -3,12 +3,16 @@ extends Node2D
 
 const EQUIPMENT_SEED: int = 424242
 const DEFAULT_SAVE_PATH: String = "user://shardbound-save.json"
+const ISLAND_SHARD_SEED: int = 9001
+const BASE_TREE_YIELD: int = 3
+const BASE_ENEMY_SPEED: float = 75.0
 
 @onready var player: PlayerCharacter = $Player
 @onready var tree: ResourceNode = $Tree
 @onready var enemy: ChaserEnemy = $Enemy
 @onready var workbench: Workbench = $Workbench
 @onready var tidecatcher: Tidecatcher = $Tidecatcher
+@onready var island_slot: IslandSlot = $IslandSlot
 @onready var hud: GameHud = $HUD
 
 var wood: int = 0
@@ -19,6 +23,8 @@ var crafting_service := CraftingService.new()
 var reinforced_heart_crafted: bool = false
 var tidecatcher_built: bool = false
 var save_service := SaveService.new()
+var island_shards: Array[Dictionary] = []
+var installed_shard: Dictionary = {}
 
 func _ready() -> void:
 	player.attack_requested.connect(_on_attack_requested)
@@ -41,10 +47,15 @@ func _ready() -> void:
 	hud.system_menu_closed.connect(_on_system_menu_closed)
 	hud.save_requested.connect(save_game)
 	hud.load_requested.connect(load_game)
+	hud.island_panel_requested.connect(open_island_panel)
+	hud.island_panel_closed.connect(_on_island_panel_closed)
+	hud.island_install_requested.connect(install_selected_shard)
+	hud.island_remove_requested.connect(remove_installed_shard)
 	tidecatcher.wood_collected.connect(_on_tidecatcher_wood_collected)
 	tidecatcher.storage_changed.connect(_on_tidecatcher_storage_changed)
 	_refresh_equipment_ui()
 	_refresh_workbench_ui()
+	_refresh_island_ui()
 
 func _on_attack_requested(origin: Vector2, direction: Vector2) -> void:
 	var best_target: Node2D
@@ -67,6 +78,7 @@ func _on_tree_depleted(drop_position: Vector2, amount: int) -> void:
 func _on_enemy_defeated(drop_position: Vector2) -> void:
 	enemies_defeated += 1
 	_spawn_pickup(drop_position, "equipment", EquipmentGenerator.generate(EQUIPMENT_SEED))
+	_spawn_pickup(drop_position + Vector2(25.0, 0.0), "island_shard", IslandShardGenerator.generate(ISLAND_SHARD_SEED))
 
 func _spawn_pickup(drop_position: Vector2, kind: String, payload: Variant) -> WorldPickup:
 	var pickup := WorldPickup.new()
@@ -87,6 +99,11 @@ func _on_pickup_collected(kind: String, payload: Variant) -> void:
 		equipment_inventory.collect(item)
 		hud.set_loot(item)
 		_refresh_equipment_ui()
+	elif kind == "island_shard":
+		var shard := payload as Dictionary
+		if not _has_shard(String(shard.get("id", ""))):
+			island_shards.append(shard.duplicate(true))
+		_refresh_island_ui()
 
 func open_equipment_panel() -> void:
 	if hud.is_workbench_panel_open():
@@ -178,12 +195,13 @@ func refresh_all_ui(crafting_feedback: String = "") -> void:
 	hud.set_wood(wood)
 	_refresh_equipment_ui()
 	_refresh_workbench_ui(crafting_feedback)
+	_refresh_island_ui()
 
 func _refresh_workbench_ui(feedback: String = "") -> void:
 	hud.refresh_workbench(wood, equipment_inventory.scrap, reinforced_heart_crafted, tidecatcher_built, feedback)
 
 func _restore_gameplay_if_no_modal() -> void:
-	if hud.is_equipment_panel_open() or hud.is_workbench_panel_open() or hud.is_system_menu_open():
+	if hud.is_equipment_panel_open() or hud.is_workbench_panel_open() or hud.is_system_menu_open() or hud.is_island_panel_open():
 		return
 	player.input_enabled = true
 	if is_instance_valid(enemy):
@@ -233,6 +251,9 @@ func snapshot_state() -> Dictionary:
 	var saved_items: Array[Dictionary] = []
 	for item: Dictionary in equipment_inventory.items:
 		saved_items.append(item.duplicate(true))
+	var saved_shards: Array[Dictionary] = []
+	for shard: Dictionary in island_shards:
+		saved_shards.append(shard.duplicate(true))
 	return {
 		"player": {
 			"health": player.health,
@@ -247,6 +268,7 @@ func snapshot_state() -> Dictionary:
 		},
 		"reinforced_heart_crafted": reinforced_heart_crafted,
 		"tidecatcher": {"built": tidecatcher_built, "stored_wood": tidecatcher.stored_wood()},
+		"islands": {"inventory": saved_shards, "installed": installed_shard.duplicate(true)},
 	}
 
 func _apply_state(state: Dictionary) -> void:
@@ -254,6 +276,7 @@ func _apply_state(state: Dictionary) -> void:
 	var position_state := player_state.position as Dictionary
 	var equipment_state := state.equipment as Dictionary
 	var tidecatcher_state := state.tidecatcher as Dictionary
+	var islands_state := state.islands as Dictionary
 	player.maximum_health = int(player_state.maximum_health)
 	player.health = clampi(int(player_state.health), 0, player.maximum_health)
 	player.global_position = Vector2(float(position_state.x), float(position_state.y))
@@ -269,9 +292,61 @@ func _apply_state(state: Dictionary) -> void:
 	reinforced_heart_crafted = bool(state.reinforced_heart_crafted)
 	tidecatcher_built = bool(tidecatcher_state.built)
 	tidecatcher.restore_state(tidecatcher_built, int(tidecatcher_state.stored_wood), player)
+	island_shards.clear()
+	for shard_value: Variant in islands_state.inventory:
+		island_shards.append((shard_value as Dictionary).duplicate(true))
+	installed_shard = (islands_state.installed as Dictionary).duplicate(true)
+	_apply_island_modifiers()
 	player.health_changed.emit(player.health, player.maximum_health)
 	refresh_all_ui()
 	hud.set_automation_status(tidecatcher_built, tidecatcher.stored_wood(), WoodProduction.STORAGE_CAPACITY)
+
+func open_island_panel() -> void:
+	_refresh_island_ui()
+	hud.open_island_panel()
+	player.input_enabled = false
+	if is_instance_valid(enemy):
+		enemy.set_physics_process(false)
+
+func close_island_panel() -> void:
+	hud.close_island_panel()
+
+func _on_island_panel_closed() -> void:
+	_restore_gameplay_if_no_modal()
+
+func install_selected_shard(index: int) -> bool:
+	if index < 0 or index >= island_shards.size():
+		return false
+	installed_shard = island_shards[index].duplicate(true)
+	_apply_island_modifiers()
+	_refresh_island_ui()
+	return true
+
+func remove_installed_shard() -> bool:
+	if installed_shard.is_empty():
+		return false
+	installed_shard = {}
+	_apply_island_modifiers()
+	_refresh_island_ui()
+	return true
+
+func _apply_island_modifiers() -> void:
+	var yield_bonus := int(installed_shard.get("tree_yield_bonus", 0))
+	var speed_multiplier := float(installed_shard.get("enemy_speed_multiplier", 1.0))
+	if is_instance_valid(tree):
+		tree.wood_yield = BASE_TREE_YIELD + yield_bonus
+	if is_instance_valid(enemy):
+		enemy.move_speed = BASE_ENEMY_SPEED * speed_multiplier
+	island_slot.set_installed(not installed_shard.is_empty(), String(installed_shard.get("name", "")))
+
+func _refresh_island_ui() -> void:
+	hud.refresh_islands(island_shards, installed_shard)
+
+func _has_shard(shard_id: String) -> bool:
+	for shard: Dictionary in island_shards:
+		if String(shard.get("id", "")) == shard_id:
+			return true
+	return false
 
 func run_scripted_smoke() -> Dictionary:
 	tree.receive_attack(1)

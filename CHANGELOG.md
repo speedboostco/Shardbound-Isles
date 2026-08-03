@@ -9,3 +9,4 @@
 - Clamp the camera to the arena after visual evidence exposed out-of-world rendering near the workbench.
 - Add the Tidecatcher: controller-built deterministic wood automation with capped storage and automatic nearby collection.
 - Add schema-versioned single-slot local save/load with validated canonical restoration and controller-focused system UI.
+- Add the deterministic Verdant Crucible island shard, physical eastern installation slot, risk/reward modifiers, and schema-1-to-2 save migration.

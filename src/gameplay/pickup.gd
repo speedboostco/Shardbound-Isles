@@ -23,7 +23,10 @@ func collect_immediately() -> void:
 	queue_free()
 
 func _draw() -> void:
-	var color := Color("f0c55b") if kind == "wood" else Color("b779ff")
-	draw_circle(Vector2.ZERO, 9.0, color)
-	draw_arc(Vector2.ZERO, 11.0, 0.0, TAU, 16, Color.WHITE, 2.0)
-
+	if kind == "island_shard":
+		draw_colored_polygon(PackedVector2Array([Vector2(0, -13), Vector2(11, 0), Vector2(0, 13), Vector2(-11, 0)]), Color("72e1a5"))
+		draw_polyline(PackedVector2Array([Vector2(0, -13), Vector2(11, 0), Vector2(0, 13), Vector2(-11, 0), Vector2(0, -13)]), Color.WHITE, 2.0)
+	else:
+		var color := Color("f0c55b") if kind == "wood" else Color("b779ff")
+		draw_circle(Vector2.ZERO, 9.0, color)
+		draw_arc(Vector2.ZERO, 11.0, 0.0, TAU, 16, Color.WHITE, 2.0)

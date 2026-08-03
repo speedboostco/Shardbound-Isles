@@ -1,0 +1,130 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource path="res://src/ui/hud.gd" type="Script" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="EquipmentPanelStyle"]
+bg_color = Color(0.035, 0.075, 0.09, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.28, 0.7, 0.72, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+offset_left = 18.0
+offset_top = 18.0
+offset_right = 475.0
+offset_bottom = 205.0
+color = Color(0.03, 0.07, 0.1, 0.88)
+
+[node name="Margin" type="MarginContainer" parent="."]
+offset_left = 34.0
+offset_top = 29.0
+offset_right = 465.0
+offset_bottom = 197.0
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+theme_override_constants/separation = 7
+
+[node name="Title" type="Label" parent="Margin/VBox"]
+theme_override_colors/font_color = Color(0.36, 0.88, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "SHARDBOUND ISLES — FIRST LANDING"
+
+[node name="Health" type="Label" parent="Margin/VBox"]
+theme_override_font_sizes/font_size = 18
+text = "HEALTH  10 / 10"
+
+[node name="Wood" type="Label" parent="Margin/VBox"]
+theme_override_font_sizes/font_size = 18
+text = "WOOD    0"
+
+[node name="Attack" type="Label" parent="Margin/VBox"]
+theme_override_font_sizes/font_size = 18
+text = "ATTACK  1"
+
+[node name="Loot" type="Label" parent="Margin/VBox"]
+theme_override_font_sizes/font_size = 18
+text = "EQUIPMENT  NONE"
+
+[node name="Objective" type="Label" parent="."]
+offset_left = 760.0
+offset_top = 26.0
+offset_right = 1254.0
+offset_bottom = 88.0
+theme_override_colors/font_color = Color(1, 0.87, 0.42, 1)
+theme_override_font_sizes/font_size = 19
+text = "BREAK THE TREE • DEFEAT THE WISP\nMOVE: LEFT STICK / WASD   ATTACK: A / SPACE\nEQUIPMENT: Y / I"
+horizontal_alignment = 2
+
+[node name="EquipmentPanel" type="PanelContainer" parent="."]
+visible = false
+offset_left = 315.0
+offset_top = 220.0
+offset_right = 965.0
+offset_bottom = 610.0
+theme_override_styles/panel = SubResource("EquipmentPanelStyle")
+
+[node name="Margin" type="MarginContainer" parent="EquipmentPanel"]
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 25
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 25
+
+[node name="VBox" type="VBoxContainer" parent="EquipmentPanel/Margin"]
+theme_override_constants/separation = 17
+
+[node name="Title" type="Label" parent="EquipmentPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(0.36, 0.88, 1, 1)
+theme_override_font_sizes/font_size = 28
+text = "EQUIPMENT"
+horizontal_alignment = 1
+
+[node name="ItemName" type="Label" parent="EquipmentPanel/Margin/VBox"]
+theme_override_font_sizes/font_size = 22
+text = "NO EQUIPMENT IN PACK"
+horizontal_alignment = 1
+
+[node name="Comparison" type="Label" parent="EquipmentPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(1, 0.87, 0.42, 1)
+theme_override_font_sizes/font_size = 18
+text = "Defeat enemies to find equipment."
+horizontal_alignment = 1
+
+[node name="Equipped" type="Label" parent="EquipmentPanel/Margin/VBox"]
+theme_override_font_sizes/font_size = 18
+text = "EQUIPPED  Unarmed"
+
+[node name="Scrap" type="Label" parent="EquipmentPanel/Margin/VBox"]
+theme_override_font_sizes/font_size = 18
+text = "SALVAGE SCRAP  0"
+
+[node name="Actions" type="HBoxContainer" parent="EquipmentPanel/Margin/VBox"]
+alignment = 1
+theme_override_constants/separation = 14
+
+[node name="Equip" type="Button" parent="EquipmentPanel/Margin/VBox/Actions"]
+custom_minimum_size = Vector2(150, 52)
+disabled = true
+text = "EQUIP"
+
+[node name="Salvage" type="Button" parent="EquipmentPanel/Margin/VBox/Actions"]
+custom_minimum_size = Vector2(150, 52)
+disabled = true
+text = "SALVAGE"
+
+[node name="Unequip" type="Button" parent="EquipmentPanel/Margin/VBox/Actions"]
+custom_minimum_size = Vector2(150, 52)
+disabled = true
+text = "UNEQUIP"
+
+[node name="Close" type="Button" parent="EquipmentPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 48)
+text = "CLOSE  (B / ESC)"

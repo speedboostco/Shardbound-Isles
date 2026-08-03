@@ -1,0 +1,28 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource path="res://src/gameplay/world.gd" type="Script" id="1"]
+[ext_resource path="res://src/gameplay/player.gd" type="Script" id="2"]
+[ext_resource path="res://src/gameplay/resource_node.gd" type="Script" id="3"]
+[ext_resource path="res://src/gameplay/enemy.gd" type="Script" id="4"]
+[ext_resource path="res://src/ui/hud.tscn" type="PackedScene" id="5"]
+
+[node name="FirstPlayableWorld" type="Node2D"]
+script = ExtResource("1")
+
+[node name="Player" type="CharacterBody2D" parent="."]
+script = ExtResource("2")
+
+[node name="Camera2D" type="Camera2D" parent="Player"]
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0
+
+[node name="Tree" type="StaticBody2D" parent="."]
+position = Vector2(180, 20)
+script = ExtResource("3")
+
+[node name="Enemy" type="CharacterBody2D" parent="."]
+position = Vector2(-270, 80)
+script = ExtResource("4")
+
+[node name="HUD" parent="." instance=ExtResource("5")]
+

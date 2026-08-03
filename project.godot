@@ -1,0 +1,27 @@
+; Engine configuration file.
+config_version=5
+
+[application]
+config/name="Shardbound Isles"
+run/main_scene="res://src/gameplay/world.tscn"
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=800
+window/size/window_width_override=1280
+window/size/window_height_override=800
+window/stretch/mode="canvas_items"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+
+[input]
+move_left={"deadzone":0.2,"events":[Object(InputEventKey,"physical_keycode":65),Object(InputEventKey,"physical_keycode":4194311),Object(InputEventJoypadMotion,"axis":0,"axis_value":-1.0),Object(InputEventJoypadButton,"button_index":13)]}
+move_right={"deadzone":0.2,"events":[Object(InputEventKey,"physical_keycode":68),Object(InputEventKey,"physical_keycode":4194313),Object(InputEventJoypadMotion,"axis":0,"axis_value":1.0),Object(InputEventJoypadButton,"button_index":14)]}
+move_up={"deadzone":0.2,"events":[Object(InputEventKey,"physical_keycode":87),Object(InputEventKey,"physical_keycode":4194320),Object(InputEventJoypadMotion,"axis":1,"axis_value":-1.0),Object(InputEventJoypadButton,"button_index":11)]}
+move_down={"deadzone":0.2,"events":[Object(InputEventKey,"physical_keycode":83),Object(InputEventKey,"physical_keycode":4194322),Object(InputEventJoypadMotion,"axis":1,"axis_value":1.0),Object(InputEventJoypadButton,"button_index":12)]}
+attack={"deadzone":0.2,"events":[Object(InputEventKey,"physical_keycode":32),Object(InputEventKey,"physical_keycode":4194309),Object(InputEventJoypadButton,"button_index":0)]}
+pause={"deadzone":0.2,"events":[Object(InputEventKey,"physical_keycode":4194305),Object(InputEventJoypadButton,"button_index":6)]}
+equipment={"deadzone":0.2,"events":[Object(InputEventKey,"physical_keycode":73),Object(InputEventKey,"physical_keycode":4194308),Object(InputEventJoypadButton,"button_index":3)]}

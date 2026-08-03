@@ -1,0 +1,23 @@
+name: Validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: true
+      - name: Import project
+        run: godot --headless --editor --path . --quit
+      - name: Run all tests
+        run: godot --headless --path . --script res://tests/run_tests.gd -- --suite=all
+      - name: Export Linux debug build
+        run: godot --headless --path . --export-debug Linux

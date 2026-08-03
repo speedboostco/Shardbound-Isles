@@ -1,11 +1,21 @@
 # Loot
 
-Loot generation is deterministic for an explicit seed and generation context. `WeaponDefinition` contains immutable authored data while `WeaponInstance` contains runtime identity and rolls. Canonical weapon state includes `item_id`, `base_type`, `damage`, `attack_speed`, `rarity`, and `seed`; serialization and restoration preserve the same stable context/type/seed instance ID. Legacy keys remain readable for schema-3 save compatibility.
+Equipment generation is one deterministic pipeline driven by an explicit seed and context:
 
-Collected equipment enters authoritative inventory state. Previous/Next controls browse every owned item while the panel shows its position, power comparison, attack speed, affix, and authoritative salvage value. Equip and Salvage act on the displayed index; selection clamps after removal. Equipping one compatible weapon changes both actual attack damage and cooldown; the previous weapon remains owned. Incompatible base types are rejected. An equipped item must be unequipped before salvage, preventing accidental destruction.
+1. Choose a base definition and item level.
+2. Roll Common, Magic, Rare, Epic, or Legendary rarity.
+3. Determine the ordinary-affix count from the rarity contract.
+4. Build an eligible, non-conflicting affix pool.
+5. Make weighted choices and roll values inside authored ranges.
+6. Add an eligible legendary behavior without consuming an ordinary slot.
+7. Finalize a plain JSON-serializable item instance with stable identity.
 
-Salvage values are shared domain rules used by both the inventory action and its UI: common 1, uncommon 2, rare 4, and legendary 10 scrap.
+Rarity controls affix opportunities and salvage value, not just color. Rolls overlap deliberately: a higher-rarity item is not guaranteed to be better for a particular build. Every tooltip therefore exposes the base, rolls, and behavior rather than an invented item score.
 
-The Abyssal Warden drops Riftwake Core (`riftwake_core_7777`), a deterministic legendary magic item with power 9 and seed `7777`. Its stable `riftwake_pulse` affix changes attacks into an area effect: the primary strike resolves first, then a visible 115-pixel pulse deals 2 damage to nearby secondary enemies. Legendary items salvage for 10 scrap under the existing rarity rule.
+Items use typed `weapon`, `helmet`, `body`, `boots`, `ring`, and `amulet` slots. Replacing an equipped item leaves the previous item owned. Derived stats are recomputed from immutable bases on every equipment change, so repeated equip operations cannot accumulate modifiers.
 
-Each completed rift drops one rare Rift Cache with stable run-indexed ID/seed beginning at `rift_cache_8801`. Power is 7, 8, then capped at 9 for later runs; repeatability does not create unbounded numerical scaling.
+Salvage consumes an unequipped, non-favorite item only after the transaction succeeds. Reward scales with rarity and item level. Equipped and favorited items are protected. The equipment screen provides quick equip, unequip, keep/unfavorite, and salvage actions with controller focus.
+
+Ground equipment is capped at 40. When pressure exceeds the cap, the oldest lowest-rarity non-legendary item is removed first; Epic and Legendary drops receive an importance beam, and Legendary drops are never cleanup candidates. Material pickups continue to merge. `LootFilter` already separates keep and optional auto-salvage policy, but automatic salvage is disabled for M2.
+
+The early arena exposes all three weapon families: Tideglass Bow from the first Slime, a seeded Rare sword from the Tide Slinger, and a seeded Epic wand from the Stormcaller. The boss still grants Riftwake Core.

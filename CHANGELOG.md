@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Complete M3 world-as-loot with a serializable three-slot archipelago, deterministic leveled shard definitions, atomic physical island lifecycle, schema-5 runtime persistence, and controller risk/adjacency preview.
+- Add Forest gameplay, Moonleaf and Herbal Compass progression, eight compositional island modifiers, and Rare Spores, Obsidian Front, and Spirit Siege adjacency tradeoffs.
+- Complete M2 deterministic Diablo-like loot with five rarities, 16 validated ordinary affixes, six typed equipment slots, derived stats, controller comparison/favorites/salvage, bounded world drops, and schema-4 persistence.
+- Add shared sword, bow, and wand attack profiles plus modular Riftwake Pulse, Chain Mining, Burning Smelter, and Living Arrows legendary behaviors.
 - Complete M1 with analog deterministic movement, smoothed bounded camera, universal contextual interaction, definition-driven resource nodes, merged pickups, authoritative resource inventory, shared health, explicit Slime AI, canonical seeded weapons, real damage/speed equipment effects, event-driven HUD, and a repeatable gather-fight-equip simulation.
 - Complete Gate M0 infrastructure with static validation, JUnit test reports, layered CI and export artifacts, independent seeded RNG streams, and contextual category logging.
 - Reorganize live Godot resources under `game/`, developer tooling under `tools/`, and tracked build-output guidance under `build/` with documented layer ownership.

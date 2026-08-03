@@ -41,9 +41,11 @@ func _run() -> void:
 	if main_scene.is_empty() or load(main_scene) == null:
 		failures.append("application/run/main_scene must reference a loadable scene")
 	_scan_core_directory("res://game/core")
+	_validate_m2_definitions()
+	_validate_m3_definitions()
 	for failure: String in failures:
 		push_error("STATIC VALIDATION: %s" % failure)
-	print("STATIC_RESULT checks=%d failures=%d" % [REQUIRED_DIRECTORIES.size() + REQUIRED_DOCUMENTS.size() + 2, failures.size()])
+	print("STATIC_RESULT checks=%d failures=%d" % [REQUIRED_DIRECTORIES.size() + REQUIRED_DOCUMENTS.size() + 8, failures.size()])
 	quit(0 if failures.is_empty() else 1)
 
 func _scan_core_directory(path: String) -> void:
@@ -73,3 +75,34 @@ func _scan_core_script(path: String) -> void:
 		var line := file.get_line()
 		if random_call_pattern.search(line) != null:
 			failures.append("global random call in %s:%d" % [path, line_number])
+
+func _validate_m2_definitions() -> void:
+	var registries: Array[Dictionary] = [
+		{"name": "item base", "path": "res://game/core/item_base_registry.gd"},
+		{"name": "affix", "path": "res://game/core/affix_registry.gd"},
+		{"name": "legendary behavior", "path": "res://game/core/legendary_behavior_registry.gd"},
+	]
+	for registry: Dictionary in registries:
+		var script_value: Variant = load(String(registry.path))
+		if script_value == null or not script_value is Script or not (script_value as Script).can_instantiate():
+			failures.append("%s registry must load" % String(registry.name))
+			continue
+		var instance: Variant = (script_value as Script).new()
+		for error_value: Variant in instance.validate():
+			failures.append("%s definition: %s" % [String(registry.name), String(error_value)])
+
+func _validate_m3_definitions() -> void:
+	for registry: Dictionary in [
+		{"name": "island modifier", "path": "res://game/core/island_modifier_registry.gd"},
+		{"name": "adjacency synergy", "path": "res://game/core/adjacency_synergy_registry.gd"},
+	]:
+		var script_value: Variant = load(String(registry.path))
+		if script_value == null or not script_value is Script or not (script_value as Script).can_instantiate():
+			failures.append("%s registry must load" % String(registry.name))
+			continue
+		var instance: Variant = (script_value as Script).new()
+		for error_value: Variant in instance.validate():
+			failures.append("%s definition: %s" % [String(registry.name), String(error_value)])
+	for seed_value: int in range(9001, 9007):
+		for error_value: Variant in IslandShardDefinition.validate_dictionary(IslandShardGenerator.generate(seed_value, 12)):
+			failures.append("island shard definition: %s" % String(error_value))

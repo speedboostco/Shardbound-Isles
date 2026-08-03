@@ -22,6 +22,10 @@
 - Simulation layer - 17 assertions, 0 failures.
 - JUnit: `build/test-results/all.xml` was written by the successful full run.
 - `M1_PICKUP_METRICS {"drops":100,"elapsed_usec":260}` - one merged physical stack preserving all 100 units, below the 500 ms contract.
+- Official Godot 4.7.1 export-template archive - 1,280,486,955 bytes; SHA-256 `86409DB6200B6F8FD3230989C2D2002851F3DD18ACF11D7BDBAFDDF5A0DD0F72`.
+- `tools/dev.ps1 export-windows` - exit 0; produced `ShardboundIsles.exe` (102,982,144 bytes) and `ShardboundIsles.pck` (236,916 bytes).
+- `tools/dev.ps1 export-linux` - exit 0; produced `ShardboundIsles.x86_64` (73,675,128 bytes), launcher, and `ShardboundIsles.pck` (236,916 bytes).
+- Exported Windows headless smoke launch with `--quit-after 120` - exit 0.
 - `git diff --check` - no whitespace errors during final review.
 
 Godot emitted the host certificate-store warning after otherwise successful processes. It did not change the exit code or test results.
@@ -37,8 +41,17 @@ Visual artifact: [M1 first playable at 1280x800](m1-first-playable-1280x800.png)
 
 Manual inspection confirms readable health/resources/weapon stats, a visible green Slime, distinct tree and stone, the equipped Tideglass Bow, a bottom-safe `A / E USE WORKBENCH` prompt, no central HUD obstruction, no clipped text, and no missing assets.
 
+## Build artifact hashes
+
+- Windows executable: `1CB23CEC5F4DE7FA6C884CD61AF3B5B3DF52B7D0F82638AA36B241A1CFDC3244`.
+- Windows PCK: `52950AF6D99E836A68828059186462AC2EB102B47AEEC027E37F984981B0D10D`.
+- Linux executable: `0B20D290D99AB6E73B1B5888BEA582859FDE5BE8116160F0EB192CC1B2611808`.
+- Linux PCK: `52950AF6D99E836A68828059186462AC2EB102B47AEEC027E37F984981B0D10D`.
+
+Build output remains ignored under `build/`; it is local evidence rather than committed generated content.
+
 ## External validation limitations
 
 - GNU Make is not installed on this Windows host, so the PowerShell implementation called by each Make target was exercised directly.
-- Local Windows and Linux exports both exit 1 with explicit missing-template errors because Godot 4.7.1 export templates are absent. The repository presets and CI export jobs are present, but no local binary was produced in this run.
-- A physical ten-minute controller playthrough and Windows-build launch under Steam Deck Proton require the corresponding controller, export templates, and Steam Deck/Proton host; these hardware gates were not claimed as passed.
+- No Steam installation or Proton command is available, WSL contains only the service `docker-desktop` distribution, and no matching game controller is detected.
+- Therefore the Windows executable is launch-validated on Windows, but a physical ten-minute controller playthrough and Steam Deck/Proton launch still require the corresponding external hardware/environment and are not claimed as passed.

@@ -23,3 +23,8 @@ func run(support: TestSupport) -> void:
 	var repeated_whetstone: Dictionary = crafting.craft_whetstone(9, true)
 	support.expect(repeated_whetstone.get("success") == false and repeated_whetstone.get("reason") == "already_crafted", "unique Whetstone must reject duplicate crafting")
 	support.expect(crafting.craft_whetstone(0, false).get("reason") == "insufficient_resources", "failed Whetstone must explain insufficient stone")
+	support.expect(not crafting.can_craft_herbal_compass(2, false) and crafting.can_craft_herbal_compass(3, false), "Herbal Compass must require three Moonleaf")
+	var compass: Dictionary = crafting.craft_herbal_compass(3, false)
+	support.expect(compass.get("success") == true and compass.get("moonleaf_spent") == 3, "Herbal Compass must consume its Forest resource")
+	support.expect(float(compass.get("pickup_radius_bonus")) == 40.0, "Herbal Compass must grant a concrete pickup-radius upgrade")
+	support.expect(crafting.craft_herbal_compass(9, true).get("reason") == "already_crafted", "unique Herbal Compass must reject duplicate crafting")

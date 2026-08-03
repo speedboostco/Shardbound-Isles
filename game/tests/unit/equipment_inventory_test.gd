@@ -16,7 +16,7 @@ func run(support: TestSupport) -> void:
 	support.expect(inventory.salvage(0) == 0, "equipped item must be protected from salvage")
 	support.expect(inventory.unequip(), "equipped item must be removable")
 	var reward: int = inventory.salvage(0)
-	support.expect(reward == 2, "uncommon starter equipment must salvage for two scrap")
+	support.expect(reward == 2, "magic starter equipment must salvage for two scrap")
 	support.expect(inventory.scrap == 2 and inventory.items.is_empty(), "salvage must remove item and grant scrap")
 	var first := EquipmentGenerator.generate(424243)
 	var second := EquipmentGenerator.generate(424244)

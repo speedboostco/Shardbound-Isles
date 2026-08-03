@@ -37,4 +37,11 @@ static func reward(run_index: int) -> Dictionary:
 		"power": 6 + mini(safe_index, 3),
 		"attack_speed": 1.0,
 		"seed": 8800 + safe_index,
+		"slot": "weapon",
+		"item_level": 25 + safe_index,
+		"base_stats": {},
+		"affixes": [],
+		"legendary_effects": [],
+		"rarity_color": RarityRules.color("rare"),
+		"favorite": false,
 	}

@@ -17,5 +17,13 @@ static func generate(seed_value: int, context: String = "starter") -> Dictionary
 	definition.set("base_type", ARCHETYPES[index])
 	definition.set("damage", rng.randi_range(4, 7))
 	definition.set("attack_speed", ATTACK_SPEEDS[index])
-	definition.set("rarity", "uncommon")
-	return WeaponInstanceScript.from_definition(definition, seed_value, context).to_dictionary()
+	definition.set("rarity", "magic")
+	var item: Dictionary = WeaponInstanceScript.from_definition(definition, seed_value, context).to_dictionary()
+	item["slot"] = "weapon"
+	item["item_level"] = 1
+	item["base_stats"] = {}
+	item["affixes"] = []
+	item["legendary_effects"] = []
+	item["rarity_color"] = RarityRules.color("magic")
+	item["favorite"] = false
+	return item

@@ -1,7 +1,8 @@
 class_name SaveService
 extends RefCounted
 
-const SCHEMA_VERSION: int = 3
+const SCHEMA_VERSION: int = 5
+const DEFAULT_WORLD_SEED: int = 73000
 
 func encode(state: Dictionary) -> String:
 	return JSON.stringify({"schema_version": SCHEMA_VERSION, "state": state})
@@ -17,7 +18,7 @@ func decode(payload: String) -> Dictionary:
 	if not document.has("schema_version"):
 		return {"ok": false, "error": "missing_schema"}
 	var version := int(document.get("schema_version", -1))
-	if version not in [1, 2, SCHEMA_VERSION]:
+	if version not in [1, 2, 3, 4, SCHEMA_VERSION]:
 		return {"ok": false, "error": "unsupported_schema"}
 	if not document.get("state") is Dictionary:
 		return {"ok": false, "error": "missing_state"}
@@ -27,6 +28,25 @@ func decode(payload: String) -> Dictionary:
 	if version <= 2:
 		state["stone"] = 0
 		state["runed_whetstone_crafted"] = false
+	if version <= 3:
+		var legacy_equipment := state.get("equipment", {}) as Dictionary
+		var legacy_equipped_id := String(legacy_equipment.get("equipped_id", ""))
+		legacy_equipment["equipped_slots"] = {} if legacy_equipped_id.is_empty() else {"weapon": legacy_equipped_id}
+	if version <= 4:
+		state["moonleaf"] = int(state.get("moonleaf", 0))
+		state["herbal_compass_crafted"] = bool(state.get("herbal_compass_crafted", false))
+		var legacy_islands := state.get("islands", {"inventory": [], "installed": {}}) as Dictionary
+		var upgraded_inventory: Array[Dictionary] = []
+		for shard_value: Variant in legacy_islands.get("inventory", []):
+			if shard_value is Dictionary:
+				upgraded_inventory.append(_upgrade_legacy_shard(shard_value as Dictionary))
+		var archipelago := ArchipelagoModel.new(DEFAULT_WORLD_SEED)
+		archipelago.initialize_default_slots()
+		var legacy_installed := legacy_islands.get("installed", {}) as Dictionary
+		if not legacy_installed.is_empty():
+			var upgraded := _upgrade_legacy_shard(legacy_installed)
+			archipelago.install("east", upgraded, IslandRuntimeState.create(upgraded))
+		state["islands"] = {"inventory": upgraded_inventory, "installed": {} if legacy_installed.is_empty() else _upgrade_legacy_shard(legacy_installed), "archipelago": archipelago.to_dictionary()}
 	if not _is_valid_state(state):
 		return {"ok": false, "error": "invalid_state"}
 	var result := {"ok": true, "schema_version": SCHEMA_VERSION, "state": _normalize_state(state)}
@@ -79,15 +99,18 @@ func _is_valid_state(state: Dictionary) -> bool:
 	var islands := state.islands as Dictionary
 	if not player.get("position") is Dictionary or not equipment.get("items") is Array:
 		return false
-	if not islands.get("inventory") is Array or not islands.get("installed") is Dictionary:
+	if not islands.get("inventory") is Array or not islands.get("installed") is Dictionary or not islands.get("archipelago") is Dictionary:
 		return false
 	var position := player.position as Dictionary
-	var required_values: Array[Variant] = [player.get("health"), player.get("maximum_health"), position.get("x"), position.get("y"), state.get("wood"), state.get("stone"), equipment.get("scrap"), tidecatcher.get("stored_wood")]
+	var required_values: Array[Variant] = [player.get("health"), player.get("maximum_health"), position.get("x"), position.get("y"), state.get("wood"), state.get("stone"), state.get("moonleaf"), equipment.get("scrap"), tidecatcher.get("stored_wood")]
 	for value: Variant in required_values:
 		if not (value is int or value is float):
 			return false
-	if not equipment.get("equipped_id") is String or not state.get("reinforced_heart_crafted") is bool or not state.get("runed_whetstone_crafted") is bool or not tidecatcher.get("built") is bool:
+	if not equipment.get("equipped_id") is String or not equipment.get("equipped_slots") is Dictionary or not state.get("reinforced_heart_crafted") is bool or not state.get("runed_whetstone_crafted") is bool or not state.get("herbal_compass_crafted") is bool or not tidecatcher.get("built") is bool:
 		return false
+	for slot_value: Variant in (equipment.get("equipped_slots") as Dictionary):
+		if String(slot_value) not in EquipmentInventory.SLOTS or not (equipment.get("equipped_slots") as Dictionary).get(slot_value) is String:
+			return false
 	for item_value: Variant in equipment.items:
 		if not item_value is Dictionary:
 			return false
@@ -99,21 +122,14 @@ func _is_valid_state(state: Dictionary) -> bool:
 			return false
 	if not (islands.installed as Dictionary).is_empty() and not _is_valid_shard(islands.installed):
 		return false
+	if ArchipelagoModel.from_dictionary(islands.archipelago as Dictionary) == null:
+		return false
 	return true
 
 func _is_valid_shard(value: Variant) -> bool:
 	if not value is Dictionary:
 		return false
-	var shard := value as Dictionary
-	if not (shard.get("id") is String and shard.get("name") is String and shard.get("biome") is String and (shard.get("seed") is int or shard.get("seed") is float) and (shard.get("tree_yield_bonus") is int or shard.get("tree_yield_bonus") is float) and (shard.get("enemy_speed_multiplier") is int or shard.get("enemy_speed_multiplier") is float)):
-		return false
-	for key: String in ["player_attack_bonus", "production_interval_multiplier", "enemy_projectile_damage_bonus"]:
-		if shard.has(key) and not (shard.get(key) is int or shard.get(key) is float):
-			return false
-	for key: String in ["reward_description", "risk_description"]:
-		if shard.has(key) and not shard.get(key) is String:
-			return false
-	return true
+	return IslandShardDefinition.validate_dictionary(value as Dictionary).is_empty()
 
 func _normalize_state(state: Dictionary) -> Dictionary:
 	var player := state.player as Dictionary
@@ -130,6 +146,23 @@ func _normalize_state(state: Dictionary) -> Dictionary:
 			item["damage"] = int(item.get("damage", item.get("power", 0)))
 		if item.has("attack_speed"):
 			item["attack_speed"] = float(item.get("attack_speed", 1.0))
+		if item.has("item_level"):
+			item["item_level"] = int(item.get("item_level", 1))
+		if item.has("favorite"):
+			item["favorite"] = bool(item.get("favorite", false))
+		if item.get("base_stats") is Dictionary:
+			var normalized_base_stats: Dictionary = {}
+			for stat_id: String in (item.base_stats as Dictionary):
+				normalized_base_stats[stat_id] = float((item.base_stats as Dictionary)[stat_id])
+			item["base_stats"] = normalized_base_stats
+		if item.get("affixes") is Array:
+			var normalized_affixes: Array[Dictionary] = []
+			for affix_value: Variant in item.affixes:
+				if affix_value is Dictionary:
+					var affix := (affix_value as Dictionary).duplicate(true)
+					affix["value"] = float(affix.get("value", 0.0))
+					normalized_affixes.append(affix)
+			item["affixes"] = normalized_affixes
 		normalized_items.append(item)
 	var normalized_shards: Array[Dictionary] = []
 	for shard_value: Variant in islands.inventory:
@@ -143,22 +176,28 @@ func _normalize_state(state: Dictionary) -> Dictionary:
 		},
 		"wood": int(state.wood),
 		"stone": int(state.stone),
+		"moonleaf": int(state.moonleaf),
 		"equipment": {
 			"scrap": int(equipment.scrap),
 			"equipped_id": String(equipment.equipped_id),
+			"equipped_slots": (equipment.equipped_slots as Dictionary).duplicate(true),
 			"items": normalized_items,
 		},
 		"reinforced_heart_crafted": bool(state.reinforced_heart_crafted),
 		"runed_whetstone_crafted": bool(state.runed_whetstone_crafted),
+		"herbal_compass_crafted": bool(state.herbal_compass_crafted),
 		"tidecatcher": {"built": bool(tidecatcher.built), "stored_wood": int(tidecatcher.stored_wood)},
-		"islands": {"inventory": normalized_shards, "installed": {} if installed.is_empty() else _normalize_shard(installed)},
+		"islands": {"inventory": normalized_shards, "installed": {} if installed.is_empty() else _normalize_shard(installed), "archipelago": (ArchipelagoModel.from_dictionary(islands.archipelago as Dictionary) as ArchipelagoModel).to_dictionary()},
 	}
 
 func _normalize_shard(shard: Dictionary) -> Dictionary:
 	var normalized := shard.duplicate(true)
 	normalized["seed"] = int(shard.seed)
-	normalized["tree_yield_bonus"] = int(shard.tree_yield_bonus)
-	normalized["enemy_speed_multiplier"] = float(shard.enemy_speed_multiplier)
+	normalized["level"] = int(shard.level)
+	if shard.has("tree_yield_bonus"):
+		normalized["tree_yield_bonus"] = int(shard.tree_yield_bonus)
+	if shard.has("enemy_speed_multiplier"):
+		normalized["enemy_speed_multiplier"] = float(shard.enemy_speed_multiplier)
 	if shard.has("player_attack_bonus"):
 		normalized["player_attack_bonus"] = int(shard.player_attack_bonus)
 	if shard.has("production_interval_multiplier"):
@@ -166,3 +205,11 @@ func _normalize_shard(shard: Dictionary) -> Dictionary:
 	if shard.has("enemy_projectile_damage_bonus"):
 		normalized["enemy_projectile_damage_bonus"] = int(shard.enemy_projectile_damage_bonus)
 	return normalized
+
+func _upgrade_legacy_shard(shard: Dictionary) -> Dictionary:
+	if IslandShardDefinition.validate_dictionary(shard).is_empty():
+		return shard.duplicate(true)
+	return IslandShardGenerator.generate(int(shard.get("seed", FIRST_LEGACY_SEED())), int(shard.get("level", 1)))
+
+func FIRST_LEGACY_SEED() -> int:
+	return IslandShardGenerator.FIRST_DEFINITION_SEED

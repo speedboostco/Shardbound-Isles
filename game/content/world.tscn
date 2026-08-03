@@ -70,7 +70,15 @@ position = Vector2(220, -185)
 script = ExtResource("7")
 
 [node name="IslandSlot" type="Node2D" parent="."]
-position = Vector2(505, 175)
+position = Vector2(505, 60)
+script = ExtResource("8")
+
+[node name="NorthEastIslandSlot" type="Node2D" parent="."]
+position = Vector2(390, -250)
+script = ExtResource("8")
+
+[node name="SouthEastIslandSlot" type="Node2D" parent="."]
+position = Vector2(680, 300)
 script = ExtResource("8")
 
 [node name="RangedEnemy" type="CharacterBody2D" parent="."]

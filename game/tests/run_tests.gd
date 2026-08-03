@@ -19,6 +19,15 @@ func _run() -> void:
 		return
 	if suite in ["all", "unit"]:
 		for definition: Dictionary in [
+			{"path": "res://game/tests/unit/archipelago_model_test.gd", "assertions": 20},
+			{"path": "res://game/tests/unit/island_generation_m3_test.gd", "assertions": 24},
+			{"path": "res://game/tests/unit/island_modifier_adjacency_test.gd", "assertions": 20},
+			{"path": "res://game/tests/unit/island_persistence_test.gd", "assertions": 12},
+			{"path": "res://game/tests/unit/loot_generation_test.gd", "assertions": 21},
+			{"path": "res://game/tests/unit/equipment_stats_test.gd", "assertions": 19},
+			{"path": "res://game/tests/unit/legendary_framework_test.gd", "assertions": 18},
+			{"path": "res://game/tests/unit/weapon_combat_rules_test.gd", "assertions": 8},
+			{"path": "res://game/tests/unit/loot_policy_test.gd", "assertions": 8},
 			{"path": "res://game/tests/unit/movement_rules_test.gd", "assertions": 7},
 			{"path": "res://game/tests/unit/interaction_selector_test.gd", "assertions": 6},
 			{"path": "res://game/tests/unit/resource_inventory_test.gd", "assertions": 12},
@@ -29,9 +38,9 @@ func _run() -> void:
 			{"path": "res://game/tests/unit/test_report_test.gd", "assertions": 11},
 			{"path": "res://game/tests/unit/equipment_generator_test.gd", "assertions": 5},
 			{"path": "res://game/tests/unit/equipment_inventory_test.gd", "assertions": 15},
-			{"path": "res://game/tests/unit/crafting_service_test.gd", "assertions": 14},
+			{"path": "res://game/tests/unit/crafting_service_test.gd", "assertions": 18},
 			{"path": "res://game/tests/unit/wood_production_test.gd", "assertions": 7},
-			{"path": "res://game/tests/unit/save_service_test.gd", "assertions": 13},
+			{"path": "res://game/tests/unit/save_service_test.gd", "assertions": 15},
 			{"path": "res://game/tests/unit/island_shard_generator_test.gd", "assertions": 10},
 			{"path": "res://game/tests/unit/ranged_attack_pattern_test.gd", "assertions": 5},
 			{"path": "res://game/tests/unit/boss_attack_pattern_test.gd", "assertions": 6},
@@ -51,6 +60,8 @@ func _run() -> void:
 			_record_result("unit", path, assertions_before, failures_before)
 	if suite in ["all", "integration"]:
 		for definition: Dictionary in [
+			{"path": "res://game/tests/integration/m3_world_loot_flow_test.gd", "assertions": 40},
+			{"path": "res://game/tests/integration/m2_loot_flow_test.gd", "assertions": 31},
 			{"path": "res://game/tests/integration/m1_scene_contract_test.gd", "assertions": 26},
 			{"path": "res://game/tests/integration/slime_obstacle_flow_test.gd", "assertions": 4},
 			{"path": "res://game/tests/integration/gameplay_flow_test.gd", "assertions": 10},
@@ -100,6 +111,30 @@ func _run() -> void:
 				return
 			print("RIFT_METRICS %s" % JSON.stringify(rift_metrics))
 		_record_result("simulation", rift_path, rift_before, rift_failures_before)
+		var m2_path := "res://game/tests/simulation/m2_loot_simulation_test.gd"
+		var m2_before := support.assertions
+		var m2_failures_before := support.failures.size()
+		var m2_simulation: Variant = _instantiate_test(m2_path)
+		if m2_simulation != null:
+			var m2_metrics: Dictionary = await m2_simulation.run(support, self)
+			if not support.require_assertion_count(support.assertions - m2_before, 10, m2_path):
+				_record_result("simulation", m2_path, m2_before, m2_failures_before)
+				_finish(suite)
+				return
+			print("M2_METRICS %s" % JSON.stringify(m2_metrics))
+		_record_result("simulation", m2_path, m2_before, m2_failures_before)
+		var m3_path := "res://game/tests/simulation/m3_world_loot_simulation_test.gd"
+		var m3_before := support.assertions
+		var m3_failures_before := support.failures.size()
+		var m3_simulation: Variant = _instantiate_test(m3_path)
+		if m3_simulation != null:
+			var m3_metrics: Dictionary = await m3_simulation.run(support, self)
+			if not support.require_assertion_count(support.assertions - m3_before, 12, m3_path):
+				_record_result("simulation", m3_path, m3_before, m3_failures_before)
+				_finish(suite)
+				return
+			print("M3_METRICS %s" % JSON.stringify(m3_metrics))
+		_record_result("simulation", m3_path, m3_before, m3_failures_before)
 	_finish(suite)
 
 func _finish(suite: String) -> void:

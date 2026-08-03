@@ -5,6 +5,7 @@ signal equipment_panel_requested
 signal equipment_panel_closed
 signal equip_requested(index: int)
 signal salvage_requested(index: int)
+signal favorite_requested(index: int, favorite: bool)
 signal unequip_requested
 signal workbench_panel_requested
 signal workbench_panel_closed
@@ -16,13 +17,14 @@ signal save_requested
 signal load_requested
 signal island_panel_requested
 signal island_panel_closed
-signal island_install_requested(index: int)
-signal island_remove_requested
+signal island_install_requested(index: int, slot_id: String)
+signal island_remove_requested(slot_id: String)
 signal rift_requested
 
 @onready var health_label: Label = $Margin/VBox/Health
 @onready var wood_label: Label = $Margin/VBox/Wood
 @onready var stone_label: Label = $Margin/VBox/Stone
+@onready var moonleaf_label: Label = $Margin/VBox/Moonleaf
 @onready var loot_label: Label = $Margin/VBox/Loot
 @onready var attack_label: Label = $Margin/VBox/Attack
 @onready var equipment_panel: PanelContainer = $EquipmentPanel
@@ -36,6 +38,7 @@ signal rift_requested
 @onready var scrap_label: Label = $EquipmentPanel/Margin/VBox/Scrap
 @onready var equip_button: Button = $EquipmentPanel/Margin/VBox/Actions/Equip
 @onready var salvage_button: Button = $EquipmentPanel/Margin/VBox/Actions/Salvage
+@onready var favorite_button: Button = $EquipmentPanel/Margin/VBox/Actions/Favorite
 @onready var unequip_button: Button = $EquipmentPanel/Margin/VBox/Actions/Unequip
 @onready var workbench_panel: PanelContainer = $WorkbenchPanel
 @onready var workbench_recipe_label: Label = $WorkbenchPanel/Margin/VBox/Recipe
@@ -56,6 +59,10 @@ signal rift_requested
 @onready var island_previous_button: Button = $IslandPanel/Margin/VBox/Selection/Previous
 @onready var island_count_label: Label = $IslandPanel/Margin/VBox/Selection/Count
 @onready var island_next_button: Button = $IslandPanel/Margin/VBox/Selection/Next
+@onready var island_slot_previous_button: Button = $IslandPanel/Margin/VBox/SlotSelection/Previous
+@onready var island_slot_label: Label = $IslandPanel/Margin/VBox/SlotSelection/Slot
+@onready var island_slot_next_button: Button = $IslandPanel/Margin/VBox/SlotSelection/Next
+@onready var island_synergy_label: Label = $IslandPanel/Margin/VBox/Synergy
 @onready var island_status_label: Label = $IslandPanel/Margin/VBox/Status
 @onready var island_install_button: Button = $IslandPanel/Margin/VBox/Actions/Install
 @onready var island_remove_button: Button = $IslandPanel/Margin/VBox/Actions/Remove
@@ -66,6 +73,7 @@ signal rift_requested
 var _items: Array[Dictionary] = []
 var _equipped_id: String = ""
 var _equipped_item: Dictionary = {}
+var _equipped_slots: Dictionary = {}
 var _selected_equipment_index: int = 0
 var _displayed_attack_damage: int = 1
 var _displayed_attack_speed: float = 1.0
@@ -74,18 +82,24 @@ var _displayed_stone: int = 0
 var _selected_recipe_index: int = 0
 var _workbench_wood: int = 0
 var _workbench_stone: int = 0
+var _workbench_moonleaf: int = 0
 var _workbench_scrap: int = 0
 var _heart_crafted: bool = false
 var _whetstone_crafted: bool = false
+var _herbal_compass_crafted: bool = false
 var _island_shards: Array[Dictionary] = []
-var _installed_island: Dictionary = {}
+var _archipelago_data: Dictionary = {}
 var _selected_island_index: int = 0
+var _selected_island_slot_index: int = 0
+var _pending_island_action: String = ""
+const ISLAND_SLOT_IDS: Array[String] = ["east", "north_east", "south_east"]
 
 func _ready() -> void:
 	equipment_previous_button.pressed.connect(func() -> void: _select_relative_equipment(-1))
 	equipment_next_button.pressed.connect(func() -> void: _select_relative_equipment(1))
 	equip_button.pressed.connect(func() -> void: equip_requested.emit(_selected_equipment_index))
 	salvage_button.pressed.connect(func() -> void: salvage_requested.emit(_selected_equipment_index))
+	favorite_button.pressed.connect(_toggle_selected_favorite)
 	unequip_button.pressed.connect(func() -> void: unequip_requested.emit())
 	$EquipmentPanel/Margin/VBox/Close.pressed.connect(close_equipment_panel)
 	workbench_previous_button.pressed.connect(func() -> void: _select_relative_recipe(-1))
@@ -98,8 +112,10 @@ func _ready() -> void:
 	$SystemPanel/Margin/VBox/Close.pressed.connect(close_system_menu)
 	island_previous_button.pressed.connect(func() -> void: _select_relative_island(-1))
 	island_next_button.pressed.connect(func() -> void: _select_relative_island(1))
-	island_install_button.pressed.connect(func() -> void: island_install_requested.emit(_selected_island_index))
-	island_remove_button.pressed.connect(func() -> void: island_remove_requested.emit())
+	island_slot_previous_button.pressed.connect(func() -> void: _select_relative_island_slot(-1))
+	island_slot_next_button.pressed.connect(func() -> void: _select_relative_island_slot(1))
+	island_install_button.pressed.connect(_request_selected_island_install)
+	island_remove_button.pressed.connect(_request_selected_island_remove)
 	$IslandPanel/Margin/VBox/Close.pressed.connect(close_island_panel)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -154,6 +170,9 @@ func set_stone(amount: int) -> void:
 	_displayed_stone = amount
 	stone_label.text = "STONE   %d" % amount
 
+func set_moonleaf(amount: int) -> void:
+	moonleaf_label.text = "MOONLEAF  %d" % amount
+
 func get_displayed_stone() -> int:
 	return _displayed_stone
 
@@ -170,12 +189,15 @@ func get_displayed_attack_speed() -> float:
 func set_loot(item: Dictionary) -> void:
 	loot_label.text = "FOUND  %s  |  DMG %d  |  SPEED %.2fx" % [item.get("name", "None"), item.get("damage", item.get("power", 0)), item.get("attack_speed", 1.0)]
 
-func refresh_equipment(items: Array[Dictionary], equipped_item: Dictionary, scrap: int, attack_damage: int, attack_speed: float = 1.0) -> void:
+func refresh_equipment(items: Array[Dictionary], equipped_item: Dictionary, scrap: int, attack_damage: int, attack_speed: float = 1.0, equipped_slots: Dictionary = {}) -> void:
 	_items.clear()
 	for item: Dictionary in items:
 		_items.append(item.duplicate(true))
 	_equipped_item = equipped_item.duplicate(true)
 	_equipped_id = String(equipped_item.get("id", ""))
+	_equipped_slots = equipped_slots.duplicate(true)
+	if _equipped_slots.is_empty() and not _equipped_id.is_empty():
+		_equipped_slots["weapon"] = _equipped_id
 	_displayed_scrap = scrap
 	_displayed_attack_damage = attack_damage
 	_displayed_attack_speed = attack_speed
@@ -195,6 +217,7 @@ func refresh_equipment(items: Array[Dictionary], equipped_item: Dictionary, scra
 func _render_selected_equipment() -> void:
 	if _items.is_empty():
 		item_name_label.text = "NO EQUIPMENT IN PACK"
+		item_name_label.modulate = Color.WHITE
 		comparison_label.text = "Defeat enemies to find equipment."
 		affix_label.text = ""
 		equipment_count_label.text = "0 / 0"
@@ -202,21 +225,64 @@ func _render_selected_equipment() -> void:
 		equipment_next_button.disabled = true
 		equip_button.disabled = true
 		salvage_button.disabled = true
+		favorite_button.disabled = true
 	else:
 		var item := _items[_selected_equipment_index]
-		var equipped_power := int(_equipped_item.get("power", 0))
-		var delta := int(item.get("power", 0)) - equipped_power
-		item_name_label.text = "%s  •  %s  •  POWER %d" % [item.get("name", "Unknown"), String(item.get("rarity", "common")).to_upper(), item.get("power", 0)]
-		comparison_label.text = "POWER CHANGE  %+d    |    SALVAGE VALUE  %d" % [delta, _salvage_value(String(item.get("rarity", "common")))]
-		var affix_name := String(item.get("legendary_affix_name", ""))
-		var affix_description := String(item.get("legendary_affix_description", ""))
-		affix_label.text = "%s — %s" % [affix_name.to_upper(), affix_description] if not affix_name.is_empty() else ""
+		var rarity := String(item.get("rarity", "common"))
+		var canonical_rarity := "magic" if rarity == "uncommon" else rarity
+		var slot := String(item.get("slot", "weapon"))
+		var current := _item_by_id(String(_equipped_slots.get(slot, "")))
+		var damage_delta := int(item.get("damage", item.get("power", 0))) - int(current.get("damage", current.get("power", 0)))
+		var speed_delta := float(item.get("attack_speed", 1.0)) - float(current.get("attack_speed", 1.0))
+		item_name_label.text = "%s\nLEVEL %d  •  %s  •  %s%s" % [item.get("name", "Unknown"), item.get("item_level", 1), slot.to_upper(), rarity.to_upper(), "  •  FAVORITE" if bool(item.get("favorite", false)) else ""]
+		item_name_label.modulate = Color(String(item.get("rarity_color", RarityRules.color(canonical_rarity))))
+		comparison_label.text = "DMG %+d    SPEED %+.2fx    |    SALVAGE VALUE  %d" % [damage_delta, speed_delta, EquipmentInventory.salvage_value(item)]
+		var tooltip_lines: Array[String] = []
+		if slot == "weapon":
+			tooltip_lines.append("BASE  %d damage  •  %.2fx attacks" % [item.get("damage", item.get("power", 0)), item.get("attack_speed", 1.0)])
+		var base_stats := item.get("base_stats", {}) as Dictionary
+		for stat_id: String in base_stats:
+			tooltip_lines.append("BASE  %s" % _format_modifier(stat_id, "add", float(base_stats[stat_id])))
+		for affix_value: Variant in item.get("affixes", []):
+			if affix_value is Dictionary:
+				var affix := affix_value as Dictionary
+				tooltip_lines.append("%s  [%s]  %s" % [String(affix.get("name", affix.get("id", "AFFIX"))).to_upper(), String(affix.get("category", "")).to_upper(), _format_modifier(String(affix.get("stat", "")), String(affix.get("operation", "add")), float(affix.get("value", 0.0)))])
+		var effect_ids: Array = item.get("legendary_effects", []) as Array
+		if effect_ids.is_empty() and not String(item.get("legendary_affix_id", "")).is_empty():
+			effect_ids = [String(item.legendary_affix_id)]
+		for effect_value: Variant in effect_ids:
+			var effect := LegendaryBehaviorRegistry.definition(String(effect_value))
+			var effect_name := String(effect.get("name", item.get("legendary_affix_name", effect_value)))
+			var effect_description := String(effect.get("description", item.get("legendary_affix_description", "Behavior-changing effect.")))
+			tooltip_lines.append("LEGENDARY — %s: %s" % [effect_name.to_upper(), effect_description])
+		affix_label.text = "\n".join(tooltip_lines)
 		equipment_count_label.text = "%d / %d" % [_selected_equipment_index + 1, _items.size()]
 		equipment_previous_button.disabled = _items.size() <= 1
 		equipment_next_button.disabled = _items.size() <= 1
-		equip_button.disabled = String(item.get("id", "")) == _equipped_id
-		salvage_button.disabled = String(item.get("id", "")) == _equipped_id
-	unequip_button.disabled = _equipped_id.is_empty()
+		var selected_equipped := String(item.get("id", "")) == String(_equipped_slots.get(slot, ""))
+		equip_button.disabled = selected_equipped
+		salvage_button.disabled = selected_equipped or bool(item.get("favorite", false))
+		favorite_button.disabled = false
+		favorite_button.text = "UNFAVORITE" if bool(item.get("favorite", false)) else "KEEP"
+	unequip_button.disabled = _equipped_slots.is_empty()
+
+func _item_by_id(item_id: String) -> Dictionary:
+	for item: Dictionary in _items:
+		if String(item.get("id", "")) == item_id:
+			return item
+	return {}
+
+func _format_modifier(stat_id: String, operation: String, value: float) -> String:
+	var label := stat_id.replace("_", " ").capitalize()
+	if stat_id in ["damage_multiplier", "attack_speed", "critical_chance", "critical_damage", "gathering_power", "production_speed"]:
+		return "%+.1f%% %s%s" % [value * 100.0, label, " (multiplicative)" if operation == "multiply" else ""]
+	return "%+.1f %s%s" % [value, label, " (multiplicative)" if operation == "multiply" else ""]
+
+func _toggle_selected_favorite() -> void:
+	if _items.is_empty():
+		return
+	var favorite := not bool(_items[_selected_equipment_index].get("favorite", false))
+	favorite_requested.emit(_selected_equipment_index, favorite)
 
 func select_equipment(index: int) -> bool:
 	if index < 0 or index >= _items.size():
@@ -242,6 +308,8 @@ func _recover_equipment_focus() -> void:
 		equip_button.grab_focus()
 	elif not salvage_button.disabled:
 		salvage_button.grab_focus()
+	elif not favorite_button.disabled:
+		favorite_button.grab_focus()
 	elif not unequip_button.disabled:
 		unequip_button.grab_focus()
 	else:
@@ -289,12 +357,14 @@ func get_displayed_attack_damage() -> int:
 func get_displayed_scrap() -> int:
 	return _displayed_scrap
 
-func refresh_workbench(wood: int, stone: int, scrap: int, heart_crafted: bool, whetstone_crafted: bool, tidecatcher_built: bool, feedback: String = "") -> void:
+func refresh_workbench(wood: int, stone: int, moonleaf: int, scrap: int, heart_crafted: bool, whetstone_crafted: bool, herbal_compass_crafted: bool, tidecatcher_built: bool, feedback: String = "") -> void:
 	_workbench_wood = wood
 	_workbench_stone = stone
+	_workbench_moonleaf = moonleaf
 	_workbench_scrap = scrap
 	_heart_crafted = heart_crafted
 	_whetstone_crafted = whetstone_crafted
+	_herbal_compass_crafted = herbal_compass_crafted
 	_render_selected_recipe(feedback)
 	if tidecatcher_built:
 		tidecatcher_build_button.text = "TIDECATCHER BUILT"
@@ -308,8 +378,15 @@ func refresh_workbench(wood: int, stone: int, scrap: int, heart_crafted: bool, w
 	_recover_workbench_focus()
 
 func _render_selected_recipe(feedback: String = "") -> void:
-	workbench_count_label.text = "%d / 2" % (_selected_recipe_index + 1)
-	if get_selected_recipe_id() == CraftingService.WHETSTONE_RECIPE_ID:
+	workbench_count_label.text = "%d / 3" % (_selected_recipe_index + 1)
+	if get_selected_recipe_id() == CraftingService.HERBAL_COMPASS_RECIPE_ID:
+		workbench_recipe_label.text = "HERBAL COMPASS"
+		workbench_effect_label.text = "Permanently gain +40 pickup radius"
+		recipe_cost_label.text = "COST  %d / 3 MOONLEAF" % _workbench_moonleaf
+		craft_button.text = "CRAFT HERBAL COMPASS"
+		craft_button.disabled = _herbal_compass_crafted or _workbench_moonleaf < CraftingService.HERBAL_COMPASS_MOONLEAF_COST
+		recipe_status_label.text = feedback if not feedback.is_empty() else ("ALREADY CRAFTED" if _herbal_compass_crafted else ("READY TO CRAFT" if not craft_button.disabled else "NEED FOREST MOONLEAF"))
+	elif get_selected_recipe_id() == CraftingService.WHETSTONE_RECIPE_ID:
 		workbench_recipe_label.text = "RUNED WHETSTONE"
 		workbench_effect_label.text = "Permanently gain +1 base attack damage"
 		recipe_cost_label.text = "COST  %d / 2 STONE" % _workbench_stone
@@ -325,12 +402,16 @@ func _render_selected_recipe(feedback: String = "") -> void:
 		recipe_status_label.text = feedback if not feedback.is_empty() else ("ALREADY CRAFTED" if _heart_crafted else ("READY TO CRAFT" if not craft_button.disabled else "NEED MORE RESOURCES"))
 
 func _select_relative_recipe(offset: int) -> void:
-	_selected_recipe_index = posmod(_selected_recipe_index + offset, 2)
+	_selected_recipe_index = posmod(_selected_recipe_index + offset, 3)
 	_render_selected_recipe()
 	_recover_workbench_focus()
 
 func get_selected_recipe_id() -> String:
-	return CraftingService.WHETSTONE_RECIPE_ID if _selected_recipe_index == 1 else CraftingService.RECIPE_ID
+	if _selected_recipe_index == 1:
+		return CraftingService.WHETSTONE_RECIPE_ID
+	if _selected_recipe_index == 2:
+		return CraftingService.HERBAL_COMPASS_RECIPE_ID
+	return CraftingService.RECIPE_ID
 
 func get_recipe_cost_text() -> String:
 	return recipe_cost_label.text
@@ -409,11 +490,12 @@ func set_system_feedback(message: String) -> void:
 func get_system_feedback() -> String:
 	return system_feedback_label.text
 
-func refresh_islands(shards: Array[Dictionary], installed: Dictionary) -> void:
+func refresh_islands(shards: Array[Dictionary], archipelago_data: Dictionary) -> void:
 	_island_shards.clear()
 	for shard: Dictionary in shards:
 		_island_shards.append(shard.duplicate(true))
-	_installed_island = installed.duplicate(true)
+	_archipelago_data = archipelago_data.duplicate(true)
+	_pending_island_action = ""
 	if _island_shards.is_empty():
 		_selected_island_index = 0
 	else:
@@ -424,8 +506,12 @@ func _render_selected_island() -> void:
 	if _island_shards.is_empty():
 		island_name_label.text = "NO ISLAND SHARDS"
 		$IslandPanel/Margin/VBox/Biome.text = "Defeat enemies to discover world loot."
+		$IslandPanel/Margin/VBox/Resources.text = "RESOURCES  —"
+		$IslandPanel/Margin/VBox/Enemies.text = "ENEMIES  —"
 		$IslandPanel/Margin/VBox/Positive.text = ""
 		$IslandPanel/Margin/VBox/Negative.text = ""
+		$IslandPanel/Margin/VBox/Encounter.text = "ENCOUNTER  —"
+		$IslandPanel/Margin/VBox/Rewards.text = "EXPECTED REWARDS  —"
 		island_count_label.text = "0 / 0"
 		island_previous_button.disabled = true
 		island_next_button.disabled = true
@@ -433,16 +519,35 @@ func _render_selected_island() -> void:
 	else:
 		var shard := _island_shards[_selected_island_index]
 		island_name_label.text = String(shard.get("name", "Unknown Shard")).to_upper()
-		$IslandPanel/Margin/VBox/Biome.text = "BIOME  %s    •    SEED %d" % [String(shard.get("biome", "unknown")).to_upper(), int(shard.get("seed", 0))]
-		$IslandPanel/Margin/VBox/Positive.text = "REWARD  %s" % String(shard.get("reward_description", "Tree nodes yield +%d wood" % int(shard.get("tree_yield_bonus", 0))))
-		$IslandPanel/Margin/VBox/Negative.text = "RISK  %s" % String(shard.get("risk_description", "Enemies move %d%% faster" % int(round((float(shard.get("enemy_speed_multiplier", 1.0)) - 1.0) * 100.0))))
+		$IslandPanel/Margin/VBox/Biome.text = "BIOME  %s    •    LEVEL %d    •    %s    •    %s" % [String(shard.get("biome", "unknown")).to_upper(), int(shard.get("level", 1)), String(shard.get("size", "small")).to_upper(), String(shard.get("rarity", "common")).to_upper()]
+		$IslandPanel/Margin/VBox/Resources.text = "RESOURCES  %s" % _join_preview(shard.get("resources", []))
+		$IslandPanel/Margin/VBox/Enemies.text = "ENEMIES  %s" % _join_preview(shard.get("enemies", []))
+		$IslandPanel/Margin/VBox/Positive.text = "POSITIVE  %s" % _modifier_names(shard.get("positive_modifiers", []))
+		$IslandPanel/Margin/VBox/Negative.text = "RISKS  %s" % _modifier_names(shard.get("negative_modifiers", []))
+		$IslandPanel/Margin/VBox/Encounter.text = "ENCOUNTER  %s" % String(shard.get("encounter", "None"))
+		$IslandPanel/Margin/VBox/Rewards.text = "EXPECTED REWARDS  %s" % _join_preview(shard.get("expected_rewards", []))
 		island_count_label.text = "%d / %d" % [_selected_island_index + 1, _island_shards.size()]
 		island_previous_button.disabled = _island_shards.size() <= 1
 		island_next_button.disabled = _island_shards.size() <= 1
-		island_install_button.text = "REPLACE INSTALLED SHARD" if not _installed_island.is_empty() else "INSTALL EASTERN ISLAND"
 		island_install_button.disabled = false
-	island_remove_button.disabled = _installed_island.is_empty()
-	island_status_label.text = "INSTALLED  %s" % String(_installed_island.get("name", "None"))
+	_render_selected_island_slot()
+
+func _render_selected_island_slot() -> void:
+	var slot_id := get_selected_island_slot_id()
+	island_slot_label.text = "SLOT  %s" % slot_id.replace("_", " ").to_upper()
+	var slot_data := ((_archipelago_data.get("slots", {}) as Dictionary).get(slot_id, {}) as Dictionary)
+	var installed := slot_data.get("installed_island", {}) as Dictionary
+	island_remove_button.disabled = installed.is_empty()
+	island_install_button.text = "REPLACE ISLAND" if not installed.is_empty() else "INSTALL IN FREE SLOT"
+	island_status_label.text = "SLOT STATUS  %s" % ("FREE" if installed.is_empty() else String(installed.definition.name).to_upper())
+	island_synergy_label.text = "ADJACENCY  None"
+	if not _island_shards.is_empty():
+		var model := ArchipelagoModel.from_dictionary(_archipelago_data)
+		if model != null:
+			var previews := model.preview_synergies(_island_shards[_selected_island_index], slot_id)
+			if not previews.is_empty():
+				var synergy := previews[0] as Dictionary
+				island_synergy_label.text = "ADJACENCY  %s — + %s  /  PRICE: %s" % [String(synergy.name).to_upper(), String(synergy.benefit), String(synergy.price)]
 
 func select_island(index: int) -> bool:
 	if index < 0 or index >= _island_shards.size():
@@ -455,6 +560,62 @@ func _select_relative_island(offset: int) -> void:
 	if _island_shards.is_empty():
 		return
 	select_island(posmod(_selected_island_index + offset, _island_shards.size()))
+
+func _select_relative_island_slot(offset: int) -> void:
+	_selected_island_slot_index = posmod(_selected_island_slot_index + offset, ISLAND_SLOT_IDS.size())
+	_pending_island_action = ""
+	_render_selected_island_slot()
+
+func get_selected_island_slot_id() -> String:
+	return ISLAND_SLOT_IDS[_selected_island_slot_index]
+
+func select_island_slot(slot_id: String) -> bool:
+	var index := ISLAND_SLOT_IDS.find(slot_id)
+	if index < 0:
+		return false
+	_selected_island_slot_index = index
+	_pending_island_action = ""
+	_render_selected_island_slot()
+	return true
+
+func get_island_preview_text() -> String:
+	return "\n".join([$IslandPanel/Margin/VBox/Biome.text, $IslandPanel/Margin/VBox/Resources.text, $IslandPanel/Margin/VBox/Enemies.text, $IslandPanel/Margin/VBox/Positive.text, $IslandPanel/Margin/VBox/Negative.text, $IslandPanel/Margin/VBox/Encounter.text, $IslandPanel/Margin/VBox/Rewards.text, island_synergy_label.text])
+
+func _request_selected_island_install() -> void:
+	var slot_id := get_selected_island_slot_id()
+	var installed := (((_archipelago_data.get("slots", {}) as Dictionary).get(slot_id, {}) as Dictionary).get("installed_island", {}) as Dictionary)
+	var action_key := "replace:%d:%s" % [_selected_island_index, slot_id]
+	if not installed.is_empty() and _pending_island_action != action_key:
+		_pending_island_action = action_key
+		island_status_label.text = "WARNING — REPLACING CLEARS ACTIVE ISLAND ENTITIES. PRESS REPLACE AGAIN."
+		return
+	_pending_island_action = ""
+	island_install_requested.emit(_selected_island_index, slot_id)
+
+func _request_selected_island_remove() -> void:
+	var slot_id := get_selected_island_slot_id()
+	var action_key := "remove:%s" % slot_id
+	if _pending_island_action != action_key:
+		_pending_island_action = action_key
+		island_status_label.text = "WARNING — REMOVAL CLEARS ACTIVE ISLAND ENTITIES. PRESS REMOVE AGAIN."
+		return
+	_pending_island_action = ""
+	island_remove_requested.emit(slot_id)
+
+func _join_preview(values: Variant) -> String:
+	var result: Array[String] = []
+	if values is Array:
+		for value: Variant in values:
+			result.append(String(value).replace("_", " ").capitalize())
+	return ", ".join(result) if not result.is_empty() else "None"
+
+func _modifier_names(values: Variant) -> String:
+	var names: Array[String] = []
+	if values is Array:
+		for value: Variant in values:
+			var definition := IslandModifierRegistry.definition(String(value))
+			names.append("%s: %s" % [String(definition.get("name", String(value).capitalize())), String(definition.get("description", ""))])
+	return " | ".join(names) if not names.is_empty() else "None"
 
 func get_selected_island_index() -> int:
 	return _selected_island_index

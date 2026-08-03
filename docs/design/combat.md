@@ -10,4 +10,8 @@ Defeating all three arena enemies awakens the Abyssal Warden at `(0, 230)`. Phas
 
 Equipping Riftwake Core grants Riftwake Pulse. Every player attack releases a 115-pixel ring for 2 damage after the directional strike. The primary target is excluded; nearby ordinary, elite, boss, and rift enemies can each receive one secondary hit. Pure targeting orders candidates by distance and stable ID before world damage is applied.
 
+M2 weapons share one attack-resolution path and differ through data-defined profiles. The sword performs a short 82-pixel slash against one close target. The bow fires a narrow 280-pixel piercing line. The wand resolves a 175-pixel arcane burst that splashes half damage to nearby secondary targets. Controller aim and attack bindings are shared; weapon code does not duplicate target or damage rules.
+
+Chain Mining, Burning Smelter, and Living Arrows are modular legendary components. Chain Mining is bounded to four deterministic secondary targets and cannot recurse. Burning Smelter consumes one burning-death event and either smelts nearby ore or stores a fallback charge. Living Arrows uses its own seeded stream, caps temporary plants at three, and expires them after six seconds.
+
 Island risk applies from immutable combat baselines. Verdant Crucible multiplies movement by 1.25, Emberglass Reach adds 2 to player attack damage, and Tempest Loom adds 1 damage to every enemy projectile. Replacing or removing a shard clears the prior modifier before applying the new one.

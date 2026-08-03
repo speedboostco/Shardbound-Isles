@@ -24,10 +24,10 @@ func _ready() -> void:
 	add_to_group("attackable")
 	queue_redraw()
 
-func receive_attack(_damage: int) -> void:
+func receive_attack(damage: int) -> void:
 	if remaining_hits <= 0:
 		return
-	remaining_hits -= 1
+	remaining_hits -= maxi(1, damage)
 	queue_redraw()
 	if remaining_hits <= 0:
 		depleted.emit(global_position, resource_id, _drop_amount())
@@ -62,7 +62,9 @@ func _ensure_collision_shape() -> void:
 	add_child(collision)
 
 func _draw() -> void:
-	if String(definition.get("visual_kind")) == "stone":
+	if String(definition.get("visual_kind")) == "herb":
+		_draw_herb()
+	elif String(definition.get("visual_kind")) == "stone":
 		_draw_stone()
 	else:
 		_draw_tree()
@@ -86,3 +88,10 @@ func _draw_stone() -> void:
 	if damage_stage() >= 2:
 		draw_polyline(PackedVector2Array([Vector2(4, 2), Vector2(22, -9), Vector2(34, -1)]), Color("d5e5ef"), 3.0)
 		draw_polyline(PackedVector2Array([Vector2(-8, -8), Vector2(-25, 1), Vector2(-31, 16)]), Color("d5e5ef"), 3.0)
+
+func _draw_herb() -> void:
+	for angle: float in [-1.0, -0.5, 0.0, 0.5, 1.0]:
+		var tip := Vector2(sin(angle) * 22.0, -18.0 - cos(angle) * 9.0)
+		draw_line(Vector2(0, 15), tip, Color("65d99a"), 5.0)
+		draw_circle(tip, 7.0, Color("c87cff"))
+	draw_arc(Vector2.ZERO, 27.0, 0.0, TAU, 24, Color("6a3b82"), 3.0)

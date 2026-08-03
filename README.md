@@ -1,7 +1,7 @@
 
 # Shardbound Isles
 
-An offline, controller-first 2D action RPG where the world itself is loot. This repository currently contains the bootstrap and first playable gather–fight–loot milestone.
+An offline, controller-first 2D action RPG where the world itself is loot. The current playable milestone includes deterministic equipment plus previewable island shards, three physical archipelago slots, compositional island modifiers, saved runtime island progress, and adjacency tradeoffs.
 
 ## Requirements
 
@@ -21,6 +21,6 @@ make run
 
 On Windows without Make, use `powershell -NoProfile -ExecutionPolicy Bypass -File tools/dev.ps1 help` and replace `help` with any listed command.
 
-Move with WASD, arrow keys, left stick, or D-pad. Attack with Space, Enter, or the controller west face button (X / Square); interact with the nearest prompted target using E or the south face button (A / Cross). Break the tree and stone, collect their resources automatically, defeat the green Slime, equip its deterministic Tideglass Bow, and use the increased damage and attack speed against the second Slime.
+Move with WASD, arrow keys, left stick, or D-pad. Attack with Space, Enter, or the controller west face button (X / Square); interact with E or the south face button. Open island shards with J/right shoulder, inspect risk and rewards, choose a slot, and install. Forest + Swamp previews Rare Spores; Forest Moonleaf crafts the Herbal Compass at the workbench.
 
 Read [AGENTS.md](AGENTS.md), then the active plan under `docs/exec-plans/active/`, before changing code.

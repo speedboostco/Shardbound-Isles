@@ -6,6 +6,14 @@ signal equipment_panel_closed
 signal equip_requested(index: int)
 signal salvage_requested(index: int)
 signal unequip_requested
+signal workbench_panel_requested
+signal workbench_panel_closed
+signal craft_requested
+signal tidecatcher_build_requested
+signal system_menu_requested
+signal system_menu_closed
+signal save_requested
+signal load_requested
 
 @onready var health_label: Label = $Margin/VBox/Health
 @onready var wood_label: Label = $Margin/VBox/Wood
@@ -19,6 +27,15 @@ signal unequip_requested
 @onready var equip_button: Button = $EquipmentPanel/Margin/VBox/Actions/Equip
 @onready var salvage_button: Button = $EquipmentPanel/Margin/VBox/Actions/Salvage
 @onready var unequip_button: Button = $EquipmentPanel/Margin/VBox/Actions/Unequip
+@onready var workbench_panel: PanelContainer = $WorkbenchPanel
+@onready var recipe_cost_label: Label = $WorkbenchPanel/Margin/VBox/Cost
+@onready var recipe_status_label: Label = $WorkbenchPanel/Margin/VBox/Status
+@onready var craft_button: Button = $WorkbenchPanel/Margin/VBox/Craft
+@onready var tidecatcher_build_button: Button = $WorkbenchPanel/Margin/VBox/BuildTidecatcher
+@onready var automation_label: Label = $AutomationStatus
+@onready var system_panel: PanelContainer = $SystemPanel
+@onready var system_feedback_label: Label = $SystemPanel/Margin/VBox/Feedback
+@onready var save_button: Button = $SystemPanel/Margin/VBox/Save
 
 var _items: Array[Dictionary] = []
 var _equipped_id: String = ""
@@ -30,16 +47,40 @@ func _ready() -> void:
 	salvage_button.pressed.connect(func() -> void: salvage_requested.emit(0))
 	unequip_button.pressed.connect(func() -> void: unequip_requested.emit())
 	$EquipmentPanel/Margin/VBox/Close.pressed.connect(close_equipment_panel)
+	craft_button.pressed.connect(func() -> void: craft_requested.emit())
+	tidecatcher_build_button.pressed.connect(func() -> void: tidecatcher_build_requested.emit())
+	$WorkbenchPanel/Margin/VBox/Close.pressed.connect(close_workbench_panel)
+	save_button.pressed.connect(func() -> void: save_requested.emit())
+	$SystemPanel/Margin/VBox/Load.pressed.connect(func() -> void: load_requested.emit())
+	$SystemPanel/Margin/VBox/Close.pressed.connect(close_system_menu)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("equipment"):
+	if event.is_action_pressed("pause"):
+		if system_panel.visible:
+			close_system_menu()
+		else:
+			system_menu_requested.emit()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("equipment"):
 		if equipment_panel.visible:
 			close_equipment_panel()
 		else:
 			equipment_panel_requested.emit()
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("craft"):
+		if workbench_panel.visible:
+			close_workbench_panel()
+		elif not equipment_panel.visible:
+			workbench_panel_requested.emit()
+		get_viewport().set_input_as_handled()
 	elif equipment_panel.visible and event.is_action_pressed("ui_cancel"):
 		close_equipment_panel()
+		get_viewport().set_input_as_handled()
+	elif workbench_panel.visible and event.is_action_pressed("ui_cancel"):
+		close_workbench_panel()
+		get_viewport().set_input_as_handled()
+	elif system_panel.visible and event.is_action_pressed("ui_cancel"):
+		close_system_menu()
 		get_viewport().set_input_as_handled()
 
 func set_health(current: int, maximum: int) -> void:
@@ -102,6 +143,84 @@ func get_displayed_attack_damage() -> int:
 func get_displayed_scrap() -> int:
 	return _displayed_scrap
 
+func refresh_workbench(wood: int, scrap: int, already_crafted: bool, tidecatcher_built: bool, feedback: String = "") -> void:
+	recipe_cost_label.text = "COST  %d / 3 WOOD    •    %d / 2 SCRAP" % [wood, scrap]
+	if already_crafted:
+		recipe_status_label.text = feedback if not feedback.is_empty() else "ALREADY CRAFTED"
+		craft_button.disabled = true
+	else:
+		var affordable := wood >= 3 and scrap >= 2
+		recipe_status_label.text = feedback if not feedback.is_empty() else ("READY TO CRAFT" if affordable else "NEED MORE RESOURCES")
+		craft_button.disabled = not affordable
+	if tidecatcher_built:
+		tidecatcher_build_button.text = "TIDECATCHER BUILT"
+		tidecatcher_build_button.disabled = true
+	elif already_crafted:
+		tidecatcher_build_button.text = "BUILD TIDECATCHER — FREE"
+		tidecatcher_build_button.disabled = false
+	else:
+		tidecatcher_build_button.text = "TIDECATCHER — REQUIRES HEART"
+		tidecatcher_build_button.disabled = true
+	if workbench_panel.visible:
+		if not craft_button.disabled:
+			craft_button.grab_focus()
+		elif not tidecatcher_build_button.disabled:
+			tidecatcher_build_button.grab_focus()
+		else:
+			$WorkbenchPanel/Margin/VBox/Close.grab_focus()
+
+func open_workbench_panel() -> void:
+	equipment_panel.visible = false
+	workbench_panel.visible = true
+	if not craft_button.disabled:
+		craft_button.grab_focus()
+	else:
+		$WorkbenchPanel/Margin/VBox/Close.grab_focus()
+
+func close_workbench_panel() -> void:
+	workbench_panel.visible = false
+	workbench_panel_closed.emit()
+
+func is_workbench_panel_open() -> bool:
+	return workbench_panel.visible
+
+func get_crafting_feedback() -> String:
+	return recipe_status_label.text
+
+func set_automation_status(active: bool, stored: int, capacity: int, feedback: String = "") -> void:
+	automation_label.visible = active or not feedback.is_empty()
+	if not feedback.is_empty():
+		automation_label.text = feedback
+	elif active:
+		automation_label.text = "TIDECATCHER  %d / %d WOOD  •  APPROACH TO COLLECT" % [stored, capacity]
+
+func is_tidecatcher_visible() -> bool:
+	return automation_label.visible
+
+func get_automation_feedback() -> String:
+	return automation_label.text
+
+func is_tidecatcher_build_focused() -> bool:
+	return get_viewport().gui_get_focus_owner() == tidecatcher_build_button
+
+func open_system_menu() -> void:
+	equipment_panel.visible = false
+	workbench_panel.visible = false
+	system_panel.visible = true
+	save_button.grab_focus()
+
+func close_system_menu() -> void:
+	system_panel.visible = false
+	system_menu_closed.emit()
+
+func is_system_menu_open() -> bool:
+	return system_panel.visible
+
+func set_system_feedback(message: String) -> void:
+	system_feedback_label.text = message
+
+func get_system_feedback() -> String:
+	return system_feedback_label.text
+
 func _salvage_value(rarity: String) -> int:
 	return 2 if rarity == "uncommon" else 1
-

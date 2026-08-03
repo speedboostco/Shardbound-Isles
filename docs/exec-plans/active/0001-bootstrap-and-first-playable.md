@@ -99,3 +99,115 @@ The plan remains active because export and visual/controller acceptance criteria
 - Reproducible GUI evidence captured at exactly 1280x800 in `evidence/equipment-panel-1280x800.png` using seed `424242`.
 - Visual review found and corrected excessive modal transparency. Final review confirms readable text, visible focus, no clipping/overlap, no missing assets, correct anchors, and modal-over-gameplay layering.
 - Controller behavior is covered through InputMap actions and focus assertions, but no physical controller hardware was available for a manual feel check.
+
+## Milestone 3: first workbench recipe
+
+Goal: convert the complete gather–fight–salvage output into one visible character upgrade through a controller-first workbench.
+
+Assumptions:
+
+- The first recipe costs exactly 3 wood and 2 scrap so it closes the currently playable loop.
+- A Reinforced Heart adding 2 maximum health is a meaningful initial craft without introducing a broader item taxonomy.
+- The recipe is unique per run; repeated crafting must be rejected without consuming resources.
+
+Acceptance criteria:
+
+- A visible workbench can be approached and opened without a pointer.
+- The modal displays recipe effect, costs, affordability, and explicit success/failure feedback.
+- Crafting consumes authoritative world resources only after validation.
+- Reinforced Heart raises maximum and current health from 10 to 12 and cannot be crafted twice.
+- Opening the modal assigns valid controller focus and suspends combat movement; cancel closes it.
+- Unit, integration, and 1280x800 visual evidence cover the new flow.
+
+Tests defined before production changes:
+
+- Unit: exact affordability, insufficient-resource rejection, successful result, and already-crafted rejection.
+- Integration: proximity gate, modal focus, authoritative deductions, health increase, duplicate rejection, feedback, and close behavior.
+- Visual: fixed-state 1280x800 workbench modal showing affordable recipe and focused craft action.
+
+Expected changes: pure crafting rule, workbench scene, world interaction/action wiring, HUD crafting modal, tests, InputMap, docs, and evidence.
+
+Risk and rollback: modal duplication can create conflicting focus or leave gameplay frozen. Only one modal may be visible; close signals restore gameplay through the world composition root.
+
+### Milestone 3 evidence — 2026-08-03
+
+- Crafting unit tests pass: 8 assertions covering exact affordability, both insufficient inputs, successful result, exact deductions/effect, duplicate rejection, and failure reasons.
+- Workbench integration tests pass: 12 assertions covering proximity, modal focus, authoritative deductions, health increase to 12/12, duplicate protection, feedback, and gameplay restoration.
+- Reproducible GUI evidence captured at 1280x800 in `evidence/workbench-panel-1280x800.png` with the affordable recipe and Craft action focused.
+- The first visual capture exposed out-of-world rendering when the camera followed the player north. Camera limits were added and the evidence was recaptured.
+- Final visual review confirms readable text, no clipping/overlap, visible focus, correct opaque layering, visible workbench identity, and no missing assets.
+
+## Milestone 4: Tidecatcher automation
+
+Goal: reward mastery of manual tree gathering with one compact production building that creates wood without replacing exploration or combat.
+
+Assumptions:
+
+- Crafting the Reinforced Heart unlocks one free Tidecatcher construction choice; this avoids requiring a tree respawn solely to pay another cost.
+- The Tidecatcher produces 1 wood every 2 seconds and stores at most 6.
+- Stored wood transfers automatically when the player enters collection range, removing a repeated button chore.
+- Production is run-local until the save milestone exists.
+
+Acceptance criteria:
+
+- The workbench offers controller-focused construction only after the Reinforced Heart is crafted.
+- Construction activates a visible building once and rejects duplicates.
+- Seed-independent production timing is deterministic, chunk-size independent, and capped at 6.
+- Approaching the building transfers all stored wood to authoritative inventory and gives visible feedback.
+- Tests cover timing, cap, collection, unlock, construction, duplicate protection, and world transfer.
+- A 1280x800 artifact proves readable construction or production state.
+
+Tests defined before production changes:
+
+- Unit: sub-interval production, exact interval, chunk-size independence, storage cap, and collection reset.
+- Integration: locked construction rejection, post-heart construction, duplicate rejection, six-second production, automatic nearby collection, HUD feedback, and authoritative wood update.
+- Visual: built Tidecatcher with stored production, readable HUD status, and no layout regression at 1280x800.
+
+Expected changes: deterministic production rule, composed building node, workbench construction action, HUD status/feedback, world wiring, tests, and synchronized automation docs.
+
+Risk and rollback: per-frame production can become nondeterministic or wasteful. Keep timing in a pure accumulator and give only the single active building lightweight processing; later buildings can move to timer/event batching when a measured consumer exists.
+
+### Milestone 4 evidence — 2026-08-03
+
+- Production unit tests pass: 5 assertions covering sub-interval behavior, exact interval output, chunk-size independence, six-wood cap, and collection reset.
+- Tidecatcher integration tests pass: 8 assertions covering unlock, visible construction, duplicate rejection, deterministic production, proximity transfer, authoritative inventory, emptied storage, and feedback.
+- Workbench integration additionally verifies focus moves to Build Tidecatcher immediately after crafting unlocks it.
+- Reproducible built-state evidence captured at 1280x800 in `evidence/tidecatcher-1280x800.png` with 3/6 stored wood.
+- Visual review confirms readable cadence/storage/collection guidance, completed construction state, valid Close focus, no clipping/overlap, bounded camera, and visible building identity.
+
+## Milestone 5: versioned local persistence
+
+Goal: preserve the meaningful run state through a controller-accessible save/load cycle without introducing global state.
+
+Assumptions:
+
+- Schema version 1 covers player health/position, wood, scrap, generated equipment including IDs and seeds, equipped ID, Reinforced Heart, Tidecatcher construction, and stored wood.
+- Tree/enemy transient encounter state is not persisted in this milestone; loading restores progression into a fresh arena encounter.
+- `user://shardbound-save.json` is the single local slot and requires no text entry.
+- Temp-file write plus replace/rollback is the practical atomic strategy available through Godot file APIs.
+
+Acceptance criteria:
+
+- A controller-focused system menu exposes Save, Load, and Close without a pointer.
+- Saved JSON declares schema version 1 and contains only serializable values/stable identifiers.
+- Successful load deterministically restores every scoped field and refreshes gameplay/UI.
+- Malformed JSON, missing required state, and unsupported versions are rejected without mutating the live world.
+- Save replacement uses a temp file and preserves/restores the previous file if replacement fails.
+- Unit and integration tests cover validation, round trip, disk IO, restoration, rejection, and menu focus/feedback.
+
+Tests defined before production changes:
+
+- Unit: schema emission, valid round trip, malformed rejection, unsupported-version rejection, missing-state rejection, and disk round trip.
+- Integration: populate a source world, save, load into a fresh world, verify all scoped fields/building storage/equipment, and verify system-menu focus and visible feedback.
+
+Expected changes: persistence service, world state snapshot/restore, Tidecatcher restoration, system menu, input mapping, tests, save docs, and evidence.
+
+Risk and rollback: partial load mutation could corrupt an active run. Decode and validate the complete payload before applying any field; integration tests load into a fresh composition and assert authoritative state afterward.
+
+### Milestone 5 evidence — 2026-08-03
+
+- Save-service unit tests pass: 8 assertions covering schema emission, semantic round trip, malformed/unsupported/missing-state rejection, and disk round trip.
+- Save/load integration tests pass: 13 assertions covering disk IO, health/position/resources, stable item seed/equipped ID/derived damage, progression, construction, stored wood, menu focus/feedback, and mutation-free malformed rejection.
+- JSON numeric fields are canonicalized after decoding so integer domain values remain typed and deterministic.
+- Reproducible system-menu evidence captured at 1280x800 in `evidence/system-menu-1280x800.png` showing schema version 1, saved 12/12 health, 5 wood, 4/6 stored wood, success feedback, and Save focus.
+- Visual review confirms readable labels, no clipping/overlap, correct modal layering, visible focus, consistent background HUD state, and no missing assets.

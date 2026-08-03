@@ -45,6 +45,11 @@ func take_damage(amount: int) -> void:
 	health_changed.emit(health, maximum_health)
 	queue_redraw()
 
+func add_maximum_health(amount: int) -> void:
+	maximum_health += amount
+	health += amount
+	health_changed.emit(health, maximum_health)
+
 func _draw() -> void:
 	draw_circle(Vector2.ZERO, 18.0, Color("4cc9f0"))
 	draw_line(Vector2.ZERO, facing * 27.0, Color.WHITE, 5.0)

@@ -7,6 +7,12 @@
 | Equipment | I / Tab | North face button |
 | Navigate equipment | Arrows / Enter | D-pad / left stick / face button |
 | Close equipment | Escape | East face button |
-| Pause (planned) | Escape | Start |
+| Use workbench | C | West face button |
+| Craft | Enter | South face button |
+| Construct automation | Enter | South face button |
+| Collect produced wood | Approach building | Approach building |
+| System menu | P | Start |
+| Save/load navigation | Arrows / Enter | D-pad / left stick / face button |
+| Close menu | Escape | East face button |
 
 No normal gameplay action may require pointer input or text entry. UI focus must remain navigable by controller.

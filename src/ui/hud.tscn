@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource path="res://src/ui/hud.gd" type="Script" id="1"]
 
@@ -9,6 +9,30 @@ border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
 border_color = Color(0.28, 0.7, 0.72, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="WorkbenchPanelStyle"]
+bg_color = Color(0.04, 0.065, 0.055, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.89, 0.62, 0.28, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="SystemPanelStyle"]
+bg_color = Color(0.035, 0.055, 0.08, 0.99)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.42, 0.67, 0.95, 1)
 corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
@@ -61,7 +85,7 @@ offset_right = 1254.0
 offset_bottom = 88.0
 theme_override_colors/font_color = Color(1, 0.87, 0.42, 1)
 theme_override_font_sizes/font_size = 19
-text = "BREAK THE TREE • DEFEAT THE WISP\nMOVE: LEFT STICK / WASD   ATTACK: A / SPACE\nEQUIPMENT: Y / I"
+text = "BREAK THE TREE • DEFEAT THE WISP\nMOVE: LEFT STICK / WASD   ATTACK: A / SPACE\nEQUIPMENT: Y / I    WORKBENCH: X / C"
 horizontal_alignment = 2
 
 [node name="EquipmentPanel" type="PanelContainer" parent="."]
@@ -127,4 +151,126 @@ text = "UNEQUIP"
 
 [node name="Close" type="Button" parent="EquipmentPanel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 48)
+text = "CLOSE  (B / ESC)"
+
+[node name="WorkbenchPanel" type="PanelContainer" parent="."]
+visible = false
+offset_left = 340.0
+offset_top = 155.0
+offset_right = 940.0
+offset_bottom = 655.0
+theme_override_styles/panel = SubResource("WorkbenchPanelStyle")
+
+[node name="Margin" type="MarginContainer" parent="WorkbenchPanel"]
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 26
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 26
+
+[node name="VBox" type="VBoxContainer" parent="WorkbenchPanel/Margin"]
+theme_override_constants/separation = 17
+
+[node name="Title" type="Label" parent="WorkbenchPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(1, 0.72, 0.34, 1)
+theme_override_font_sizes/font_size = 28
+text = "ISLAND WORKBENCH"
+horizontal_alignment = 1
+
+[node name="Recipe" type="Label" parent="WorkbenchPanel/Margin/VBox"]
+theme_override_font_sizes/font_size = 24
+text = "REINFORCED HEART"
+horizontal_alignment = 1
+
+[node name="Effect" type="Label" parent="WorkbenchPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(0.5, 0.9, 0.75, 1)
+theme_override_font_sizes/font_size = 19
+text = "Permanently gain +2 maximum health"
+horizontal_alignment = 1
+
+[node name="Cost" type="Label" parent="WorkbenchPanel/Margin/VBox"]
+theme_override_font_sizes/font_size = 18
+text = "COST  0 / 3 WOOD    •    0 / 2 SCRAP"
+horizontal_alignment = 1
+
+[node name="Status" type="Label" parent="WorkbenchPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(1, 0.86, 0.4, 1)
+theme_override_font_sizes/font_size = 18
+text = "NEED MORE RESOURCES"
+horizontal_alignment = 1
+
+[node name="Craft" type="Button" parent="WorkbenchPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 55)
+disabled = true
+text = "CRAFT"
+
+[node name="AutomationTitle" type="Label" parent="WorkbenchPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(0.55, 0.9, 0.82, 1)
+theme_override_font_sizes/font_size = 18
+text = "AUTOMATION — produces wood every 2 seconds"
+horizontal_alignment = 1
+
+[node name="BuildTidecatcher" type="Button" parent="WorkbenchPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 52)
+disabled = true
+text = "TIDECATCHER — REQUIRES HEART"
+
+[node name="Close" type="Button" parent="WorkbenchPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 48)
+text = "CLOSE  (B / ESC)"
+
+[node name="AutomationStatus" type="Label" parent="."]
+visible = false
+offset_left = 330.0
+offset_top = 730.0
+offset_right = 950.0
+offset_bottom = 778.0
+theme_override_colors/font_color = Color(0.55, 0.95, 0.83, 1)
+theme_override_font_sizes/font_size = 19
+text = "TIDECATCHER  0 / 6 WOOD  •  APPROACH TO COLLECT"
+horizontal_alignment = 1
+
+[node name="SystemPanel" type="PanelContainer" parent="."]
+visible = false
+offset_left = 430.0
+offset_top = 220.0
+offset_right = 850.0
+offset_bottom = 590.0
+theme_override_styles/panel = SubResource("SystemPanelStyle")
+
+[node name="Margin" type="MarginContainer" parent="SystemPanel"]
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 28
+
+[node name="VBox" type="VBoxContainer" parent="SystemPanel/Margin"]
+theme_override_constants/separation = 18
+
+[node name="Title" type="Label" parent="SystemPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(0.55, 0.8, 1, 1)
+theme_override_font_sizes/font_size = 28
+text = "SYSTEM"
+horizontal_alignment = 1
+
+[node name="Slot" type="Label" parent="SystemPanel/Margin/VBox"]
+theme_override_font_sizes/font_size = 17
+text = "LOCAL SLOT • SCHEMA VERSION 1"
+horizontal_alignment = 1
+
+[node name="Feedback" type="Label" parent="SystemPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(1, 0.86, 0.4, 1)
+theme_override_font_sizes/font_size = 18
+text = "READY"
+horizontal_alignment = 1
+
+[node name="Save" type="Button" parent="SystemPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 55)
+text = "SAVE GAME"
+
+[node name="Load" type="Button" parent="SystemPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 55)
+text = "LOAD GAME"
+
+[node name="Close" type="Button" parent="SystemPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 50)
 text = "CLOSE  (B / ESC)"

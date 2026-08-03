@@ -4,4 +4,4 @@ The target slice covers movement, gathering, combat, procedural equipment, craft
 
 ## Current milestone
 
-One arena proves movement, camera, a tree, automatic wood pickup, one chasing enemy, one attack, deterministic equipment loot, controller-first comparison/equip/salvage decisions, a minimal HUD, and an automated fixed-seed smoke scenario. Multiple item selection, full content breadth, crafting, islands, rifts, and saves remain planned.
+One arena proves movement, bounded camera, a tree, automatic wood pickup, one chasing enemy, one attack, deterministic equipment loot, controller-first comparison/equip/salvage decisions, a workbench with one permanent-health recipe, a Tidecatcher automating mastered wood gathering, schema-versioned local persistence, a minimal HUD, and automated fixed-seed scenarios. Multiple item selection, broader production, islands, and rifts remain planned.

@@ -2,16 +2,23 @@ class_name FirstPlayableWorld
 extends Node2D
 
 const EQUIPMENT_SEED: int = 424242
+const DEFAULT_SAVE_PATH: String = "user://shardbound-save.json"
 
 @onready var player: PlayerCharacter = $Player
 @onready var tree: ResourceNode = $Tree
 @onready var enemy: ChaserEnemy = $Enemy
+@onready var workbench: Workbench = $Workbench
+@onready var tidecatcher: Tidecatcher = $Tidecatcher
 @onready var hud: GameHud = $HUD
 
 var wood: int = 0
 var equipment_inventory := EquipmentInventory.new()
 var equipment: Array[Dictionary] = equipment_inventory.items
 var enemies_defeated: int = 0
+var crafting_service := CraftingService.new()
+var reinforced_heart_crafted: bool = false
+var tidecatcher_built: bool = false
+var save_service := SaveService.new()
 
 func _ready() -> void:
 	player.attack_requested.connect(_on_attack_requested)
@@ -26,7 +33,18 @@ func _ready() -> void:
 	hud.equip_requested.connect(equip_selected_item)
 	hud.salvage_requested.connect(salvage_selected_item)
 	hud.unequip_requested.connect(unequip_item)
+	hud.workbench_panel_requested.connect(try_open_workbench)
+	hud.workbench_panel_closed.connect(_on_workbench_panel_closed)
+	hud.craft_requested.connect(craft_reinforced_heart)
+	hud.tidecatcher_build_requested.connect(build_tidecatcher)
+	hud.system_menu_requested.connect(open_system_menu)
+	hud.system_menu_closed.connect(_on_system_menu_closed)
+	hud.save_requested.connect(save_game)
+	hud.load_requested.connect(load_game)
+	tidecatcher.wood_collected.connect(_on_tidecatcher_wood_collected)
+	tidecatcher.storage_changed.connect(_on_tidecatcher_storage_changed)
 	_refresh_equipment_ui()
+	_refresh_workbench_ui()
 
 func _on_attack_requested(origin: Vector2, direction: Vector2) -> void:
 	var best_target: Node2D
@@ -71,6 +89,8 @@ func _on_pickup_collected(kind: String, payload: Variant) -> void:
 		_refresh_equipment_ui()
 
 func open_equipment_panel() -> void:
+	if hud.is_workbench_panel_open():
+		hud.close_workbench_panel()
 	_refresh_equipment_ui()
 	hud.open_equipment_panel()
 	player.input_enabled = false
@@ -81,9 +101,7 @@ func close_equipment_panel() -> void:
 	hud.close_equipment_panel()
 
 func _on_equipment_panel_closed() -> void:
-	player.input_enabled = true
-	if is_instance_valid(enemy):
-		enemy.set_physics_process(true)
+	_restore_gameplay_if_no_modal()
 
 func equip_selected_item(index: int) -> bool:
 	var equipped := equipment_inventory.equip(index)
@@ -104,6 +122,156 @@ func salvage_selected_item(index: int) -> int:
 
 func _refresh_equipment_ui() -> void:
 	hud.refresh_equipment(equipment_inventory.items, equipment_inventory.equipped_item(), equipment_inventory.scrap, equipment_inventory.attack_damage())
+	_refresh_workbench_ui()
+
+func try_open_workbench() -> bool:
+	if not workbench.is_player_in_range(player.global_position):
+		return false
+	if hud.is_equipment_panel_open():
+		hud.close_equipment_panel()
+	_refresh_workbench_ui()
+	hud.open_workbench_panel()
+	player.input_enabled = false
+	if is_instance_valid(enemy):
+		enemy.set_physics_process(false)
+	return true
+
+func close_workbench_panel() -> void:
+	hud.close_workbench_panel()
+
+func _on_workbench_panel_closed() -> void:
+	_restore_gameplay_if_no_modal()
+
+func craft_reinforced_heart() -> bool:
+	var result := crafting_service.craft(wood, equipment_inventory.scrap, reinforced_heart_crafted)
+	if not bool(result.get("success", false)):
+		var reason := String(result.get("reason", ""))
+		_refresh_workbench_ui("ALREADY CRAFTED" if reason == "already_crafted" else "NEED MORE RESOURCES")
+		return false
+	wood -= int(result.get("wood_spent", 0))
+	equipment_inventory.scrap -= int(result.get("scrap_spent", 0))
+	reinforced_heart_crafted = true
+	player.add_maximum_health(int(result.get("maximum_health_bonus", 0)))
+	refresh_all_ui("CRAFTED — MAX HEALTH +2")
+	return true
+
+func build_tidecatcher() -> bool:
+	if not reinforced_heart_crafted or tidecatcher_built:
+		_refresh_workbench_ui("REQUIRES REINFORCED HEART" if not reinforced_heart_crafted else "TIDECATCHER ALREADY BUILT")
+		return false
+	tidecatcher_built = true
+	tidecatcher.activate(player)
+	_refresh_workbench_ui("TIDECATCHER CONSTRUCTED")
+	hud.set_automation_status(true, 0, WoodProduction.STORAGE_CAPACITY, "TIDECATCHER ONLINE — PRODUCING WOOD")
+	return true
+
+func _on_tidecatcher_wood_collected(amount: int) -> void:
+	wood += amount
+	hud.set_wood(wood)
+	hud.set_automation_status(true, 0, WoodProduction.STORAGE_CAPACITY, "TIDECATCHER COLLECTED +%d WOOD" % amount)
+
+func _on_tidecatcher_storage_changed(stored: int, capacity: int) -> void:
+	hud.set_automation_status(true, stored, capacity)
+
+func refresh_all_ui(crafting_feedback: String = "") -> void:
+	hud.set_health(player.health, player.maximum_health)
+	hud.set_wood(wood)
+	_refresh_equipment_ui()
+	_refresh_workbench_ui(crafting_feedback)
+
+func _refresh_workbench_ui(feedback: String = "") -> void:
+	hud.refresh_workbench(wood, equipment_inventory.scrap, reinforced_heart_crafted, tidecatcher_built, feedback)
+
+func _restore_gameplay_if_no_modal() -> void:
+	if hud.is_equipment_panel_open() or hud.is_workbench_panel_open() or hud.is_system_menu_open():
+		return
+	player.input_enabled = true
+	if is_instance_valid(enemy):
+		enemy.set_physics_process(true)
+	if tidecatcher_built:
+		tidecatcher.set_process(true)
+
+func open_system_menu() -> void:
+	hud.open_system_menu()
+	player.input_enabled = false
+	if is_instance_valid(enemy):
+		enemy.set_physics_process(false)
+	if tidecatcher_built:
+		tidecatcher.set_process(false)
+
+func close_system_menu() -> void:
+	hud.close_system_menu()
+
+func _on_system_menu_closed() -> void:
+	_restore_gameplay_if_no_modal()
+
+func save_game(path: String = DEFAULT_SAVE_PATH) -> bool:
+	var result := save_service.save_to_path(path, snapshot_state())
+	var succeeded := bool(result.get("ok", false))
+	hud.set_system_feedback("GAME SAVED" if succeeded else "SAVE FAILED — %s" % String(result.get("error", "unknown")).to_upper())
+	return succeeded
+
+func load_game(path: String = DEFAULT_SAVE_PATH) -> bool:
+	var result := save_service.load_from_path(path)
+	if not bool(result.get("ok", false)):
+		hud.set_system_feedback("LOAD FAILED — %s" % String(result.get("error", "unknown")).to_upper())
+		return false
+	_apply_state(result.get("state") as Dictionary)
+	hud.set_system_feedback("GAME LOADED")
+	return true
+
+func apply_save_payload(payload: String) -> bool:
+	var result := save_service.decode(payload)
+	if not bool(result.get("ok", false)):
+		hud.set_system_feedback("LOAD REJECTED — %s" % String(result.get("error", "unknown")).to_upper())
+		return false
+	_apply_state(result.get("state") as Dictionary)
+	hud.set_system_feedback("GAME LOADED")
+	return true
+
+func snapshot_state() -> Dictionary:
+	var saved_items: Array[Dictionary] = []
+	for item: Dictionary in equipment_inventory.items:
+		saved_items.append(item.duplicate(true))
+	return {
+		"player": {
+			"health": player.health,
+			"maximum_health": player.maximum_health,
+			"position": {"x": player.global_position.x, "y": player.global_position.y},
+		},
+		"wood": wood,
+		"equipment": {
+			"scrap": equipment_inventory.scrap,
+			"equipped_id": equipment_inventory.equipped_id,
+			"items": saved_items,
+		},
+		"reinforced_heart_crafted": reinforced_heart_crafted,
+		"tidecatcher": {"built": tidecatcher_built, "stored_wood": tidecatcher.stored_wood()},
+	}
+
+func _apply_state(state: Dictionary) -> void:
+	var player_state := state.player as Dictionary
+	var position_state := player_state.position as Dictionary
+	var equipment_state := state.equipment as Dictionary
+	var tidecatcher_state := state.tidecatcher as Dictionary
+	player.maximum_health = int(player_state.maximum_health)
+	player.health = clampi(int(player_state.health), 0, player.maximum_health)
+	player.global_position = Vector2(float(position_state.x), float(position_state.y))
+	wood = maxi(0, int(state.wood))
+	equipment_inventory.items.clear()
+	for item_value: Variant in equipment_state.items:
+		equipment_inventory.items.append((item_value as Dictionary).duplicate(true))
+	equipment_inventory.scrap = maxi(0, int(equipment_state.scrap))
+	equipment_inventory.equipped_id = String(equipment_state.equipped_id)
+	if equipment_inventory.equipped_item().is_empty():
+		equipment_inventory.equipped_id = ""
+	player.attack_damage = equipment_inventory.attack_damage()
+	reinforced_heart_crafted = bool(state.reinforced_heart_crafted)
+	tidecatcher_built = bool(tidecatcher_state.built)
+	tidecatcher.restore_state(tidecatcher_built, int(tidecatcher_state.stored_wood), player)
+	player.health_changed.emit(player.health, player.maximum_health)
+	refresh_all_ui()
+	hud.set_automation_status(tidecatcher_built, tidecatcher.stored_wood(), WoodProduction.STORAGE_CAPACITY)
 
 func run_scripted_smoke() -> Dictionary:
 	tree.receive_attack(1)

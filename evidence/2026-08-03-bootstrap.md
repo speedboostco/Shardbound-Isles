@@ -36,3 +36,26 @@ Seed `424242` scripted two tree hits, wood collection, three enemy hits, and equ
 - `tests/visual/capture_equipment_panel.gd` — exit 0; captured `equipment-panel-1280x800.png` at 1280x800 using seed `424242`.
 - Visual inspection verified readable text, visible Equip focus, no clipping or overlap, no missing assets, safe anchors, and opaque modal layering. The first capture exposed excessive transparency; the panel style was corrected and recaptured.
 - Physical controller hardware was not exercised; controller behavior is automated at the InputMap/focus level.
+
+## Workbench milestone evidence
+
+- Crafting unit suite adds 8 passing assertions for validation, output, duplicate protection, and non-consuming failures.
+- Workbench integration adds 12 passing assertions for proximity, focus, exact deductions, health increase, feedback, duplicate rejection, and restored input.
+- `tests/visual/capture_workbench_panel.gd` — exit 0; captured `workbench-panel-1280x800.png` at 1280x800 with exact recipe resources.
+- Initial capture exposed the camera clear color above the arena near the northern workbench. Camera limits were added and the scenario was recaptured.
+- Final image review verifies readable recipe/effect/cost/status text, highlighted Craft focus, no clipping or overlap, opaque modal layering, and a visible workbench behind the modal.
+
+## Tidecatcher milestone evidence
+
+- Production rules add 5 passing assertions for interval timing, chunk-size independence, cap behavior, and collection reset.
+- Tidecatcher scene integration adds 8 passing assertions for unlock/construction, duplicate rejection, six-second output, proximity transfer, authoritative wood, storage reset, and visible feedback.
+- Workbench integration verifies controller focus transfers to the newly unlocked construction action.
+- `tests/visual/capture_tidecatcher.gd` — exit 0; captured `tidecatcher-1280x800.png` with 3/6 stored wood.
+- Visual inspection verifies construction status, production cadence, storage and collection guidance, focus visibility, modal fit/layering, bounded camera, and building readability.
+
+## Persistence milestone evidence
+
+- Save-service unit coverage adds 8 passing assertions for versioning, round trip, malformed/unsupported/missing-state rejection, and local disk IO.
+- Save/load integration adds 13 passing assertions for every scoped field, system-menu focus/feedback, stable equipment identity and damage, stored production, and mutation-free rejection.
+- `tests/visual/capture_system_menu.gd` — exit 0; captured `system-menu-1280x800.png` showing successful schema-v1 save state.
+- Visual inspection verifies 12/12 health, 5 wood, 4/6 stored production, Save focus, schema/result readability, modal fit/layering, and no missing assets.

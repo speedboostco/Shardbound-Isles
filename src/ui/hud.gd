@@ -26,6 +26,9 @@ signal rift_requested
 @onready var attack_label: Label = $Margin/VBox/Attack
 @onready var equipment_panel: PanelContainer = $EquipmentPanel
 @onready var item_name_label: Label = $EquipmentPanel/Margin/VBox/ItemName
+@onready var equipment_previous_button: Button = $EquipmentPanel/Margin/VBox/Selection/Previous
+@onready var equipment_count_label: Label = $EquipmentPanel/Margin/VBox/Selection/Count
+@onready var equipment_next_button: Button = $EquipmentPanel/Margin/VBox/Selection/Next
 @onready var comparison_label: Label = $EquipmentPanel/Margin/VBox/Comparison
 @onready var affix_label: Label = $EquipmentPanel/Margin/VBox/Affix
 @onready var equipped_label: Label = $EquipmentPanel/Margin/VBox/Equipped
@@ -55,6 +58,8 @@ signal rift_requested
 
 var _items: Array[Dictionary] = []
 var _equipped_id: String = ""
+var _equipped_item: Dictionary = {}
+var _selected_equipment_index: int = 0
 var _displayed_attack_damage: int = 1
 var _displayed_scrap: int = 0
 var _island_shards: Array[Dictionary] = []
@@ -62,8 +67,10 @@ var _installed_island: Dictionary = {}
 var _selected_island_index: int = 0
 
 func _ready() -> void:
-	equip_button.pressed.connect(func() -> void: equip_requested.emit(0))
-	salvage_button.pressed.connect(func() -> void: salvage_requested.emit(0))
+	equipment_previous_button.pressed.connect(func() -> void: _select_relative_equipment(-1))
+	equipment_next_button.pressed.connect(func() -> void: _select_relative_equipment(1))
+	equip_button.pressed.connect(func() -> void: equip_requested.emit(_selected_equipment_index))
+	salvage_button.pressed.connect(func() -> void: salvage_requested.emit(_selected_equipment_index))
 	unequip_button.pressed.connect(func() -> void: unequip_requested.emit())
 	$EquipmentPanel/Margin/VBox/Close.pressed.connect(close_equipment_panel)
 	craft_button.pressed.connect(func() -> void: craft_requested.emit())
@@ -130,31 +137,77 @@ func set_loot(item: Dictionary) -> void:
 	loot_label.text = "FOUND  %s  |  POWER %d" % [item.get("name", "None"), item.get("power", 0)]
 
 func refresh_equipment(items: Array[Dictionary], equipped_item: Dictionary, scrap: int, attack_damage: int) -> void:
-	_items = items
+	_items.clear()
+	for item: Dictionary in items:
+		_items.append(item.duplicate(true))
+	_equipped_item = equipped_item.duplicate(true)
 	_equipped_id = String(equipped_item.get("id", ""))
 	_displayed_scrap = scrap
 	_displayed_attack_damage = attack_damage
 	attack_label.text = "ATTACK  %d" % attack_damage
 	scrap_label.text = "SALVAGE SCRAP  %d" % scrap
 	equipped_label.text = "EQUIPPED  %s" % String(equipped_item.get("name", "Unarmed"))
-	if items.is_empty():
+	if _items.is_empty():
+		_selected_equipment_index = 0
+	else:
+		_selected_equipment_index = clampi(_selected_equipment_index, 0, _items.size() - 1)
+	_render_selected_equipment()
+	_recover_equipment_focus()
+
+func _render_selected_equipment() -> void:
+	if _items.is_empty():
 		item_name_label.text = "NO EQUIPMENT IN PACK"
 		comparison_label.text = "Defeat enemies to find equipment."
 		affix_label.text = ""
+		equipment_count_label.text = "0 / 0"
+		equipment_previous_button.disabled = true
+		equipment_next_button.disabled = true
 		equip_button.disabled = true
 		salvage_button.disabled = true
 	else:
-		var item := items[0]
-		var equipped_power := int(equipped_item.get("power", 0))
+		var item := _items[_selected_equipment_index]
+		var equipped_power := int(_equipped_item.get("power", 0))
 		var delta := int(item.get("power", 0)) - equipped_power
 		item_name_label.text = "%s  •  %s  •  POWER %d" % [item.get("name", "Unknown"), String(item.get("rarity", "common")).to_upper(), item.get("power", 0)]
 		comparison_label.text = "POWER CHANGE  %+d    |    SALVAGE VALUE  %d" % [delta, _salvage_value(String(item.get("rarity", "common")))]
 		var affix_name := String(item.get("legendary_affix_name", ""))
 		var affix_description := String(item.get("legendary_affix_description", ""))
 		affix_label.text = "%s — %s" % [affix_name.to_upper(), affix_description] if not affix_name.is_empty() else ""
+		equipment_count_label.text = "%d / %d" % [_selected_equipment_index + 1, _items.size()]
+		equipment_previous_button.disabled = _items.size() <= 1
+		equipment_next_button.disabled = _items.size() <= 1
 		equip_button.disabled = String(item.get("id", "")) == _equipped_id
 		salvage_button.disabled = String(item.get("id", "")) == _equipped_id
 	unequip_button.disabled = _equipped_id.is_empty()
+
+func select_equipment(index: int) -> bool:
+	if index < 0 or index >= _items.size():
+		return false
+	_selected_equipment_index = index
+	_render_selected_equipment()
+	_recover_equipment_focus()
+	return true
+
+func _select_relative_equipment(offset: int) -> void:
+	if _items.is_empty():
+		return
+	select_equipment(posmod(_selected_equipment_index + offset, _items.size()))
+
+func _recover_equipment_focus() -> void:
+	if not equipment_panel.visible:
+		return
+	var focused := get_viewport().gui_get_focus_owner()
+	if focused is Control and (focused as Control).is_visible_in_tree():
+		if not focused is BaseButton or not (focused as BaseButton).disabled:
+			return
+	if not equip_button.disabled:
+		equip_button.grab_focus()
+	elif not salvage_button.disabled:
+		salvage_button.grab_focus()
+	elif not unequip_button.disabled:
+		unequip_button.grab_focus()
+	else:
+		$EquipmentPanel/Margin/VBox/Close.grab_focus()
 
 func open_equipment_panel() -> void:
 	equipment_panel.visible = true
@@ -177,6 +230,20 @@ func has_valid_action_focus() -> bool:
 
 func get_inventory_item_count() -> int:
 	return _items.size()
+
+func get_selected_equipment_index() -> int:
+	return _selected_equipment_index
+
+func get_displayed_equipment_id() -> String:
+	if _items.is_empty():
+		return ""
+	return String(_items[_selected_equipment_index].get("id", ""))
+
+func get_displayed_affix_text() -> String:
+	return affix_label.text
+
+func get_displayed_comparison_text() -> String:
+	return comparison_label.text
 
 func get_displayed_attack_damage() -> int:
 	return _displayed_attack_damage
@@ -348,4 +415,4 @@ func get_rift_feedback() -> String:
 	return rift_label.text
 
 func _salvage_value(rarity: String) -> int:
-	return 2 if rarity == "uncommon" else 1
+	return EquipmentInventory.salvage_value_for_rarity(rarity)

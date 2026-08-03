@@ -103,9 +103,9 @@ horizontal_alignment = 2
 [node name="EquipmentPanel" type="PanelContainer" parent="."]
 visible = false
 offset_left = 315.0
-offset_top = 185.0
+offset_top = 130.0
 offset_right = 965.0
-offset_bottom = 640.0
+offset_bottom = 680.0
 theme_override_styles/panel = SubResource("EquipmentPanelStyle")
 
 [node name="Margin" type="MarginContainer" parent="EquipmentPanel"]
@@ -115,7 +115,7 @@ theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 25
 
 [node name="VBox" type="VBoxContainer" parent="EquipmentPanel/Margin"]
-theme_override_constants/separation = 17
+theme_override_constants/separation = 13
 
 [node name="Title" type="Label" parent="EquipmentPanel/Margin/VBox"]
 theme_override_colors/font_color = Color(0.36, 0.88, 1, 1)
@@ -127,6 +127,33 @@ horizontal_alignment = 1
 theme_override_font_sizes/font_size = 22
 text = "NO EQUIPMENT IN PACK"
 horizontal_alignment = 1
+
+[node name="Selection" type="HBoxContainer" parent="EquipmentPanel/Margin/VBox"]
+alignment = 1
+theme_override_constants/separation = 18
+
+[node name="Previous" type="Button" parent="EquipmentPanel/Margin/VBox/Selection"]
+custom_minimum_size = Vector2(145, 48)
+focus_neighbor_left = NodePath("../Next")
+focus_neighbor_right = NodePath("../Next")
+focus_neighbor_bottom = NodePath("../../Actions/Equip")
+disabled = true
+text = "< PREVIOUS"
+
+[node name="Count" type="Label" parent="EquipmentPanel/Margin/VBox/Selection"]
+custom_minimum_size = Vector2(95, 48)
+theme_override_font_sizes/font_size = 18
+text = "0 / 0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Next" type="Button" parent="EquipmentPanel/Margin/VBox/Selection"]
+custom_minimum_size = Vector2(145, 48)
+focus_neighbor_left = NodePath("../Previous")
+focus_neighbor_right = NodePath("../Previous")
+focus_neighbor_bottom = NodePath("../../Actions/Equip")
+disabled = true
+text = "NEXT >"
 
 [node name="Comparison" type="Label" parent="EquipmentPanel/Margin/VBox"]
 theme_override_colors/font_color = Color(1, 0.87, 0.42, 1)
@@ -155,16 +182,19 @@ theme_override_constants/separation = 14
 
 [node name="Equip" type="Button" parent="EquipmentPanel/Margin/VBox/Actions"]
 custom_minimum_size = Vector2(150, 52)
+focus_neighbor_top = NodePath("../../Selection/Previous")
 disabled = true
 text = "EQUIP"
 
 [node name="Salvage" type="Button" parent="EquipmentPanel/Margin/VBox/Actions"]
 custom_minimum_size = Vector2(150, 52)
+focus_neighbor_top = NodePath("../../Selection/Previous")
 disabled = true
 text = "SALVAGE"
 
 [node name="Unequip" type="Button" parent="EquipmentPanel/Margin/VBox/Actions"]
 custom_minimum_size = Vector2(150, 52)
+focus_neighbor_top = NodePath("../../Selection/Next")
 disabled = true
 text = "UNEQUIP"
 

@@ -451,3 +451,44 @@ Risk and rollback: adding modifiers in multiple systems can leave stale derived 
 - The initial red integration run demonstrated that a runtime test error could return control to the runner after only partial assertions. Each registered test now has an expected assertion-count contract, so interrupted runs become explicit failures.
 - Reproducible evidence was captured at 1280x800 in `evidence/three-island-shards-1280x800.png` with Tempest Loom selected and installed.
 - Visual review confirms readable reward/risk text, 3/3 selection state, Previous/Next controls, REPLACE focus, opaque modal layering, distinct cyan storm-ring island identity, no clipping/overlap, bounded arena, and no missing assets.
+
+## Milestone 12: controller equipment-inventory browsing
+
+Goal: make every collected weapon inspectable and actionable instead of hard-wiring equipment actions to inventory index zero.
+
+Assumptions:
+
+- Previous/Next buttons cycle through the current authoritative inventory without changing saved gameplay state.
+- Equip and Salvage act on the displayed index; Unequip remains a global equipped-slot action.
+- Selection clamps after salvage and resets to zero only when the inventory becomes empty.
+- An equipped displayed item disables Equip and Salvage, preserving existing destruction protection.
+- If an action disables the focused button, focus moves to the next valid equipment action.
+- UI selection itself is transient and does not require a save-schema change.
+
+Acceptance criteria:
+
+- The modal shows selected position/count and updates item, power comparison, salvage value, and legendary affix text while browsing.
+- Controller focus moves explicitly between selection and actions without a pointer.
+- Equip and Salvage signals carry the selected index through world-authoritative inventory rules.
+- Equipping, protected salvage, unequipping, salvage removal, selection clamping, attack damage, and remaining inventory identity are covered.
+- Installed island attack bonuses remain visible in the equipment/HUD attack readout.
+- A 1280x800 artifact verifies three-item selection, readable legendary detail, focus, clipping, and layering.
+
+Tests defined before production changes:
+
+- Unit: equip and salvage a non-zero inventory index while preserving the other item.
+- Integration: three collected items, controller Next action, explicit focus route, selected equip, accurate damage/HUD, legendary inspection, selected salvage, protected equipped item, focus recovery, index clamping, remaining-item equip, and combat result.
+
+Expected changes: equipment modal selection controls/state, selected-index signal routing, focus neighbors/recovery, selected-item getters, world attack-HUD synchronization, tests, UI/loot/control docs, and evidence.
+
+Risk and rollback: refreshing after actions can disable the currently focused control or leave selection out of range. Clamp selection before every render and recover focus only when the current control is absent or disabled, preserving deliberate focus on Previous/Next.
+
+### Milestone 12 evidence — 2026-08-03
+
+- Equipment inventory unit coverage passes within a 72-assertion unit suite, including equip/salvage of a non-zero index while preserving the other item.
+- Integration coverage passes within a 130-assertion suite: three-item browsing, explicit focus route, selected equip/salvage, actual HUD damage, legendary detail/value, equipped-item protection, focus recovery, clamping, remaining-item equip, and combat damage.
+- Full validation passes 212 assertions; fixed-seed smoke and repeat-rift metrics remain unchanged.
+- The initial red integration run stopped after 3 of 18 equipment assertions; the assertion-count contract converted the runtime error into an explicit `TEST INCOMPLETE` failure and non-zero command result.
+- The first 1280x800 capture exposed a mismatch: Riftwake Core salvaged for 10 scrap but displayed value 1. Salvage values now come from one shared domain rule, integration checks value 10, and the artifact was recaptured.
+- Final evidence is `evidence/equipment-inventory-1280x800.png`, showing item 3/3, Riftwake behavior, authoritative salvage value 10, equipped Tideglass Bow, and EQUIP focus.
+- Visual review confirms readable text, complete actions/navigation, opaque modal layering, no clipping/overlap, bounded arena, and no missing assets.

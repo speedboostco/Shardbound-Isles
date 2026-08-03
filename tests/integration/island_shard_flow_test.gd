@@ -17,7 +17,7 @@ func run(support: TestSupport, scene_tree: SceneTree) -> void:
 	world.hud.island_next_button.pressed.emit()
 	support.expect(world.hud.get_selected_island_index() == 1, "controller Next action must inspect the second shard")
 	support.expect(world.install_selected_shard(world.hud.get_selected_island_index()), "selected Emberglass shard must install")
-	support.expect(world.player.attack_damage == 3 and world.tree.wood_yield == 2, "Emberglass must apply its attack and gathering tradeoff")
+	support.expect(world.player.attack_damage == 3 and world.hud.get_displayed_attack_damage() == 3 and world.tree.wood_yield == 2, "Emberglass must apply and display its attack and gathering tradeoff")
 	support.expect(world.hud.select_island(0), "controller island UI must return to Verdant")
 	support.expect(world.install_selected_shard(0), "owned shard must install into neighboring slot")
 	support.expect(world.island_slot.installed and world.installed_shard.get("id") == shard.id, "install must visibly and authoritatively fill slot")

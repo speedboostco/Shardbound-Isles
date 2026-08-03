@@ -17,3 +17,5 @@
 - Harden the test runner so script load, compile, and instantiation failures cannot silently pass as zero-assertion suites.
 - Expand world loot to Verdant Crucible, Emberglass Reach, and Tempest Loom with distinct gathering, combat, automation, projectile-risk, controller-selection, and physical-biome behavior.
 - Add per-test assertion-count contracts so interrupted runtime tests cannot silently report a partial pass.
+- Add controller equipment-inventory browsing with selected-index equip/salvage actions, clamped selection, focus recovery, and accurate island-adjusted attack display.
+- Share rarity salvage values between domain actions and comparison UI after visual review exposed a legendary 10-versus-1 mismatch.

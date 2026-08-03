@@ -5,7 +5,7 @@
 | Move | WASD / arrows | Left stick / D-pad |
 | Attack | Space / Enter | South face button |
 | Equipment | I / Tab | North face button |
-| Navigate equipment | Arrows / Enter | D-pad / left stick / face button |
+| Browse/navigate equipment | Previous/Next, arrows / Enter | D-pad / left stick / face button |
 | Close equipment | Escape | East face button |
 | Use workbench | C | West face button |
 | Craft | Enter | South face button |

@@ -228,7 +228,7 @@ func salvage_selected_item(index: int) -> int:
 	return reward
 
 func _refresh_equipment_ui() -> void:
-	hud.refresh_equipment(equipment_inventory.items, equipment_inventory.equipped_item(), equipment_inventory.scrap, equipment_inventory.attack_damage())
+	hud.refresh_equipment(equipment_inventory.items, equipment_inventory.equipped_item(), equipment_inventory.scrap, player.attack_damage)
 	_refresh_workbench_ui()
 
 func _sync_player_equipment() -> void:
@@ -410,6 +410,7 @@ func install_selected_shard(index: int) -> bool:
 		return false
 	installed_shard = island_shards[index].duplicate(true)
 	_apply_island_modifiers()
+	_refresh_equipment_ui()
 	_refresh_island_ui()
 	return true
 
@@ -418,6 +419,7 @@ func remove_installed_shard() -> bool:
 		return false
 	installed_shard = {}
 	_apply_island_modifiers()
+	_refresh_equipment_ui()
 	_refresh_island_ui()
 	return true
 

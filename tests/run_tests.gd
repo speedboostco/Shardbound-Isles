@@ -10,7 +10,7 @@ func _run() -> void:
 	if suite in ["all", "unit"]:
 		for definition: Dictionary in [
 			{"path": "res://tests/unit/equipment_generator_test.gd", "assertions": 5},
-			{"path": "res://tests/unit/equipment_inventory_test.gd", "assertions": 9},
+			{"path": "res://tests/unit/equipment_inventory_test.gd", "assertions": 11},
 			{"path": "res://tests/unit/crafting_service_test.gd", "assertions": 8},
 			{"path": "res://tests/unit/wood_production_test.gd", "assertions": 7},
 			{"path": "res://tests/unit/save_service_test.gd", "assertions": 11},
@@ -29,7 +29,7 @@ func _run() -> void:
 	if suite in ["all", "integration"]:
 		for definition: Dictionary in [
 			{"path": "res://tests/integration/gameplay_flow_test.gd", "assertions": 7},
-			{"path": "res://tests/integration/equipment_ui_flow_test.gd", "assertions": 11},
+			{"path": "res://tests/integration/equipment_ui_flow_test.gd", "assertions": 18},
 			{"path": "res://tests/integration/workbench_flow_test.gd", "assertions": 12},
 			{"path": "res://tests/integration/tidecatcher_flow_test.gd", "assertions": 8},
 			{"path": "res://tests/integration/save_load_flow_test.gd", "assertions": 13},

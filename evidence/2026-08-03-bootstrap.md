@@ -112,3 +112,14 @@ Seed `424242` scripted two tree hits, wood collection, three enemy hits, and equ
 - `tests/visual/capture_three_island_shards.gd` — exit 0; captured `three-island-shards-1280x800.png` at 1280x800.
 - Visual inspection verifies readable Tempest benefit/risk text, 3/3 navigation state, visible REPLACE focus, opaque modal fit/layering, a distinct cyan storm-ring eastern island, and no clipping or missing assets.
 - Physical controller hardware and subjective balance of the three tradeoffs were not exercised.
+
+## Equipment-inventory browsing milestone evidence
+
+- Unit suite: 72 assertions, 0 failures, including authoritative non-zero-index equip and salvage behavior.
+- Integration suite: 130 assertions, 0 failures, including three-item controller browsing, selected actions, protection, focus recovery, clamping, damage display, legendary detail/value, and combat outcome.
+- Full validation: 212 assertions, 0 failures; smoke and repeat-rift metrics remain deterministic.
+- The initial missing-selection runtime error stopped after 3 of 18 assertions and was correctly rejected by the assertion-count contract as `TEST INCOMPLETE`.
+- `tests/visual/capture_equipment_inventory.gd` — exit 0; captured `equipment-inventory-1280x800.png` at 1280x800.
+- Initial inspection found Riftwake Core displayed salvage value 1 while the action granted 10. The UI now consumes the same rarity rule as inventory salvage; integration verifies value 10 and the screenshot was recaptured.
+- Final inspection verifies 3/3 state, readable legendary behavior, correct comparison/value, EQUIP focus, modal fit/layering, no clipping, and no missing assets.
+- Physical controller hardware and subjective inventory-navigation feel were not exercised.

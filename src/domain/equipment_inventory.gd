@@ -31,7 +31,7 @@ func salvage(index: int) -> int:
 	var item := items[index]
 	if String(item.get("id", "")) == equipped_id:
 		return 0
-	var reward := _salvage_value(String(item.get("rarity", "common")))
+	var reward := salvage_value_for_rarity(String(item.get("rarity", "common")))
 	items.remove_at(index)
 	scrap += reward
 	return reward
@@ -51,7 +51,7 @@ func _equipped_power() -> int:
 func _is_valid_index(index: int) -> bool:
 	return index >= 0 and index < items.size()
 
-func _salvage_value(rarity: String) -> int:
+static func salvage_value_for_rarity(rarity: String) -> int:
 	match rarity:
 		"uncommon":
 			return 2
@@ -61,4 +61,3 @@ func _salvage_value(rarity: String) -> int:
 			return 10
 		_:
 			return 1
-

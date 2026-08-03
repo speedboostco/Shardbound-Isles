@@ -21,12 +21,16 @@ Before changing code, read the documents relevant to the task:
 * Current vertical slice: `docs/product/vertical-slice.md`
 * Architecture: `docs/engineering/architecture.md`
 * Testing: `docs/engineering/testing-strategy.md`
+* Repository structure: `docs/engineering/project-structure.md`
+* Build commands: `docs/engineering/build-and-release.md`
 * Performance: `docs/engineering/performance-budgets.md`
 * Controls: `docs/design/controls.md`
 * Active plans: `docs/exec-plans/active/`
 * Accepted decisions: `docs/decisions/`
 
 Treat repository documentation as the system of record. Do not rely on prior chat context.
+
+This file is a routing and execution map, not a game design document. Keep detailed feature requirements in `docs/`.
 
 ## Source precedence
 
@@ -93,6 +97,8 @@ Do not silently resolve product-level conflicts.
 * Incompatible save changes require migration or explicit rejection.
 * Prefer clarity over cleverness.
 * Do not add speculative abstraction without a current consumer.
+* Use `SeededRngStreams` for explicit deterministic random streams; never use global random functions in `game/core`.
+* Use `GameLogger` categories for event-based diagnostics; do not log from per-frame callbacks.
 
 ## Task protocol
 
@@ -130,11 +136,13 @@ Use the repository’s stable commands:
 
 * `make help`
 * `make setup`
+* `make static-validate`
 * `make validate`
 * `make test`
 * `make test-unit`
 * `make test-integration`
 * `make test-simulation`
+* `make run`
 * `make export-windows`
 * `make export-linux`
 

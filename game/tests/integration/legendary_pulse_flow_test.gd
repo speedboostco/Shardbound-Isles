@@ -19,7 +19,7 @@ func run(support: TestSupport, scene_tree: SceneTree) -> void:
 	var far_before := world.elite_ranged_enemy.remaining_health
 	var boss_before := world.boss.health
 	world._on_attack_requested(world.player.global_position, Vector2.RIGHT)
-	support.expect(world.enemy.remaining_health == primary_before - world.player.attack_damage, "primary target must receive strike damage exactly once")
+	support.expect(world.enemy.remaining_health == maxi(0, primary_before - world.player.attack_damage), "primary target must receive strike damage exactly once with health clamped at zero")
 	support.expect(world.ranged_enemy.remaining_health == secondary_before - 2, "nearby secondary enemy must receive one pulse hit")
 	support.expect(world.elite_ranged_enemy.remaining_health == far_before, "out-of-radius enemy must not receive pulse damage")
 	support.expect(world.boss.health == boss_before - 2, "active boss inside the pulse must receive legendary damage")

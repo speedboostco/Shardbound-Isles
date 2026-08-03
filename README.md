@@ -21,6 +21,6 @@ make run
 
 On Windows without Make, use `powershell -NoProfile -ExecutionPolicy Bypass -File tools/dev.ps1 help` and replace `help` with any listed command.
 
-Move with WASD, arrow keys, left stick, or D-pad. Attack with Space, Enter, or the controller south face button. Break the tree, collect its wood automatically, defeat the red wisp, and collect its deterministic equipment drop.
+Move with WASD, arrow keys, left stick, or D-pad. Attack with Space, Enter, or the controller west face button (X / Square); interact with the nearest prompted target using E or the south face button (A / Cross). Break the tree and stone, collect their resources automatically, defeat the green Slime, equip its deterministic Tideglass Bow, and use the increased damage and attack speed against the second Slime.
 
 Read [AGENTS.md](AGENTS.md), then the active plan under `docs/exec-plans/active/`, before changing code.

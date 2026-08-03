@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Complete M1 with analog deterministic movement, smoothed bounded camera, universal contextual interaction, definition-driven resource nodes, merged pickups, authoritative resource inventory, shared health, explicit Slime AI, canonical seeded weapons, real damage/speed equipment effects, event-driven HUD, and a repeatable gather-fight-equip simulation.
+- Complete Gate M0 infrastructure with static validation, JUnit test reports, layered CI and export artifacts, independent seeded RNG streams, and contextual category logging.
 - Reorganize live Godot resources under `game/`, developer tooling under `tools/`, and tracked build-output guidance under `build/` with documented layer ownership.
 - Bootstrap the Godot project, documentation system, stable developer commands, CI, tests, and debug export presets.
 - Add the first deterministic gather–fight–loot playable milestone.

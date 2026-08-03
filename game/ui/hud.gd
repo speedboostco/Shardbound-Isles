@@ -61,12 +61,14 @@ signal rift_requested
 @onready var island_remove_button: Button = $IslandPanel/Margin/VBox/Actions/Remove
 @onready var encounter_label: Label = $EncounterStatus
 @onready var rift_label: Label = $RiftStatus
+@onready var interaction_prompt: Label = $InteractionPrompt
 
 var _items: Array[Dictionary] = []
 var _equipped_id: String = ""
 var _equipped_item: Dictionary = {}
 var _selected_equipment_index: int = 0
 var _displayed_attack_damage: int = 1
+var _displayed_attack_speed: float = 1.0
 var _displayed_scrap: int = 0
 var _displayed_stone: int = 0
 var _selected_recipe_index: int = 0
@@ -155,10 +157,20 @@ func set_stone(amount: int) -> void:
 func get_displayed_stone() -> int:
 	return _displayed_stone
 
-func set_loot(item: Dictionary) -> void:
-	loot_label.text = "FOUND  %s  |  POWER %d" % [item.get("name", "None"), item.get("power", 0)]
+func set_interaction_prompt(label: String) -> void:
+	interaction_prompt.visible = not label.is_empty()
+	interaction_prompt.text = "A / E  %s" % label.to_upper() if not label.is_empty() else ""
 
-func refresh_equipment(items: Array[Dictionary], equipped_item: Dictionary, scrap: int, attack_damage: int) -> void:
+func get_interaction_prompt() -> String:
+	return interaction_prompt.text if interaction_prompt.visible else ""
+
+func get_displayed_attack_speed() -> float:
+	return _displayed_attack_speed
+
+func set_loot(item: Dictionary) -> void:
+	loot_label.text = "FOUND  %s  |  DMG %d  |  SPEED %.2fx" % [item.get("name", "None"), item.get("damage", item.get("power", 0)), item.get("attack_speed", 1.0)]
+
+func refresh_equipment(items: Array[Dictionary], equipped_item: Dictionary, scrap: int, attack_damage: int, attack_speed: float = 1.0) -> void:
 	_items.clear()
 	for item: Dictionary in items:
 		_items.append(item.duplicate(true))
@@ -166,9 +178,13 @@ func refresh_equipment(items: Array[Dictionary], equipped_item: Dictionary, scra
 	_equipped_id = String(equipped_item.get("id", ""))
 	_displayed_scrap = scrap
 	_displayed_attack_damage = attack_damage
-	attack_label.text = "ATTACK  %d" % attack_damage
+	_displayed_attack_speed = attack_speed
+	attack_label.text = "ATTACK  %d    SPEED  %.2fx" % [attack_damage, attack_speed]
 	scrap_label.text = "SALVAGE SCRAP  %d" % scrap
 	equipped_label.text = "EQUIPPED  %s" % String(equipped_item.get("name", "Unarmed"))
+	loot_label.text = "WEAPON  %s" % String(equipped_item.get("name", "UNARMED"))
+	if not equipped_item.is_empty():
+		loot_label.text += "  |  DMG %d  |  SPEED %.2fx" % [equipped_item.get("damage", equipped_item.get("power", 0)), equipped_item.get("attack_speed", 1.0)]
 	if _items.is_empty():
 		_selected_equipment_index = 0
 	else:

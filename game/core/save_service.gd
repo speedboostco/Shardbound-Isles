@@ -126,6 +126,10 @@ func _normalize_state(state: Dictionary) -> Dictionary:
 		var item := (item_value as Dictionary).duplicate(true)
 		item["seed"] = int(item.get("seed", 0))
 		item["power"] = int(item.get("power", 0))
+		if item.has("damage"):
+			item["damage"] = int(item.get("damage", item.get("power", 0)))
+		if item.has("attack_speed"):
+			item["attack_speed"] = float(item.get("attack_speed", 1.0))
 		normalized_items.append(item)
 	var normalized_shards: Array[Dictionary] = []
 	for shard_value: Variant in islands.inventory:

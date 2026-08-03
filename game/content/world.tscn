@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource path="res://game/features/world.gd" type="Script" id="1"]
 [ext_resource path="res://game/features/player.gd" type="Script" id="2"]
@@ -11,7 +11,24 @@
 [ext_resource path="res://game/features/ranged_enemy.gd" type="Script" id="9"]
 [ext_resource path="res://game/features/boss.gd" type="Script" id="10"]
 [ext_resource path="res://game/features/rift_portal.gd" type="Script" id="11"]
-[ext_resource path="res://game/features/stone_resource_node.gd" type="Script" id="12"]
+[ext_resource path="res://game/features/camera_rig.gd" type="Script" id="12"]
+[ext_resource path="res://game/core/resource_node_definition.gd" type="Script" id="13"]
+
+[sub_resource type="Resource" id="TreeDefinition"]
+script = ExtResource("13")
+resource_id = "wood"
+display_name = "Tree"
+maximum_health = 2
+drop_amount = 3
+visual_kind = "tree"
+
+[sub_resource type="Resource" id="StoneDefinition"]
+script = ExtResource("13")
+resource_id = "stone"
+display_name = "Stone Outcrop"
+maximum_health = 3
+drop_amount = 2
+visual_kind = "stone"
 
 [node name="FirstPlayableWorld" type="Node2D"]
 script = ExtResource("1")
@@ -20,21 +37,28 @@ script = ExtResource("1")
 script = ExtResource("2")
 
 [node name="Camera2D" type="Camera2D" parent="Player"]
-limit_left = -640
-limit_top = -400
-limit_right = 640
-limit_bottom = 400
+script = ExtResource("12")
+limit_left = -900
+limit_top = -600
+limit_right = 900
+limit_bottom = 600
 
 [node name="Tree" type="StaticBody2D" parent="."]
 position = Vector2(180, 20)
 script = ExtResource("3")
+definition = SubResource("TreeDefinition")
 
 [node name="StoneNode" type="StaticBody2D" parent="."]
 position = Vector2(390, -80)
-script = ExtResource("12")
+script = ExtResource("3")
+definition = SubResource("StoneDefinition")
 
 [node name="Enemy" type="CharacterBody2D" parent="."]
 position = Vector2(-270, 80)
+script = ExtResource("4")
+
+[node name="SecondSlime" type="CharacterBody2D" parent="."]
+position = Vector2(-70, 300)
 script = ExtResource("4")
 
 [node name="Workbench" type="StaticBody2D" parent="."]

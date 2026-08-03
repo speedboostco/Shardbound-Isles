@@ -4,6 +4,10 @@ extends RefCounted
 var items: Array[Dictionary] = []
 var equipped_id: String = ""
 var scrap: int = 0
+var compatible_types: Array[String]
+
+func _init(compatible_types_value: Array[String] = ["melee", "ranged", "magic"]) -> void:
+	compatible_types = compatible_types_value.duplicate()
 
 func collect(item: Dictionary) -> void:
 	items.append(item.duplicate(true))
@@ -15,6 +19,9 @@ func comparison_delta(index: int) -> int:
 
 func equip(index: int) -> bool:
 	if not _is_valid_index(index):
+		return false
+	var base_type := String(items[index].get("base_type", items[index].get("archetype", "")))
+	if base_type not in compatible_types:
 		return false
 	equipped_id = String(items[index].get("id", ""))
 	return not equipped_id.is_empty()
@@ -37,7 +44,10 @@ func salvage(index: int) -> int:
 	return reward
 
 func attack_damage() -> int:
-	return 1 + _equipped_power()
+	return 1 + int(equipped_item().get("damage", _equipped_power()))
+
+func attack_speed() -> float:
+	return maxf(0.1, float(equipped_item().get("attack_speed", 1.0)))
 
 func equipped_item() -> Dictionary:
 	for item: Dictionary in items:

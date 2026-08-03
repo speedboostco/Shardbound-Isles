@@ -1,4 +1,4 @@
-.PHONY: help setup import validate test test-unit test-integration test-simulation run export-windows export-linux
+.PHONY: help setup import static-validate validate test test-unit test-integration test-simulation run export-windows export-linux
 
 POWERSHELL ?= powershell
 DEV = $(POWERSHELL) -NoProfile -ExecutionPolicy Bypass -File tools/dev.ps1
@@ -9,6 +9,8 @@ setup:
 	$(DEV) setup
 import:
 	$(DEV) import
+static-validate:
+	$(DEV) static-validate
 validate:
 	$(DEV) validate
 test:

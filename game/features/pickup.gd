@@ -3,6 +3,8 @@ extends Area2D
 
 signal collected(kind: String, payload: Variant)
 
+const MERGE_RADIUS: float = 48.0
+
 var kind: String = "wood"
 var payload: Variant = 1
 var target: Node2D
@@ -21,6 +23,13 @@ func _physics_process(delta: float) -> void:
 func collect_immediately() -> void:
 	collected.emit(kind, payload)
 	queue_free()
+
+func merge_amount(amount: int) -> bool:
+	if kind not in ["wood", "stone"] or not payload is int or amount <= 0:
+		return false
+	payload = int(payload) + amount
+	queue_redraw()
+	return true
 
 func _draw() -> void:
 	if kind == "island_shard":

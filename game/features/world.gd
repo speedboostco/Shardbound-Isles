@@ -1,6 +1,10 @@
 class_name FirstPlayableWorld
 extends Node2D
 
+const GameLoggerScript := preload("res://game/core/game_logger.gd")
+const InteractionSelectorScript := preload("res://game/core/interaction_selector.gd")
+const MovementRulesScript := preload("res://game/core/movement_rules.gd")
+const ResourceInventoryScript := preload("res://game/core/resource_inventory.gd")
 const EQUIPMENT_SEED: int = 424242
 const DEFAULT_SAVE_PATH: String = "user://shardbound-save.json"
 const ISLAND_SHARD_SEED: int = 9001
@@ -17,8 +21,10 @@ const BASE_BOSS_PHASE_TWO_SPEED: float = 105.0
 
 @onready var player: PlayerCharacter = $Player
 @onready var tree: ResourceNode = $Tree
-@onready var stone_node: StoneResourceNode = $StoneNode
+@onready var stone_node: ResourceNode = $StoneNode
 @onready var enemy: ChaserEnemy = $Enemy
+@onready var second_slime: ChaserEnemy = $SecondSlime
+@onready var camera: CameraRig = $Player/Camera2D
 @onready var workbench: Workbench = $Workbench
 @onready var tidecatcher: Tidecatcher = $Tidecatcher
 @onready var island_slot: IslandSlot = $IslandSlot
@@ -28,8 +34,13 @@ const BASE_BOSS_PHASE_TWO_SPEED: float = 105.0
 @onready var rift_portal: RiftPortal = $RiftPortal
 @onready var hud: GameHud = $HUD
 
-var wood: int = 0
-var stone: int = 0
+var resource_inventory: Variant = ResourceInventoryScript.new()
+var wood: int:
+	get: return resource_inventory.amount("wood")
+	set(value): resource_inventory.set_amount("wood", maxi(0, value))
+var stone: int:
+	get: return resource_inventory.amount("stone")
+	set(value): resource_inventory.set_amount("stone", maxi(0, value))
 var equipment_inventory := EquipmentInventory.new()
 var equipment: Array[Dictionary] = equipment_inventory.items
 var enemies_defeated: int = 0
@@ -42,15 +53,22 @@ var island_shards: Array[Dictionary] = []
 var installed_shard: Dictionary = {}
 var rift_controller := RiftRunController.new()
 var rift_enemies: Array[Node2D] = []
+var logger: Variant = GameLoggerScript.new(bool(ProjectSettings.get_setting("shardbound/logging/debug_enabled", false)))
+var current_interaction_target: Node
 
 func _ready() -> void:
 	player.attack_requested.connect(_on_attack_requested)
+	player.interaction_requested.connect(_on_interaction_requested)
+	player.moved.connect(_on_player_moved)
 	player.health_changed.connect(hud.set_health)
 	player.defeated.connect(_on_player_defeated)
-	tree.depleted.connect(_on_tree_depleted)
-	stone_node.depleted.connect(_on_stone_depleted)
+	resource_inventory.changed.connect(_on_resource_inventory_changed)
+	tree.depleted.connect(_on_resource_depleted)
+	stone_node.depleted.connect(_on_resource_depleted)
 	enemy.target = player
 	enemy.defeated.connect(_on_enemy_defeated)
+	second_slime.target = player
+	second_slime.defeated.connect(_on_second_slime_defeated)
 	ranged_enemy.target = player
 	elite_ranged_enemy.target = player
 	ranged_enemy.volley_requested.connect(_on_enemy_volley_requested)
@@ -82,11 +100,15 @@ func _ready() -> void:
 	hud.island_install_requested.connect(install_selected_shard)
 	hud.island_remove_requested.connect(remove_installed_shard)
 	hud.rift_requested.connect(handle_rift_action)
+	workbench.interacted.connect(try_open_workbench)
+	rift_portal.interacted.connect(handle_rift_action)
+	rift_portal.availability_changed.connect(_refresh_interaction_target)
 	tidecatcher.wood_collected.connect(_on_tidecatcher_wood_collected)
 	tidecatcher.storage_changed.connect(_on_tidecatcher_storage_changed)
 	_refresh_equipment_ui()
 	_refresh_workbench_ui()
 	_refresh_island_ui()
+	_refresh_interaction_target()
 
 func _on_attack_requested(origin: Vector2, direction: Vector2) -> void:
 	var best_target: Node2D
@@ -102,6 +124,8 @@ func _on_attack_requested(origin: Vector2, direction: Vector2) -> void:
 			best_distance = distance
 	if is_instance_valid(best_target) and best_target.has_method("receive_attack"):
 		best_target.receive_attack(player.attack_damage)
+		player.confirm_hit()
+		camera.request_shake(4.0, 0.1)
 	if player.legendary_affix_id == "riftwake_pulse":
 		_trigger_legendary_pulse(origin, best_target)
 
@@ -124,22 +148,26 @@ func _trigger_legendary_pulse(origin: Vector2, primary_target: Node2D) -> void:
 	pulse.global_position = origin
 	add_child(pulse)
 
-func _on_tree_depleted(drop_position: Vector2, amount: int) -> void:
-	_spawn_pickup(drop_position, "wood", amount)
-
-func _on_stone_depleted(drop_position: Vector2, amount: int) -> void:
-	_spawn_pickup(drop_position, "stone", amount)
+func _on_resource_depleted(drop_position: Vector2, resource_id: String, amount: int) -> void:
+	_spawn_pickup(drop_position, resource_id, amount)
 
 func _on_enemy_defeated(drop_position: Vector2) -> void:
 	enemies_defeated += 1
+	logger.debug(GameLoggerScript.LOOT, "enemy loot generated", {"equipment_seed": EQUIPMENT_SEED, "island_seed": ISLAND_SHARD_SEED})
 	_spawn_pickup(drop_position, "equipment", EquipmentGenerator.generate(EQUIPMENT_SEED))
 	_spawn_pickup(drop_position + Vector2(25.0, 0.0), "island_shard", IslandShardGenerator.generate(ISLAND_SHARD_SEED))
+	_check_boss_unlock()
+
+func _on_second_slime_defeated(_drop_position: Vector2) -> void:
+	enemies_defeated += 1
+	logger.debug(GameLoggerScript.LOOT, "slime defeated without loot roll", {"enemy_id": "second_slime"})
 	_check_boss_unlock()
 
 func _on_ranged_enemy_defeated(drop_position: Vector2, loot_seed: int) -> void:
 	enemies_defeated += 1
 	_spawn_pickup(drop_position, "equipment", EquipmentGenerator.generate(loot_seed))
 	var shard_seed := RANGED_ISLAND_SHARD_SEED if loot_seed == RANGED_LOOT_SEED else ELITE_ISLAND_SHARD_SEED
+	logger.debug(GameLoggerScript.LOOT, "ranged enemy loot generated", {"equipment_seed": loot_seed, "island_seed": shard_seed})
 	_spawn_pickup(drop_position + Vector2(25.0, 0.0), "island_shard", IslandShardGenerator.generate(shard_seed))
 	_check_boss_unlock()
 
@@ -180,6 +208,13 @@ func spawn_enemy_projectile(origin: Vector2, projectile_direction: Vector2, proj
 	return projectile
 
 func _spawn_pickup(drop_position: Vector2, kind: String, payload: Variant) -> WorldPickup:
+	if kind in ["wood", "stone"] and payload is int:
+		for child: Node in get_children():
+			if child is WorldPickup:
+				var existing := child as WorldPickup
+				if not existing.is_queued_for_deletion() and existing.kind == kind and existing.global_position.distance_to(drop_position) <= WorldPickup.MERGE_RADIUS:
+					existing.merge_amount(int(payload))
+					return existing
 	var pickup := WorldPickup.new()
 	pickup.kind = kind
 	pickup.payload = payload
@@ -190,12 +225,8 @@ func _spawn_pickup(drop_position: Vector2, kind: String, payload: Variant) -> Wo
 	return pickup
 
 func _on_pickup_collected(kind: String, payload: Variant) -> void:
-	if kind == "wood":
-		wood += int(payload)
-		hud.set_wood(wood)
-	elif kind == "stone":
-		stone += int(payload)
-		hud.set_stone(stone)
+	if kind in ["wood", "stone"]:
+		resource_inventory.add(kind, int(payload))
 	elif kind == "equipment":
 		var item := payload as Dictionary
 		equipment_inventory.collect(item)
@@ -206,6 +237,39 @@ func _on_pickup_collected(kind: String, payload: Variant) -> void:
 		if not _has_shard(String(shard.get("id", ""))):
 			island_shards.append(shard.duplicate(true))
 		_refresh_island_ui()
+
+func _on_resource_inventory_changed(resource_id: String, amount: int, _delta: int) -> void:
+	if resource_id == "wood":
+		hud.set_wood(amount)
+	elif resource_id == "stone":
+		hud.set_stone(amount)
+
+func _on_player_moved(_position_value: Vector2) -> void:
+	_refresh_interaction_target()
+
+func _refresh_interaction_target() -> void:
+	var candidates: Array[Dictionary] = []
+	var nodes_by_id: Dictionary = {}
+	for candidate: Node in get_tree().get_nodes_in_group("interactable"):
+		if not candidate is Node2D or not candidate.has_method("interaction_id") or not candidate.has_method("can_interact"):
+			continue
+		var target := candidate as Node2D
+		var target_id := String(candidate.interaction_id())
+		candidates.append({
+			"id": target_id,
+			"position": target.global_position,
+			"available": bool(candidate.can_interact(player.global_position)),
+			"label": String(candidate.interaction_label()),
+		})
+		nodes_by_id[target_id] = candidate
+	var selected: Dictionary = InteractionSelectorScript.select(player.global_position, candidates, 180.0)
+	current_interaction_target = nodes_by_id.get(String(selected.get("id", ""))) as Node
+	hud.set_interaction_prompt(String(selected.get("label", "")))
+
+func _on_interaction_requested() -> void:
+	_refresh_interaction_target()
+	if is_instance_valid(current_interaction_target) and current_interaction_target.has_method("interact"):
+		current_interaction_target.interact(player)
 
 func open_equipment_panel() -> void:
 	if hud.is_workbench_panel_open():
@@ -239,14 +303,14 @@ func salvage_selected_item(index: int) -> int:
 	return reward
 
 func _refresh_equipment_ui() -> void:
-	hud.refresh_equipment(equipment_inventory.items, equipment_inventory.equipped_item(), equipment_inventory.scrap, player.attack_damage)
+	hud.refresh_equipment(equipment_inventory.items, equipment_inventory.equipped_item(), equipment_inventory.scrap, player.attack_damage, player.attack_speed)
 	_refresh_workbench_ui()
 
 func _sync_player_equipment() -> void:
 	var equipped := equipment_inventory.equipped_item()
 	var upgrade_bonus := CraftingService.WHETSTONE_ATTACK_BONUS if runed_whetstone_crafted else 0
-	player.attack_damage = equipment_inventory.attack_damage() + upgrade_bonus + int(installed_shard.get("player_attack_bonus", 0))
-	player.legendary_affix_id = String(equipped.get("legendary_affix_id", ""))
+	var damage := equipment_inventory.attack_damage() + upgrade_bonus + int(installed_shard.get("player_attack_bonus", 0))
+	player.set_weapon_stats(damage, equipment_inventory.attack_speed(), String(equipped.get("base_type", equipped.get("archetype", "unarmed"))), String(equipped.get("legendary_affix_id", "")))
 
 func try_open_workbench() -> bool:
 	if not workbench.is_player_in_range(player.global_position):
@@ -277,7 +341,7 @@ func craft_reinforced_heart() -> bool:
 		var reason := String(result.get("reason", ""))
 		_refresh_workbench_ui("ALREADY CRAFTED" if reason == "already_crafted" else "NEED MORE RESOURCES")
 		return false
-	wood -= int(result.get("wood_spent", 0))
+	resource_inventory.remove("wood", int(result.get("wood_spent", 0)))
 	equipment_inventory.scrap -= int(result.get("scrap_spent", 0))
 	reinforced_heart_crafted = true
 	player.add_maximum_health(int(result.get("maximum_health_bonus", 0)))
@@ -291,7 +355,7 @@ func craft_runed_whetstone() -> bool:
 		var reason := String(result.get("reason", ""))
 		_refresh_workbench_ui("ALREADY CRAFTED" if reason == "already_crafted" else "NEED MORE STONE")
 		return false
-	stone -= int(result.get("stone_spent", 0))
+	resource_inventory.remove("stone", int(result.get("stone_spent", 0)))
 	runed_whetstone_crafted = true
 	_sync_player_equipment()
 	refresh_all_ui("CRAFTED — BASE ATTACK +1")
@@ -308,8 +372,7 @@ func build_tidecatcher() -> bool:
 	return true
 
 func _on_tidecatcher_wood_collected(amount: int) -> void:
-	wood += amount
-	hud.set_wood(wood)
+	resource_inventory.add("wood", amount)
 	hud.set_automation_status(true, 0, WoodProduction.STORAGE_CAPACITY, "TIDECATCHER COLLECTED +%d WOOD" % amount)
 
 func _on_tidecatcher_storage_changed(stored: int, capacity: int) -> void:
@@ -350,15 +413,21 @@ func _on_system_menu_closed() -> void:
 func save_game(path: String = DEFAULT_SAVE_PATH) -> bool:
 	var result := save_service.save_to_path(path, snapshot_state())
 	var succeeded := bool(result.get("ok", false))
+	if succeeded:
+		logger.debug(GameLoggerScript.SAVE, "game saved", {"path": path, "schema_version": SaveService.SCHEMA_VERSION})
+	else:
+		logger.error(GameLoggerScript.SAVE, "save failed", {"path": path, "reason": String(result.get("error", "unknown"))})
 	hud.set_system_feedback("GAME SAVED" if succeeded else "SAVE FAILED — %s" % String(result.get("error", "unknown")).to_upper())
 	return succeeded
 
 func load_game(path: String = DEFAULT_SAVE_PATH) -> bool:
 	var result := save_service.load_from_path(path)
 	if not bool(result.get("ok", false)):
+		logger.error(GameLoggerScript.SAVE, "load failed", {"path": path, "reason": String(result.get("error", "unknown"))})
 		hud.set_system_feedback("LOAD FAILED — %s" % String(result.get("error", "unknown")).to_upper())
 		return false
 	_apply_state(result.get("state") as Dictionary)
+	logger.debug(GameLoggerScript.SAVE, "game loaded", {"path": path, "schema_version": int(result.get("schema_version", SaveService.SCHEMA_VERSION))})
 	hud.set_system_feedback("GAME LOADED")
 	return true
 
@@ -445,6 +514,7 @@ func install_selected_shard(index: int) -> bool:
 	if index < 0 or index >= island_shards.size():
 		return false
 	installed_shard = island_shards[index].duplicate(true)
+	logger.debug(GameLoggerScript.WORLD, "island shard installed", {"id": String(installed_shard.get("id", "")), "seed": int(installed_shard.get("seed", 0))})
 	_apply_island_modifiers()
 	_refresh_equipment_ui()
 	_refresh_island_ui()
@@ -496,7 +566,7 @@ func _has_shard(shard_id: String) -> bool:
 	return false
 
 func _set_combat_processing(enabled: bool) -> void:
-	var combatants: Array[Node] = [enemy, ranged_enemy, elite_ranged_enemy, boss]
+	var combatants: Array[Node] = [enemy, second_slime, ranged_enemy, elite_ranged_enemy, boss]
 	combatants.append_array(rift_enemies)
 	for combatant: Node in combatants:
 		if is_instance_valid(combatant):
@@ -525,7 +595,7 @@ func try_enter_rift() -> bool:
 	return true
 
 func _prepare_rift_arena() -> void:
-	for combatant: Node2D in [enemy, ranged_enemy, elite_ranged_enemy, boss]:
+	for combatant: Node2D in [enemy, second_slime, ranged_enemy, elite_ranged_enemy, boss]:
 		if is_instance_valid(combatant):
 			combatant.visible = false
 			combatant.set_physics_process(false)
@@ -597,22 +667,68 @@ func _clear_enemy_projectiles() -> void:
 			child.queue_free()
 
 func run_scripted_smoke() -> Dictionary:
+	_set_combat_processing(false)
+	player.global_position = Vector2.ZERO
+	enemy.global_position = Vector2(-270, 80)
+	second_slime.global_position = Vector2(-70, 300)
+	var movement_steps := 0
+	movement_steps += _scripted_move_to(tree.global_position + Vector2(-48, 0))
 	tree.receive_attack(1)
 	tree.receive_attack(1)
 	var wood_pickup := _find_pickup("wood")
 	wood_pickup.collect_immediately()
-	enemy.receive_attack(1)
-	enemy.receive_attack(1)
-	enemy.receive_attack(1)
+	movement_steps += _scripted_move_to(stone_node.global_position + Vector2(-52, 0))
+	stone_node.receive_attack(1)
+	stone_node.receive_attack(1)
+	stone_node.receive_attack(1)
+	var stone_pickup := _find_pickup("stone")
+	stone_pickup.collect_immediately()
+	movement_steps += _scripted_move_to(enemy.global_position + Vector2(50, 0))
+	var unarmed_damage := player.attack_damage
+	var unarmed_hits := 0
+	while is_instance_valid(enemy) and enemy.remaining_health > 0:
+		_on_attack_requested(enemy.global_position + Vector2(50, 0), Vector2.LEFT)
+		unarmed_hits += 1
 	var equipment_pickup := _find_pickup("equipment")
 	equipment_pickup.collect_immediately()
+	equip_selected_item(0)
+	var equipped_damage := player.attack_damage
+	var equipped_speed := player.attack_speed
+	movement_steps += _scripted_move_to(second_slime.global_position + Vector2(50, 0))
+	var equipped_hits := 0
+	while is_instance_valid(second_slime) and second_slime.remaining_health > 0:
+		_on_attack_requested(second_slime.global_position + Vector2(50, 0), Vector2.LEFT)
+		equipped_hits += 1
 	return {
 		"seed": EQUIPMENT_SEED,
 		"wood": wood,
+		"stone": stone,
+		"movement_steps": movement_steps,
 		"enemies_defeated": enemies_defeated,
 		"items_collected": equipment.size(),
 		"item": equipment[0] if not equipment.is_empty() else {},
+		"equipped_id": equipment_inventory.equipped_id,
+		"unarmed_damage": unarmed_damage,
+		"equipped_damage": equipped_damage,
+		"equipped_attack_speed": equipped_speed,
+		"unarmed_hits": unarmed_hits,
+		"equipped_hits": equipped_hits,
 	}
+
+func _scripted_move_to(destination: Vector2) -> int:
+	var steps := 0
+	const DELTA: float = 1.0 / 60.0
+	while player.global_position.distance_to(destination) > 3.0 and steps < 1000:
+		var direction := player.global_position.direction_to(destination)
+		var displacement: Vector2 = MovementRulesScript.displacement(direction, player.move_speed, DELTA)
+		if displacement.length() > player.global_position.distance_to(destination):
+			player.global_position = destination
+		else:
+			player.global_position += displacement
+		player.facing = direction
+		steps += 1
+	player.moved.emit(player.global_position)
+	return steps
 
 func _find_pickup(kind: String) -> WorldPickup:
 	for child: Node in get_children():
@@ -621,8 +737,8 @@ func _find_pickup(kind: String) -> WorldPickup:
 	return null
 
 func _draw() -> void:
-	draw_rect(Rect2(-640.0, -400.0, 1280.0, 800.0), Color("173f46"))
-	for x: int in range(-600, 601, 80):
-		for y: int in range(-360, 361, 80):
+	draw_rect(Rect2(-900.0, -600.0, 1800.0, 1200.0), Color("173f46"))
+	for x: int in range(-860, 861, 80):
+		for y: int in range(-560, 561, 80):
 			draw_circle(Vector2(x, y), 2.0, Color("2c6261"))
-	draw_rect(Rect2(-620.0, -370.0, 1240.0, 740.0), Color("7ac6a3"), false, 6.0)
+	draw_rect(Rect2(-880.0, -580.0, 1760.0, 1160.0), Color("7ac6a3"), false, 6.0)

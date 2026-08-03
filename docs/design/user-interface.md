@@ -1,6 +1,6 @@
 # User Interface
 
-The reference viewport is 1280x800. HUD information must be legible, anchored safely, and non-authoritative. Menus require explicit controller focus and no mandatory text input.
+The reference viewport is 1280x800. HUD information must be legible, anchored safely, and non-authoritative. It observes health, wood, stone, and equipment through state-change signals rather than frame polling. The equipped weapon line shows damage and attack speed, while a bottom-safe contextual prompt names the nearest usable target and its shared `A / E` action without obstructing the center of play. Menus require explicit controller focus and no mandatory text input or mouse hover.
 
 The equipment modal browses every collected item with Previous/Next controls and a selected-position count. It shows equipped state, signed power change, authoritative salvage value, legendary behavior, scrap total, and actions for the selected item. Opening it focuses a valid action and suspends player/enemy movement. Explicit focus neighbors connect selection to Equip/Salvage/Unequip, and focus recovers when an action disables itself.
 

@@ -1,6 +1,8 @@
 class_name RangedEnemy
 extends CharacterBody2D
 
+const HealthComponentScript := preload("res://game/core/health_component.gd")
+
 signal volley_requested(origin: Vector2, direction: Vector2, angles: Array[float], damage: int)
 signal defeated(position_value: Vector2, loot_seed: int)
 
@@ -8,12 +10,15 @@ signal defeated(position_value: Vector2, loot_seed: int)
 @export var move_speed: float = 65.0
 @export var loot_seed: int = 424243
 var target: Node2D
-var remaining_health: int
+var health_component: Variant
+var remaining_health: int:
+	get: return health_component.current if health_component != null else (5 if elite else 3)
 var _cooldown_remaining: float = 0.8
 var _telegraph_remaining: float = 0.0
 
 func _ready() -> void:
-	remaining_health = 5 if elite else 3
+	health_component = HealthComponentScript.new(5 if elite else 3)
+	health_component.died.connect(_on_died)
 	add_to_group("attackable")
 	queue_redraw()
 
@@ -51,11 +56,15 @@ func is_telegraphing() -> bool:
 	return _telegraph_remaining > 0.0
 
 func receive_attack(damage: int) -> void:
-	remaining_health -= damage
-	queue_redraw()
-	if remaining_health <= 0:
-		defeated.emit(global_position, loot_seed)
-		queue_free()
+	if health_component.damage(damage):
+		queue_redraw()
+
+func _on_died() -> void:
+	velocity = Vector2.ZERO
+	set_physics_process(false)
+	remove_from_group("attackable")
+	defeated.emit(global_position, loot_seed)
+	queue_free()
 
 func _draw() -> void:
 	var body_color := Color("9c65e8") if elite else Color("e19b4a")
@@ -70,4 +79,3 @@ func _draw() -> void:
 		var local_target := to_local(target.global_position)
 		draw_line(Vector2.ZERO, local_target.normalized() * minf(local_target.length(), 210.0), Color("ffce55"), 4.0)
 		draw_arc(Vector2.ZERO, 31.0, -PI * 0.75, PI * 0.75, 24, Color("fff1a6"), 5.0)
-

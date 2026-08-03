@@ -5,9 +5,14 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
-  validate:
+  quality:
+    name: Import, static validation, and tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: chickensoft-games/setup-godot@v2
@@ -17,7 +22,53 @@ jobs:
           include-templates: true
       - name: Import project
         run: godot --headless --editor --path . --quit
-      - name: Run all tests
-        run: godot --headless --path . --script res://game/tests/run_tests.gd -- --suite=all
-      - name: Export Linux debug build
-        run: godot --headless --path . --export-debug Linux
+      - name: Static validation
+        run: godot --headless --path . --script res://tools/static_validate.gd
+      - name: Unit tests
+        run: godot --headless --path . --script res://game/tests/run_tests.gd -- --suite=unit --junit=build/test-results/unit.xml
+      - name: Integration tests
+        run: godot --headless --path . --script res://game/tests/run_tests.gd -- --suite=integration --junit=build/test-results/integration.xml
+      - name: Simulation tests
+        run: godot --headless --path . --script res://game/tests/run_tests.gd -- --suite=simulation --junit=build/test-results/simulation.xml
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/test-results/*.xml
+          if-no-files-found: error
+          retention-days: 14
+
+  export:
+    name: Export ${{ matrix.preset }}
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - preset: Windows
+            artifact: windows-debug
+            path: build/windows/**
+          - preset: Linux
+            artifact: linux-debug
+            path: build/linux/**
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: true
+      - name: Import project
+        run: godot --headless --editor --path . --quit
+      - name: Export ${{ matrix.preset }} debug build
+        run: godot --headless --path . --export-debug "${{ matrix.preset }}"
+      - name: Upload ${{ matrix.preset }} artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.path }}
+          if-no-files-found: error
+          retention-days: 14

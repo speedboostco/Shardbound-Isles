@@ -22,7 +22,7 @@ build/
 - `game/content/` contains authored composition roots that assemble features and UI. The current `world.tscn` is the first-playable content entry point.
 - `game/tests/` contains the dependency-free runner plus unit, integration, simulation, and visual validation scripts. Tests may depend on any production layer; production code must not depend on tests.
 - `docs/` is the product, design, engineering, decision, and execution-plan system of record.
-- `tools/` contains repository-local developer command implementations. `dev.ps1` backs the stable `make` interface.
+- `tools/` contains repository-local developer command implementations. `dev.ps1` backs the stable `make` interface, and `static_validate.gd` enforces repository and deterministic-domain invariants.
 - `build/` is the local destination for generated Windows and Linux exports. Generated output is ignored; its tracked README and `.gdignore` document and enforce that responsibility.
 
 Supporting root entries have concrete repository roles: `project.godot` and `export_presets.cfg` configure Godot, `Makefile` exposes stable commands, `.github/` defines CI, and `evidence/` stores approved reproducible review artifacts.

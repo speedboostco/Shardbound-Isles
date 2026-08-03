@@ -1,6 +1,6 @@
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'setup', 'import', 'validate', 'test', 'test-unit', 'test-integration', 'test-simulation', 'run', 'export-windows', 'export-linux')]
+    [ValidateSet('help', 'setup', 'import', 'static-validate', 'validate', 'test', 'test-unit', 'test-integration', 'test-simulation', 'run', 'export-windows', 'export-linux')]
     [string]$Command = 'help'
 )
 
@@ -42,16 +42,26 @@ function Invoke-Godot([string[]]$Arguments) {
 }
 
 function Invoke-Tests([string]$Suite) {
-    Invoke-Godot @('--headless', '--path', $ProjectRoot, '--script', 'res://game/tests/run_tests.gd', '--', "--suite=$Suite")
+    $reportDirectory = if ($env:TEST_REPORT_DIR) { $env:TEST_REPORT_DIR } else { Join-Path $ProjectRoot 'build\test-results' }
+    if (-not [System.IO.Path]::IsPathRooted($reportDirectory)) { $reportDirectory = Join-Path $ProjectRoot $reportDirectory }
+    New-Item -ItemType Directory -Force $reportDirectory | Out-Null
+    $reportPath = Join-Path $reportDirectory "$Suite.xml"
+    Invoke-Godot @('--headless', '--path', $ProjectRoot, '--script', 'res://game/tests/run_tests.gd', '--', "--suite=$Suite", "--junit=$reportPath")
+}
+
+function Invoke-StaticValidation {
+    Invoke-Godot @('--headless', '--path', $ProjectRoot, '--script', 'res://tools/static_validate.gd')
 }
 
 switch ($Command) {
     'help' {
         @'
 Shardbound Isles developer commands
+  help              Explain every stable developer command
   setup             Verify the local Godot dependency and import the project
   import            Import and parse the project headlessly
-  validate          Import, then run all automated tests
+  static-validate   Check required structure, documents, main scene, and deterministic domain randomness
+  validate          Import, run static validation, then run all automated tests
   test              Run all automated tests
   test-unit         Run pure rule tests
   test-integration  Run scene interaction tests
@@ -63,7 +73,8 @@ Shardbound Isles developer commands
     }
     'setup' { Write-Output "Godot: $(Find-Godot)"; Invoke-Godot @('--headless', '--editor', '--path', $ProjectRoot, '--quit') }
     'import' { Invoke-Godot @('--headless', '--editor', '--path', $ProjectRoot, '--quit') }
-    'validate' { Invoke-Godot @('--headless', '--editor', '--path', $ProjectRoot, '--quit'); Invoke-Tests 'all' }
+    'static-validate' { Invoke-StaticValidation }
+    'validate' { Invoke-Godot @('--headless', '--editor', '--path', $ProjectRoot, '--quit'); Invoke-StaticValidation; Invoke-Tests 'all' }
     'test' { Invoke-Tests 'all' }
     'test-unit' { Invoke-Tests 'unit' }
     'test-integration' { Invoke-Tests 'integration' }

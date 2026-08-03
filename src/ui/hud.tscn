@@ -97,15 +97,15 @@ offset_right = 1254.0
 offset_bottom = 88.0
 theme_override_colors/font_color = Color(1, 0.87, 0.42, 1)
 theme_override_font_sizes/font_size = 19
-text = "BREAK THE TREE • DEFEAT THE WISP\nMOVE: LEFT STICK / WASD   ATTACK: A / SPACE\nEQUIPMENT: Y / I  WORKBENCH: X / C  ISLANDS: RB / J"
+text = "BREAK THE TREE • DEFEAT THE WISP\nMOVE: LEFT STICK / WASD  ATTACK: A / SPACE\nEQUIP: Y / I  BENCH: X / C  ISLANDS: RB / J  RIFT: LB / K"
 horizontal_alignment = 2
 
 [node name="EquipmentPanel" type="PanelContainer" parent="."]
 visible = false
 offset_left = 315.0
-offset_top = 220.0
+offset_top = 185.0
 offset_right = 965.0
-offset_bottom = 610.0
+offset_bottom = 640.0
 theme_override_styles/panel = SubResource("EquipmentPanelStyle")
 
 [node name="Margin" type="MarginContainer" parent="EquipmentPanel"]
@@ -133,6 +133,13 @@ theme_override_colors/font_color = Color(1, 0.87, 0.42, 1)
 theme_override_font_sizes/font_size = 18
 text = "Defeat enemies to find equipment."
 horizontal_alignment = 1
+
+[node name="Affix" type="Label" parent="EquipmentPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(0.78, 0.58, 1, 1)
+theme_override_font_sizes/font_size = 17
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 2
 
 [node name="Equipped" type="Label" parent="EquipmentPanel/Margin/VBox"]
 theme_override_font_sizes/font_size = 18
@@ -353,3 +360,25 @@ text = "REMOVE"
 [node name="Close" type="Button" parent="IslandPanel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 50)
 text = "CLOSE  (B / ESC)"
+
+[node name="EncounterStatus" type="Label" parent="."]
+visible = false
+offset_left = 350.0
+offset_top = 125.0
+offset_right = 930.0
+offset_bottom = 165.0
+theme_override_colors/font_color = Color(1, 0.55, 0.85, 1)
+theme_override_font_sizes/font_size = 22
+text = "BOSS AWAKENS — ABYSSAL WARDEN"
+horizontal_alignment = 1
+
+[node name="RiftStatus" type="Label" parent="."]
+visible = false
+offset_left = 340.0
+offset_top = 168.0
+offset_right = 940.0
+offset_bottom = 208.0
+theme_override_colors/font_color = Color(0.78, 0.58, 1, 1)
+theme_override_font_sizes/font_size = 21
+text = "RIFT WAVE 1 / 3"
+horizontal_alignment = 1

@@ -3,11 +3,13 @@ extends CharacterBody2D
 
 signal attack_requested(origin: Vector2, direction: Vector2)
 signal health_changed(current: int, maximum: int)
+signal defeated
 
 @export var move_speed: float = 240.0
 var maximum_health: int = 10
 var health: int = 10
 var attack_damage: int = 1
+var legendary_affix_id: String = ""
 var facing: Vector2 = Vector2.RIGHT
 var _attack_cooldown: float = 0.0
 var input_enabled: bool = true
@@ -40,6 +42,7 @@ func request_attack() -> void:
 func take_damage(amount: int) -> void:
 	health = maxi(0, health - amount)
 	if health == 0:
+		defeated.emit()
 		health = maximum_health
 		global_position = Vector2.ZERO
 	health_changed.emit(health, maximum_health)

@@ -16,5 +16,6 @@
 | Close menu | Escape | East face button |
 | Island shards | J | Right shoulder button |
 | Install/replace/remove | Arrows / Enter | D-pad / left stick / face button |
+| Enter/retreat/exit rift | K | Left shoulder button |
 
 No normal gameplay action may require pointer input or text entry. UI focus must remain navigable by controller.

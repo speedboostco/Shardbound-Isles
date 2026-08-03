@@ -289,3 +289,124 @@ Risk and rollback: visual telegraphs and projectile collision can become frame-d
 - Reproducible combat evidence captured at 1280x800 in `evidence/ranged-combat-1280x800.png` with both enemies telegraphing.
 - The first capture exposed the ordinary enemy partially under the HUD. Its deterministic spawn moved from `(-390, -190)` to `(-390, -120)` and the artifact was recaptured.
 - Final visual review confirms unobscured silhouettes, readable yellow aim lines/wind-up rings, distinct elite crown/ring, bounded arena, no clipping/overlap, and no missing assets.
+
+## Milestone 8: Abyssal Warden boss
+
+Goal: cap the arena encounter with one deterministic boss whose phase transition changes attack behavior, not only health values.
+
+Assumptions:
+
+- Defeating the chaser, Tide Slinger, and Stormcaller unlocks the boss at fixed position `(0, 230)`.
+- Phase 1 telegraphs and fires two focused tidal lances.
+- At half health, phase 2 changes color/silhouette, raises movement pressure, shortens telegraph time, and fires eight radial Maelstrom projectiles.
+- Victory drops one deterministic legendary Riftwake Core, seed `7777`, power 9.
+- Boss encounter state remains transient until encounter-state persistence is explicitly scoped.
+
+Acceptance criteria:
+
+- Boss remains hidden/non-interactive until all three current enemies are defeated.
+- Entrance and victory provide clear HUD feedback.
+- Both phases telegraph before projectiles and use deterministic patterns.
+- Crossing half health triggers one visible behavioral transition.
+- Verdant Crucible multiplies boss movement speed from its current phase baseline without stacking.
+- Boss death produces the fixed legendary reward and cannot signal victory twice.
+- Unit, integration, and 1280x800 visual evidence cover unlock, patterns, transition, modifier, and reward.
+
+Tests defined before production changes:
+
+- Unit: phase-1 two-lance symmetry, phase-2 eight-direction normalization/coverage, phase telegraph durations, and deterministic legendary reward.
+- Integration: locked initial state, three-enemy unlock, entrance feedback, telegraph-before-fire for both phases, transition speed/pattern, Verdant interaction, boss death, victory feedback, and legendary pickup.
+
+Expected changes: pure boss pattern/reward rules, boss scene behavior, world unlock/projectile/reward wiring, encounter HUD, modifier propagation, tests, combat docs, and evidence.
+
+Risk and rollback: a boss can overwhelm the compact arena. Use explicit low projectile counts/speeds, readable wind-ups, and a small health pool; defer tuning claims until manual playtesting.
+
+### Milestone 8 evidence — 2026-08-03
+
+- Boss-pattern unit tests pass: 6 assertions covering two-lance symmetry, eight-direction normalized Maelstrom, phase telegraph durations, and deterministic legendary reward.
+- Boss integration tests cover initial lock, three-enemy unlock/fixed spawn, entrance feedback, both telegraphs and patterns, half-health transition/speed, Verdant phase multiplication, idempotent defeat, victory feedback, and legendary pickup.
+- Reproducible phase-two evidence captured at 1280x800 in `evidence/boss-encounter-1280x800.png`.
+- The planned fixed spawn moved from `(0, 285)` to `(0, 230)` before capture so the complete radial telegraph remains inside the arena border.
+- Visual review confirms readable phase banner, distinct magenta transition silhouette/horns/health bar, eight warning spokes, unobstructed player/world objects, bounded camera, and no missing assets.
+- Encounter difficulty and feel remain unclaimed without a manual playtest.
+
+## Milestone 9: repeatable three-wave rift
+
+Goal: add a compact repeatable combat challenge that reuses proven enemies, escalates behavior across three deterministic waves, and rewards repeat runs.
+
+Assumptions:
+
+- Abyssal Warden victory unlocks a physical portal at `(-510, 250)` for the current run.
+- Left shoulder / K enters while nearby; the same action retreats from an active run or exits a resolved run.
+- Wave 1: two chasers. Wave 2: one chaser and one Tide Slinger. Wave 3: one Tide Slinger and one Stormcaller.
+- Completion drops a deterministic Rift Cache whose seed and power advance by run index; failure drops nothing.
+- Rift unlock/run state remains transient until schema-3 encounter persistence is separately approved.
+
+Acceptance criteria:
+
+- Locked portal becomes visibly active only after boss victory.
+- Entry, retreat, resolved exit, and repeat entry require no pointer.
+- Three waves spawn at explicit positions and progress only after all current enemies are defeated.
+- Player defeat and retreat produce clear failure feedback and safe cleanup/recovery.
+- Completion produces one deterministic run-indexed reward and clear exit guidance.
+- Verdant Crucible accelerates all spawned rift enemies from their archetype baselines.
+- Unit, integration, simulation, and 1280x800 evidence cover configuration, flow, failure, reward, and repeatability.
+
+Tests defined before production changes:
+
+- Unit: exact wave configurations/escalation, fixed spawn coordinates, and distinct deterministic rewards for successive runs.
+- Integration: locked entry, boss unlock, proximity gate, three-wave progression, Verdant speeds, completion/reward, exit/re-entry, player-defeat failure, and enemy/projectile cleanup.
+
+Expected changes: pure rift rules/reward, portal, run controller, dynamic enemy orchestration, player defeat signal, input/HUD feedback, tests, docs, and evidence.
+
+Risk and rollback: dynamically spawned enemies can leak signals/nodes across runs. Track every rift combatant explicitly, disconnect through queue-free cleanup, and assert an empty list after completion/failure/exit.
+
+### Milestone 9 evidence — 2026-08-03
+
+- Rift-rule unit tests pass: 5 assertions covering exact wave compositions, fixed coordinates, escalation, and distinct improving repeat rewards.
+- Rift integration tests pass: 14 assertions covering locked/unlocked portal, proximity, three-wave progression, Verdant speeds, completion cleanup/reward/feedback, resolved exit, repeat entry, player-defeat failure, and cleanup.
+- Deterministic simulation passes 5 rift assertions and records: 3 waves cleared, reward seed 8801, 2 runs started, second run failed cleanly by retreat.
+- Reproducible wave-three evidence captured at 1280x800 in `evidence/rift-wave-1280x800.png` with the unlocked portal, run/wave/enemy status, Tide Slinger telegraph, and Stormcaller telegraph.
+- Initial capture showed stale boss-victory feedback during the rift; entry now clears encounter feedback and the artifact was recaptured.
+- Final visual review confirms clear portal identity/range, readable wave 3/3 state, unobscured telegraphs, no clipping/overlap, bounded arena, and no missing assets.
+- Reward power caps at 9 after three runs to avoid unbounded numeric-only progression.
+
+## Milestone 10: Riftwake Pulse legendary behavior
+
+Goal: make Riftwake Core visibly build-defining by changing every player attack, not only increasing its damage number.
+
+Assumptions:
+
+- Equipping `riftwake_core_7777` grants affix ID `riftwake_pulse`.
+- Each attack emits a 115-pixel radial pulse for 2 damage after the primary strike resolves.
+- The primary strike target is excluded from the pulse, preventing duplicate damage.
+- Pulse targets are ordered deterministically by distance then stable runtime ID.
+- The pulse affects ordinary, elite, boss, and dynamically spawned rift enemies through the existing attackable contract.
+
+Acceptance criteria:
+
+- Boss reward data includes stable legendary affix ID, name, and description.
+- Equipment comparison visibly describes Riftwake Pulse.
+- Equipping/unequipping and save/load correctly derive active legendary behavior.
+- An attack creates readable radial evidence and damages every eligible nearby secondary target exactly once.
+- Primary and out-of-radius targets are not pulse-damaged.
+- Deterministic targeting and world interaction have unit/integration coverage across existing enemy types.
+
+Tests defined before production changes:
+
+- Unit: radius inclusion, exclusion, distance ordering, stable-ID tie break, and affix metadata.
+- Integration: equip legendary, primary strike, no duplicate primary hit, one secondary hit, far-target exclusion, visual pulse creation, unequip disable, and save/load restoration of active behavior.
+
+Expected changes: pure pulse targeting, legendary reward metadata, player derived affix state, pulse visual, world attack wiring, equipment UI description, tests, docs, and evidence.
+
+Risk and rollback: area attacks can trigger duplicate death signals or depend on scene-tree ordering. Select stable IDs first, exclude primary before damage, and apply at most one pulse hit per selected ID.
+
+### Milestone 10 evidence — 2026-08-03
+
+- Pulse-targeting unit coverage passes 4 assertions for radius/exclusion, distance order, stable-ID tie breaking, and reward metadata; the unit suite totals 62 assertions.
+- Integration coverage passes for equip/unequip, exact primary/secondary/out-of-range damage, boss and live rift-wave interaction, visible effect creation, and save/load restoration; the integration suite totals 109 assertions.
+- Full validation passes 181 assertions across unit, integration, and deterministic simulation suites.
+- The first targeted run exposed that the test runner could continue after a dependent script failed to compile and report zero assertions as a pass. The runner now records load, compile, or instantiation failures explicitly before dispatching any test.
+- Entering a rift now removes hidden arena combatants from `attackable`, preventing attacks or pulses from selecting invisible enemies.
+- Reproducible evidence was captured at 1280x800 in `evidence/legendary-pulse-1280x800.png` while the equipment comparison was open.
+- Visual review confirms readable wrapped affix text, visible pulse rings, UNEQUIP controller focus, opaque modal layering, no clipping/overlap, bounded arena, and no missing assets.

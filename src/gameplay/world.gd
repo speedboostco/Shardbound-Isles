@@ -10,6 +10,8 @@ const BASE_RANGED_SPEED: float = 65.0
 const BASE_ELITE_SPEED: float = 85.0
 const RANGED_LOOT_SEED: int = 424243
 const ELITE_LOOT_SEED: int = 424244
+const BASE_BOSS_PHASE_ONE_SPEED: float = 50.0
+const BASE_BOSS_PHASE_TWO_SPEED: float = 105.0
 
 @onready var player: PlayerCharacter = $Player
 @onready var tree: ResourceNode = $Tree
@@ -19,6 +21,8 @@ const ELITE_LOOT_SEED: int = 424244
 @onready var island_slot: IslandSlot = $IslandSlot
 @onready var ranged_enemy: RangedEnemy = $RangedEnemy
 @onready var elite_ranged_enemy: RangedEnemy = $EliteRangedEnemy
+@onready var boss: AbyssalWarden = $Boss
+@onready var rift_portal: RiftPortal = $RiftPortal
 @onready var hud: GameHud = $HUD
 
 var wood: int = 0
@@ -31,10 +35,13 @@ var tidecatcher_built: bool = false
 var save_service := SaveService.new()
 var island_shards: Array[Dictionary] = []
 var installed_shard: Dictionary = {}
+var rift_controller := RiftRunController.new()
+var rift_enemies: Array[Node2D] = []
 
 func _ready() -> void:
 	player.attack_requested.connect(_on_attack_requested)
 	player.health_changed.connect(hud.set_health)
+	player.defeated.connect(_on_player_defeated)
 	tree.depleted.connect(_on_tree_depleted)
 	enemy.target = player
 	enemy.defeated.connect(_on_enemy_defeated)
@@ -44,6 +51,10 @@ func _ready() -> void:
 	elite_ranged_enemy.volley_requested.connect(_on_enemy_volley_requested)
 	ranged_enemy.defeated.connect(_on_ranged_enemy_defeated)
 	elite_ranged_enemy.defeated.connect(_on_ranged_enemy_defeated)
+	boss.target = player
+	boss.volley_requested.connect(_on_boss_volley_requested)
+	boss.phase_changed.connect(_on_boss_phase_changed)
+	boss.defeated.connect(_on_boss_defeated)
 	hud.set_health(player.health, player.maximum_health)
 	hud.set_wood(wood)
 	hud.equipment_panel_requested.connect(open_equipment_panel)
@@ -63,6 +74,7 @@ func _ready() -> void:
 	hud.island_panel_closed.connect(_on_island_panel_closed)
 	hud.island_install_requested.connect(install_selected_shard)
 	hud.island_remove_requested.connect(remove_installed_shard)
+	hud.rift_requested.connect(handle_rift_action)
 	tidecatcher.wood_collected.connect(_on_tidecatcher_wood_collected)
 	tidecatcher.storage_changed.connect(_on_tidecatcher_storage_changed)
 	_refresh_equipment_ui()
@@ -83,6 +95,27 @@ func _on_attack_requested(origin: Vector2, direction: Vector2) -> void:
 			best_distance = distance
 	if is_instance_valid(best_target) and best_target.has_method("receive_attack"):
 		best_target.receive_attack(player.attack_damage)
+	if player.legendary_affix_id == "riftwake_pulse":
+		_trigger_legendary_pulse(origin, best_target)
+
+func _trigger_legendary_pulse(origin: Vector2, primary_target: Node2D) -> void:
+	var candidates: Array[Dictionary] = []
+	var targets_by_id: Dictionary = {}
+	for candidate: Node in get_tree().get_nodes_in_group("attackable"):
+		if not (candidate is ChaserEnemy or candidate is RangedEnemy or candidate is AbyssalWarden):
+			continue
+		var enemy_node := candidate as Node2D
+		var candidate_id := str(enemy_node.get_instance_id())
+		candidates.append({"id": candidate_id, "position": enemy_node.global_position})
+		targets_by_id[candidate_id] = enemy_node
+	var excluded_id := str(primary_target.get_instance_id()) if is_instance_valid(primary_target) else ""
+	for target_id: String in LegendaryPulseTargeting.select_ids(origin, candidates, LegendaryPulseVisual.MAXIMUM_RADIUS, excluded_id):
+		var target_node: Node = targets_by_id.get(target_id)
+		if is_instance_valid(target_node) and target_node.has_method("receive_attack"):
+			target_node.receive_attack(2)
+	var pulse := LegendaryPulseVisual.new()
+	pulse.global_position = origin
+	add_child(pulse)
 
 func _on_tree_depleted(drop_position: Vector2, amount: int) -> void:
 	_spawn_pickup(drop_position, "wood", amount)
@@ -91,14 +124,37 @@ func _on_enemy_defeated(drop_position: Vector2) -> void:
 	enemies_defeated += 1
 	_spawn_pickup(drop_position, "equipment", EquipmentGenerator.generate(EQUIPMENT_SEED))
 	_spawn_pickup(drop_position + Vector2(25.0, 0.0), "island_shard", IslandShardGenerator.generate(ISLAND_SHARD_SEED))
+	_check_boss_unlock()
 
 func _on_ranged_enemy_defeated(drop_position: Vector2, loot_seed: int) -> void:
 	enemies_defeated += 1
 	_spawn_pickup(drop_position, "equipment", EquipmentGenerator.generate(loot_seed))
+	_check_boss_unlock()
 
 func _on_enemy_volley_requested(origin: Vector2, base_direction: Vector2, angles: Array[float], damage: int) -> void:
 	for angle: float in angles:
 		spawn_enemy_projectile(origin, base_direction.rotated(angle), damage)
+
+func _on_boss_volley_requested(origin: Vector2, directions: Array[Vector2], damage: int) -> void:
+	for direction: Vector2 in directions:
+		spawn_enemy_projectile(origin, direction, damage)
+
+func _on_boss_phase_changed(_phase: int, base_speed: float) -> void:
+	var multiplier := float(installed_shard.get("enemy_speed_multiplier", 1.0))
+	boss.move_speed = base_speed * multiplier
+	hud.set_encounter_feedback("MAELSTROM PHASE — RADIAL VOLLEYS")
+
+func _on_boss_defeated(drop_position: Vector2) -> void:
+	_spawn_pickup(drop_position, "equipment", BossReward.generate())
+	hud.set_encounter_feedback("WARDEN DEFEATED — RIFTWAKE CORE DROPPED")
+	rift_portal.unlock()
+	hud.set_rift_feedback("RIFT UNLOCKED — APPROACH PORTAL AND PRESS LB / K")
+
+func _check_boss_unlock() -> void:
+	if enemies_defeated >= 3 and not boss.active:
+		boss.activate(player)
+		_apply_island_modifiers()
+		hud.set_encounter_feedback("BOSS AWAKENS — ABYSSAL WARDEN")
 
 func spawn_enemy_projectile(origin: Vector2, projectile_direction: Vector2, projectile_damage: int) -> EnemyProjectile:
 	var projectile := EnemyProjectile.new()
@@ -150,13 +206,13 @@ func _on_equipment_panel_closed() -> void:
 
 func equip_selected_item(index: int) -> bool:
 	var equipped := equipment_inventory.equip(index)
-	player.attack_damage = equipment_inventory.attack_damage()
+	_sync_player_equipment()
 	_refresh_equipment_ui()
 	return equipped
 
 func unequip_item() -> bool:
 	var unequipped := equipment_inventory.unequip()
-	player.attack_damage = equipment_inventory.attack_damage()
+	_sync_player_equipment()
 	_refresh_equipment_ui()
 	return unequipped
 
@@ -168,6 +224,11 @@ func salvage_selected_item(index: int) -> int:
 func _refresh_equipment_ui() -> void:
 	hud.refresh_equipment(equipment_inventory.items, equipment_inventory.equipped_item(), equipment_inventory.scrap, equipment_inventory.attack_damage())
 	_refresh_workbench_ui()
+
+func _sync_player_equipment() -> void:
+	var equipped := equipment_inventory.equipped_item()
+	player.attack_damage = equipment_inventory.attack_damage()
+	player.legendary_affix_id = String(equipped.get("legendary_affix_id", ""))
 
 func try_open_workbench() -> bool:
 	if not workbench.is_player_in_range(player.global_position):
@@ -313,7 +374,7 @@ func _apply_state(state: Dictionary) -> void:
 	equipment_inventory.equipped_id = String(equipment_state.equipped_id)
 	if equipment_inventory.equipped_item().is_empty():
 		equipment_inventory.equipped_id = ""
-	player.attack_damage = equipment_inventory.attack_damage()
+	_sync_player_equipment()
 	reinforced_heart_crafted = bool(state.reinforced_heart_crafted)
 	tidecatcher_built = bool(tidecatcher_state.built)
 	tidecatcher.restore_state(tidecatcher_built, int(tidecatcher_state.stored_wood), player)
@@ -365,6 +426,17 @@ func _apply_island_modifiers() -> void:
 		ranged_enemy.move_speed = BASE_RANGED_SPEED * speed_multiplier
 	if is_instance_valid(elite_ranged_enemy):
 		elite_ranged_enemy.move_speed = BASE_ELITE_SPEED * speed_multiplier
+	if is_instance_valid(boss):
+		var boss_base := BASE_BOSS_PHASE_TWO_SPEED if boss.phase == 2 else BASE_BOSS_PHASE_ONE_SPEED
+		boss.move_speed = boss_base * speed_multiplier
+	for combatant: Node2D in rift_enemies:
+		if not is_instance_valid(combatant):
+			continue
+		if combatant is ChaserEnemy:
+			(combatant as ChaserEnemy).move_speed = BASE_ENEMY_SPEED * speed_multiplier
+		elif combatant is RangedEnemy:
+			var ranged := combatant as RangedEnemy
+			ranged.move_speed = (BASE_ELITE_SPEED if ranged.elite else BASE_RANGED_SPEED) * speed_multiplier
 	island_slot.set_installed(not installed_shard.is_empty(), String(installed_shard.get("name", "")))
 
 func _refresh_island_ui() -> void:
@@ -377,12 +449,105 @@ func _has_shard(shard_id: String) -> bool:
 	return false
 
 func _set_combat_processing(enabled: bool) -> void:
-	for combatant: Node in [enemy, ranged_enemy, elite_ranged_enemy]:
+	var combatants: Array[Node] = [enemy, ranged_enemy, elite_ranged_enemy, boss]
+	combatants.append_array(rift_enemies)
+	for combatant: Node in combatants:
 		if is_instance_valid(combatant):
 			combatant.set_physics_process(enabled)
 	for child: Node in get_children():
 		if child is EnemyProjectile:
 			child.set_process(enabled)
+
+func handle_rift_action() -> void:
+	if rift_controller.status == RiftRunController.Status.ACTIVE:
+		_fail_rift("RIFT FAILED — RETREATED")
+	elif rift_controller.status in [RiftRunController.Status.COMPLETE, RiftRunController.Status.FAILED]:
+		rift_controller.exit()
+		hud.set_rift_feedback("RIFT READY — APPROACH PORTAL FOR RUN %d" % (rift_controller.run_index + 1))
+	else:
+		try_enter_rift()
+
+func try_enter_rift() -> bool:
+	if not rift_portal.is_player_in_range(player.global_position):
+		return false
+	if not rift_controller.start():
+		return false
+	hud.set_encounter_feedback("")
+	_prepare_rift_arena()
+	_spawn_rift_wave()
+	return true
+
+func _prepare_rift_arena() -> void:
+	for combatant: Node2D in [enemy, ranged_enemy, elite_ranged_enemy, boss]:
+		if is_instance_valid(combatant):
+			combatant.visible = false
+			combatant.set_physics_process(false)
+			combatant.remove_from_group("attackable")
+	_clear_enemy_projectiles()
+
+func _spawn_rift_wave() -> void:
+	rift_enemies.clear()
+	for definition: Dictionary in RiftRules.wave(rift_controller.wave_index):
+		var kind := String(definition.kind)
+		var spawn_position := definition.position as Vector2
+		if kind == "chaser":
+			var chaser := ChaserEnemy.new()
+			chaser.position = spawn_position
+			chaser.target = player
+			chaser.move_speed = BASE_ENEMY_SPEED * float(installed_shard.get("enemy_speed_multiplier", 1.0))
+			add_child(chaser)
+			chaser.defeated.connect(_on_rift_chaser_defeated.bind(chaser))
+			rift_enemies.append(chaser)
+		else:
+			var ranged := RangedEnemy.new()
+			ranged.position = spawn_position
+			ranged.target = player
+			ranged.elite = kind == "elite"
+			ranged.move_speed = (BASE_ELITE_SPEED if ranged.elite else BASE_RANGED_SPEED) * float(installed_shard.get("enemy_speed_multiplier", 1.0))
+			add_child(ranged)
+			ranged.volley_requested.connect(_on_enemy_volley_requested)
+			ranged.defeated.connect(_on_rift_ranged_defeated.bind(ranged))
+			rift_enemies.append(ranged)
+	hud.set_rift_feedback("RIFT RUN %d — WAVE %d / %d — %d ENEMIES" % [rift_controller.run_index, rift_controller.wave_index, RiftRules.TOTAL_WAVES, rift_enemies.size()])
+
+func _on_rift_chaser_defeated(_position: Vector2, combatant: ChaserEnemy) -> void:
+	_resolve_rift_enemy(combatant)
+
+func _on_rift_ranged_defeated(_position: Vector2, _loot_seed: int, combatant: RangedEnemy) -> void:
+	_resolve_rift_enemy(combatant)
+
+func _resolve_rift_enemy(combatant: Node2D) -> void:
+	rift_enemies.erase(combatant)
+	if not rift_enemies.is_empty() or rift_controller.status != RiftRunController.Status.ACTIVE:
+		return
+	if rift_controller.next_wave():
+		_spawn_rift_wave()
+	else:
+		rift_controller.complete()
+		_spawn_pickup(rift_portal.global_position, "equipment", RiftRules.reward(rift_controller.run_index))
+		hud.set_rift_feedback("RIFT COMPLETE — CACHE DROPPED — PRESS LB / K TO EXIT")
+
+func _on_player_defeated() -> void:
+	if rift_controller.status == RiftRunController.Status.ACTIVE:
+		_fail_rift("RIFT FAILED — SAFE RECOVERY")
+
+func _fail_rift(message: String) -> void:
+	rift_controller.fail()
+	_clear_rift_enemies()
+	_clear_enemy_projectiles()
+	hud.set_rift_feedback(message)
+
+func _clear_rift_enemies() -> void:
+	for combatant: Node2D in rift_enemies:
+		if is_instance_valid(combatant):
+			combatant.remove_from_group("attackable")
+			combatant.queue_free()
+	rift_enemies.clear()
+
+func _clear_enemy_projectiles() -> void:
+	for child: Node in get_children():
+		if child is EnemyProjectile:
+			child.queue_free()
 
 func run_scripted_smoke() -> Dictionary:
 	tree.receive_attack(1)

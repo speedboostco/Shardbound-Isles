@@ -18,6 +18,7 @@ signal island_panel_requested
 signal island_panel_closed
 signal island_install_requested(index: int)
 signal island_remove_requested
+signal rift_requested
 
 @onready var health_label: Label = $Margin/VBox/Health
 @onready var wood_label: Label = $Margin/VBox/Wood
@@ -26,6 +27,7 @@ signal island_remove_requested
 @onready var equipment_panel: PanelContainer = $EquipmentPanel
 @onready var item_name_label: Label = $EquipmentPanel/Margin/VBox/ItemName
 @onready var comparison_label: Label = $EquipmentPanel/Margin/VBox/Comparison
+@onready var affix_label: Label = $EquipmentPanel/Margin/VBox/Affix
 @onready var equipped_label: Label = $EquipmentPanel/Margin/VBox/Equipped
 @onready var scrap_label: Label = $EquipmentPanel/Margin/VBox/Scrap
 @onready var equip_button: Button = $EquipmentPanel/Margin/VBox/Actions/Equip
@@ -45,6 +47,8 @@ signal island_remove_requested
 @onready var island_status_label: Label = $IslandPanel/Margin/VBox/Status
 @onready var island_install_button: Button = $IslandPanel/Margin/VBox/Actions/Install
 @onready var island_remove_button: Button = $IslandPanel/Margin/VBox/Actions/Remove
+@onready var encounter_label: Label = $EncounterStatus
+@onready var rift_label: Label = $RiftStatus
 
 var _items: Array[Dictionary] = []
 var _equipped_id: String = ""
@@ -91,6 +95,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif not equipment_panel.visible and not workbench_panel.visible and not system_panel.visible:
 			island_panel_requested.emit()
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("rift"):
+		if not equipment_panel.visible and not workbench_panel.visible and not system_panel.visible and not island_panel.visible:
+			rift_requested.emit()
+		get_viewport().set_input_as_handled()
 	elif equipment_panel.visible and event.is_action_pressed("ui_cancel"):
 		close_equipment_panel()
 		get_viewport().set_input_as_handled()
@@ -124,6 +132,7 @@ func refresh_equipment(items: Array[Dictionary], equipped_item: Dictionary, scra
 	if items.is_empty():
 		item_name_label.text = "NO EQUIPMENT IN PACK"
 		comparison_label.text = "Defeat enemies to find equipment."
+		affix_label.text = ""
 		equip_button.disabled = true
 		salvage_button.disabled = true
 	else:
@@ -132,6 +141,9 @@ func refresh_equipment(items: Array[Dictionary], equipped_item: Dictionary, scra
 		var delta := int(item.get("power", 0)) - equipped_power
 		item_name_label.text = "%s  •  %s  •  POWER %d" % [item.get("name", "Unknown"), String(item.get("rarity", "common")).to_upper(), item.get("power", 0)]
 		comparison_label.text = "POWER CHANGE  %+d    |    SALVAGE VALUE  %d" % [delta, _salvage_value(String(item.get("rarity", "common")))]
+		var affix_name := String(item.get("legendary_affix_name", ""))
+		var affix_description := String(item.get("legendary_affix_description", ""))
+		affix_label.text = "%s — %s" % [affix_name.to_upper(), affix_description] if not affix_name.is_empty() else ""
 		equip_button.disabled = String(item.get("id", "")) == _equipped_id
 		salvage_button.disabled = String(item.get("id", "")) == _equipped_id
 	unequip_button.disabled = _equipped_id.is_empty()
@@ -277,6 +289,20 @@ func close_island_panel() -> void:
 
 func is_island_panel_open() -> bool:
 	return island_panel.visible
+
+func set_encounter_feedback(message: String) -> void:
+	encounter_label.visible = not message.is_empty()
+	encounter_label.text = message
+
+func get_encounter_feedback() -> String:
+	return encounter_label.text
+
+func set_rift_feedback(message: String) -> void:
+	rift_label.visible = not message.is_empty()
+	rift_label.text = message
+
+func get_rift_feedback() -> String:
+	return rift_label.text
 
 func _salvage_value(rarity: String) -> int:
 	return 2 if rarity == "uncommon" else 1

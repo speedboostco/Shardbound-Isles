@@ -75,3 +75,30 @@ Seed `424242` scripted two tree hits, wood collection, three enemy hits, and equ
 - Typed signal validation initially failed because a conditional literal returned untyped `Array`; explicit `Array[float]` construction fixed the boundary and targeted suites passed.
 - `tests/visual/capture_ranged_combat.gd` — exit 0; captured `ranged-combat-1280x800.png` with both attack telegraphs active.
 - Initial capture found Tide Slinger partly beneath the HUD; the spawn was moved down and recaptured. Final review verifies clear silhouettes/telegraphs, elite identity, no clipping or overlap, and no missing assets.
+
+## Boss milestone evidence
+
+- Boss pattern tests add 6 passing assertions for focused-lance symmetry, normalized radial coverage, explicit phase telegraphs, and deterministic legendary reward.
+- Integration covers locked state, three-enemy awakening, fixed spawn, entrance feedback, phase-one and phase-two attack resolution, behavioral transition, Verdant speed multiplication, single victory emission, feedback, and reward pickup.
+- `tests/visual/capture_boss_encounter.gd` — exit 0; captured `boss-encounter-1280x800.png` during the Maelstrom telegraph.
+- Boss spawn was moved from y=285 to y=230 before evidence capture so all eight radial warning spokes remain within the arena.
+- Visual inspection verifies phase banner, magenta boss identity, horns/ring/health bar, radial telegraph readability, no UI overlap, bounded arena, and no missing assets.
+
+## Rift milestone evidence
+
+- Rift rules add 5 passing assertions for exact compositions, fixed spawns, escalation, and distinct repeat rewards.
+- Integration adds 14 passing assertions for portal unlock/proximity, all wave transitions, Verdant behavior, completion/reward, repeat entry, player-defeat failure, feedback, and cleanup.
+- Simulation metrics: `{"first_reward_seed":8801,"runs_started":2,"second_run_status":"failed","waves_cleared":3}` with 5 assertions and 0 failures.
+- `tests/visual/capture_rift_wave.gd` — exit 0; captured `rift-wave-1280x800.png` during wave three.
+- First capture exposed stale boss feedback; rift entry now clears it. Final review verifies portal visibility, wave/enemy status, ordinary/elite telegraphs, no clipping or overlap, and bounded arena.
+
+## Riftwake Pulse milestone evidence
+
+- Unit suite: 62 assertions, 0 failures, including deterministic pulse radius, primary exclusion, distance/stable-ID ordering, and affix metadata.
+- Integration suite: 109 assertions, 0 failures, including exact primary/secondary/out-of-range damage, an active boss, a live rift wave, equip/unequip, visual creation, and save/load restoration.
+- Full validation: 181 assertions, 0 failures; original smoke and repeat-rift metrics remain deterministic.
+- The runner now fails explicitly when a test script cannot load, compile, or instantiate; this closes a false-pass path discovered by the initial targeted run.
+- Rift entry removes hidden arena combatants from the attackable group so area attacks cannot select invisible targets.
+- `tests/visual/capture_legendary_pulse.gd` — exit 0; captured `legendary-pulse-1280x800.png` at 1280x800.
+- Visual inspection verifies visible concentric pulse rings, readable two-line affix description, UNEQUIP controller focus, no text clipping or overlap, opaque modal layering, bounded arena, and no missing assets.
+- Physical controller hardware and subjective combat feel were not exercised.

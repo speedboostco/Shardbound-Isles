@@ -18,6 +18,10 @@ func run(support: TestSupport) -> void:
 	var migrated: Dictionary = service.decode(JSON.stringify({"schema_version": 1, "state": legacy_state}))
 	support.expect(migrated.get("ok") == true and migrated.get("migrated_from") == 1, "valid schema-one save must migrate explicitly")
 	support.expect((migrated.get("state") as Dictionary).get("islands") == {"inventory": [], "installed": {}}, "schema-one migration must add empty island state")
+	var invalid_modifier_state := state.duplicate(true)
+	invalid_modifier_state["islands"] = {"inventory": [IslandShardGenerator.generate(9003)], "installed": IslandShardGenerator.generate(9003)}
+	(invalid_modifier_state.islands.installed as Dictionary)["production_interval_multiplier"] = "fast"
+	support.expect(service.decode(service.encode(invalid_modifier_state)).get("error") == "invalid_state", "schema-two shard extensions must reject malformed modifier types")
 	var path := "user://save-service-unit.json"
 	support.expect(service.save_to_path(path, state).get("ok") == true, "valid state must write to local save path")
 	var disk_result: Dictionary = service.load_from_path(path)
@@ -30,5 +34,5 @@ func _sample_state() -> Dictionary:
 		"equipment": {"scrap": 2, "equipped_id": "starter_ranged_424242", "items": [EquipmentGenerator.generate(424242)]},
 		"reinforced_heart_crafted": true,
 		"tidecatcher": {"built": true, "stored_wood": 4},
-		"islands": {"inventory": [], "installed": {}},
+		"islands": {"inventory": [IslandShardGenerator.generate(9003)], "installed": IslandShardGenerator.generate(9003)},
 	}

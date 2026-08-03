@@ -15,3 +15,5 @@
 - Add the boss-unlocked repeatable three-wave rift, safe failure/retreat flow, and capped run-indexed rewards.
 - Make Riftwake Core behavior-changing with a deterministic radial Riftwake Pulse, in-panel affix explanation, persistence-derived activation, and boss/rift interaction coverage.
 - Harden the test runner so script load, compile, and instantiation failures cannot silently pass as zero-assertion suites.
+- Expand world loot to Verdant Crucible, Emberglass Reach, and Tempest Loom with distinct gathering, combat, automation, projectile-risk, controller-selection, and physical-biome behavior.
+- Add per-test assertion-count contracts so interrupted runtime tests cannot silently report a partial pass.

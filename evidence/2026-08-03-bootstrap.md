@@ -102,3 +102,13 @@ Seed `424242` scripted two tree hits, wood collection, three enemy hits, and equ
 - `tests/visual/capture_legendary_pulse.gd` — exit 0; captured `legendary-pulse-1280x800.png` at 1280x800.
 - Visual inspection verifies visible concentric pulse rings, readable two-line affix description, UNEQUIP controller focus, no text clipping or overlap, opaque modal layering, bounded arena, and no missing assets.
 - Physical controller hardware and subjective combat feel were not exercised.
+
+## Three island-shard milestone evidence
+
+- Unit suite: 70 assertions, 0 failures, including stable three-seed definitions, deterministic cycling, production cadence, schema-2 extension round trip, and malformed modifier rejection.
+- Integration suite: 123 assertions, 0 failures, including three deterministic enemy drops, controller selection/focus routing, Emberglass and Tempest tradeoffs, replacement/removal resets, physical biome identity, and save/load restoration.
+- Full validation: 203 assertions, 0 failures; smoke and repeat-rift metrics remain deterministic.
+- Per-test expected assertion counts now turn interrupted runtime tests into failures instead of accepting partial execution.
+- `tests/visual/capture_three_island_shards.gd` — exit 0; captured `three-island-shards-1280x800.png` at 1280x800.
+- Visual inspection verifies readable Tempest benefit/risk text, 3/3 navigation state, visible REPLACE focus, opaque modal fit/layering, a distinct cyan storm-ring eastern island, and no clipping or missing assets.
+- Physical controller hardware and subjective balance of the three tradeoffs were not exercised.

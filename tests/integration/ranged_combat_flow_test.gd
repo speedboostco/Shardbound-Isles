@@ -32,16 +32,26 @@ func run(support: TestSupport, scene_tree: SceneTree) -> void:
 	await scene_tree.process_frame
 	var ordinary_drop := _find_equipment_seed(world, FirstPlayableWorld.RANGED_LOOT_SEED)
 	support.expect(ordinary_drop != null, "ordinary ranged death must emit deterministic equipment loot")
+	support.expect(_find_island_seed(world, FirstPlayableWorld.RANGED_ISLAND_SHARD_SEED) != null, "ordinary ranged death must emit deterministic Emberglass shard loot")
 	world.elite_ranged_enemy.receive_attack(99)
 	await scene_tree.process_frame
 	var elite_drop := _find_equipment_seed(world, FirstPlayableWorld.ELITE_LOOT_SEED)
 	support.expect(elite_drop != null, "elite death must emit its deterministic equipment loot")
+	support.expect(_find_island_seed(world, FirstPlayableWorld.ELITE_ISLAND_SHARD_SEED) != null, "elite death must emit deterministic Tempest shard loot")
 	world.queue_free()
 	await scene_tree.process_frame
 
 func _find_equipment_seed(world: Node, seed_value: int) -> WorldPickup:
 	for child: Node in world.get_children():
 		if child is WorldPickup and (child as WorldPickup).kind == "equipment":
+			var payload := (child as WorldPickup).payload as Dictionary
+			if int(payload.get("seed", -1)) == seed_value:
+				return child as WorldPickup
+	return null
+
+func _find_island_seed(world: Node, seed_value: int) -> WorldPickup:
+	for child: Node in world.get_children():
+		if child is WorldPickup and (child as WorldPickup).kind == "island_shard":
 			var payload := (child as WorldPickup).payload as Dictionary
 			if int(payload.get("seed", -1)) == seed_value:
 				return child as WorldPickup

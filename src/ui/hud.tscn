@@ -297,9 +297,9 @@ text = "CLOSE  (B / ESC)"
 [node name="IslandPanel" type="PanelContainer" parent="."]
 visible = false
 offset_left = 315.0
-offset_top = 175.0
+offset_top = 130.0
 offset_right = 965.0
-offset_bottom = 650.0
+offset_bottom = 680.0
 theme_override_styles/panel = SubResource("IslandPanelStyle")
 
 [node name="Margin" type="MarginContainer" parent="IslandPanel"]
@@ -309,7 +309,7 @@ theme_override_constants/margin_right = 34
 theme_override_constants/margin_bottom = 27
 
 [node name="VBox" type="VBoxContainer" parent="IslandPanel/Margin"]
-theme_override_constants/separation = 17
+theme_override_constants/separation = 13
 
 [node name="Title" type="Label" parent="IslandPanel/Margin/VBox"]
 theme_override_colors/font_color = Color(0.48, 0.95, 0.66, 1)
@@ -321,6 +321,33 @@ horizontal_alignment = 1
 theme_override_font_sizes/font_size = 24
 text = "NO ISLAND SHARDS"
 horizontal_alignment = 1
+
+[node name="Selection" type="HBoxContainer" parent="IslandPanel/Margin/VBox"]
+alignment = 1
+theme_override_constants/separation = 18
+
+[node name="Previous" type="Button" parent="IslandPanel/Margin/VBox/Selection"]
+custom_minimum_size = Vector2(145, 48)
+focus_neighbor_left = NodePath("../Next")
+focus_neighbor_right = NodePath("../Next")
+focus_neighbor_bottom = NodePath("../../Actions/Install")
+disabled = true
+text = "< PREVIOUS"
+
+[node name="Count" type="Label" parent="IslandPanel/Margin/VBox/Selection"]
+custom_minimum_size = Vector2(95, 48)
+theme_override_font_sizes/font_size = 18
+text = "0 / 0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Next" type="Button" parent="IslandPanel/Margin/VBox/Selection"]
+custom_minimum_size = Vector2(145, 48)
+focus_neighbor_left = NodePath("../Previous")
+focus_neighbor_right = NodePath("../Previous")
+focus_neighbor_bottom = NodePath("../../Actions/Install")
+disabled = true
+text = "NEXT >"
 
 [node name="Biome" type="Label" parent="IslandPanel/Margin/VBox"]
 theme_override_font_sizes/font_size = 18
@@ -349,6 +376,7 @@ theme_override_constants/separation = 14
 
 [node name="Install" type="Button" parent="IslandPanel/Margin/VBox/Actions"]
 custom_minimum_size = Vector2(270, 55)
+focus_neighbor_top = NodePath("../../Selection/Previous")
 disabled = true
 text = "INSTALL EASTERN ISLAND"
 

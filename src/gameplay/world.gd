@@ -4,6 +4,8 @@ extends Node2D
 const EQUIPMENT_SEED: int = 424242
 const DEFAULT_SAVE_PATH: String = "user://shardbound-save.json"
 const ISLAND_SHARD_SEED: int = 9001
+const RANGED_ISLAND_SHARD_SEED: int = 9002
+const ELITE_ISLAND_SHARD_SEED: int = 9003
 const BASE_TREE_YIELD: int = 3
 const BASE_ENEMY_SPEED: float = 75.0
 const BASE_RANGED_SPEED: float = 65.0
@@ -129,15 +131,19 @@ func _on_enemy_defeated(drop_position: Vector2) -> void:
 func _on_ranged_enemy_defeated(drop_position: Vector2, loot_seed: int) -> void:
 	enemies_defeated += 1
 	_spawn_pickup(drop_position, "equipment", EquipmentGenerator.generate(loot_seed))
+	var shard_seed := RANGED_ISLAND_SHARD_SEED if loot_seed == RANGED_LOOT_SEED else ELITE_ISLAND_SHARD_SEED
+	_spawn_pickup(drop_position + Vector2(25.0, 0.0), "island_shard", IslandShardGenerator.generate(shard_seed))
 	_check_boss_unlock()
 
 func _on_enemy_volley_requested(origin: Vector2, base_direction: Vector2, angles: Array[float], damage: int) -> void:
+	var modified_damage := damage + int(installed_shard.get("enemy_projectile_damage_bonus", 0))
 	for angle: float in angles:
-		spawn_enemy_projectile(origin, base_direction.rotated(angle), damage)
+		spawn_enemy_projectile(origin, base_direction.rotated(angle), modified_damage)
 
 func _on_boss_volley_requested(origin: Vector2, directions: Array[Vector2], damage: int) -> void:
+	var modified_damage := damage + int(installed_shard.get("enemy_projectile_damage_bonus", 0))
 	for direction: Vector2 in directions:
-		spawn_enemy_projectile(origin, direction, damage)
+		spawn_enemy_projectile(origin, direction, modified_damage)
 
 func _on_boss_phase_changed(_phase: int, base_speed: float) -> void:
 	var multiplier := float(installed_shard.get("enemy_speed_multiplier", 1.0))
@@ -227,7 +233,7 @@ func _refresh_equipment_ui() -> void:
 
 func _sync_player_equipment() -> void:
 	var equipped := equipment_inventory.equipped_item()
-	player.attack_damage = equipment_inventory.attack_damage()
+	player.attack_damage = equipment_inventory.attack_damage() + int(installed_shard.get("player_attack_bonus", 0))
 	player.legendary_affix_id = String(equipped.get("legendary_affix_id", ""))
 
 func try_open_workbench() -> bool:
@@ -418,8 +424,11 @@ func remove_installed_shard() -> bool:
 func _apply_island_modifiers() -> void:
 	var yield_bonus := int(installed_shard.get("tree_yield_bonus", 0))
 	var speed_multiplier := float(installed_shard.get("enemy_speed_multiplier", 1.0))
+	_sync_player_equipment()
 	if is_instance_valid(tree):
 		tree.wood_yield = BASE_TREE_YIELD + yield_bonus
+	if is_instance_valid(tidecatcher):
+		tidecatcher.set_production_interval_multiplier(float(installed_shard.get("production_interval_multiplier", 1.0)))
 	if is_instance_valid(enemy):
 		enemy.move_speed = BASE_ENEMY_SPEED * speed_multiplier
 	if is_instance_valid(ranged_enemy):
@@ -437,7 +446,7 @@ func _apply_island_modifiers() -> void:
 		elif combatant is RangedEnemy:
 			var ranged := combatant as RangedEnemy
 			ranged.move_speed = (BASE_ELITE_SPEED if ranged.elite else BASE_RANGED_SPEED) * speed_multiplier
-	island_slot.set_installed(not installed_shard.is_empty(), String(installed_shard.get("name", "")))
+	island_slot.set_installed(not installed_shard.is_empty(), String(installed_shard.get("name", "")), String(installed_shard.get("biome", "")))
 
 func _refresh_island_ui() -> void:
 	hud.refresh_islands(island_shards, installed_shard)

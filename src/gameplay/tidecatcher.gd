@@ -51,6 +51,12 @@ func collect_if_near(player_position: Vector2) -> int:
 func stored_wood() -> int:
 	return production.stored_wood
 
+func set_production_interval_multiplier(value: float) -> void:
+	production.set_interval_multiplier(value)
+
+func production_interval_multiplier() -> float:
+	return production.interval_multiplier()
+
 func restore_state(is_active: bool, stored: int, player_target: Node2D) -> void:
 	active = is_active
 	target = player_target

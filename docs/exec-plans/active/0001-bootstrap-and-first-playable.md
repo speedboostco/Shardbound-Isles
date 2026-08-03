@@ -410,3 +410,44 @@ Risk and rollback: area attacks can trigger duplicate death signals or depend on
 - Entering a rift now removes hidden arena combatants from `attackable`, preventing attacks or pulses from selecting invisible enemies.
 - Reproducible evidence was captured at 1280x800 in `evidence/legendary-pulse-1280x800.png` while the equipment comparison was open.
 - Visual review confirms readable wrapped affix text, visible pulse rings, UNEQUIP controller focus, opaque modal layering, no clipping/overlap, bounded arena, and no missing assets.
+
+## Milestone 11: three deterministic island-shard identities
+
+Goal: expand the defining world-loot mechanic from one numeric modifier pair to three deterministic island choices that visibly connect gathering, combat, and automation.
+
+Assumptions:
+
+- Seed selection cycles deterministically from `9001`: Verdant Crucible, Emberglass Reach, then Tempest Loom.
+- Verdant remains save-compatible and unchanged: +1 tree yield, ×1.25 enemy movement.
+- Emberglass grants +2 player attack but reduces tree yield by 1.
+- Tempest halves Tidecatcher production time but adds 1 damage to enemy projectiles.
+- The chaser, Tide Slinger, and Stormcaller provide seeds `9001`, `9002`, and `9003` respectively so all choices exist in the playable loop.
+- New fields are optional extensions to schema 2; old Verdant-only saves require no migration.
+
+Acceptance criteria:
+
+- Three seeds produce stable IDs, biome identity, descriptions, and distinct modifier data.
+- Controller-operable previous/next controls inspect every owned shard and install the selected index.
+- Replacing or removing shards recomputes player attack, tree yield, enemy speed, projectile damage, and Tidecatcher cadence from immutable baselines without stacking.
+- The physical eastern island changes color and silhouette by installed biome.
+- Ordinary and elite ranged deaths drop their documented deterministic shard.
+- Saving/loading an installed new shard restores its identity and derived behavior under schema 2.
+- Unit, integration, and 1280x800 evidence cover generation, selection, behavior, replacement, persistence, focus, readability, and world identity.
+
+Tests defined before production changes:
+
+- Unit: stable three-seed definitions, deterministic cycling, exact optional modifiers, and production interval application/reset.
+- Integration: three-item controller selection, Emberglass attack/tree tradeoff, Tempest production/projectile tradeoff, non-stacking replacement/removal, ranged shard drops, and Tempest save/load restoration.
+
+Expected changes: shard definition generation, optional schema-2 field normalization, Tidecatcher cadence configuration, world modifier/drop wiring, island selection UI, biome-specific slot rendering, tests, docs, and evidence.
+
+Risk and rollback: adding modifiers in multiple systems can leave stale derived state. Keep all application in `_apply_island_modifiers`, reset every supported field to its baseline on each call, and test sequential replacement plus removal.
+
+### Milestone 11 evidence — 2026-08-03
+
+- Shard-generation and production unit coverage passes within a 70-assertion unit suite: three stable seed definitions, deterministic cycling, exact modifier data, doubled/reset production cadence, schema-2 round trip, and malformed optional-field rejection.
+- Integration coverage passes within a 123-assertion suite: all three combatant drops, three-item selection, explicit controller focus route, Emberglass and Tempest behavior, sequential replacement/removal resets, projectile risk, biome identity, and Tempest save/load restoration.
+- Full validation passes 203 assertions; original fixed-seed smoke and repeat-rift metrics remain unchanged.
+- The initial red integration run demonstrated that a runtime test error could return control to the runner after only partial assertions. Each registered test now has an expected assertion-count contract, so interrupted runs become explicit failures.
+- Reproducible evidence was captured at 1280x800 in `evidence/three-island-shards-1280x800.png` with Tempest Loom selected and installed.
+- Visual review confirms readable reward/risk text, 3/3 selection state, Previous/Next controls, REPLACE focus, opaque modal layering, distinct cyan storm-ring island identity, no clipping/overlap, bounded arena, and no missing assets.

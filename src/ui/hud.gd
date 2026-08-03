@@ -44,6 +44,9 @@ signal rift_requested
 @onready var save_button: Button = $SystemPanel/Margin/VBox/Save
 @onready var island_panel: PanelContainer = $IslandPanel
 @onready var island_name_label: Label = $IslandPanel/Margin/VBox/ShardName
+@onready var island_previous_button: Button = $IslandPanel/Margin/VBox/Selection/Previous
+@onready var island_count_label: Label = $IslandPanel/Margin/VBox/Selection/Count
+@onready var island_next_button: Button = $IslandPanel/Margin/VBox/Selection/Next
 @onready var island_status_label: Label = $IslandPanel/Margin/VBox/Status
 @onready var island_install_button: Button = $IslandPanel/Margin/VBox/Actions/Install
 @onready var island_remove_button: Button = $IslandPanel/Margin/VBox/Actions/Remove
@@ -54,6 +57,9 @@ var _items: Array[Dictionary] = []
 var _equipped_id: String = ""
 var _displayed_attack_damage: int = 1
 var _displayed_scrap: int = 0
+var _island_shards: Array[Dictionary] = []
+var _installed_island: Dictionary = {}
+var _selected_island_index: int = 0
 
 func _ready() -> void:
 	equip_button.pressed.connect(func() -> void: equip_requested.emit(0))
@@ -66,7 +72,9 @@ func _ready() -> void:
 	save_button.pressed.connect(func() -> void: save_requested.emit())
 	$SystemPanel/Margin/VBox/Load.pressed.connect(func() -> void: load_requested.emit())
 	$SystemPanel/Margin/VBox/Close.pressed.connect(close_system_menu)
-	island_install_button.pressed.connect(func() -> void: island_install_requested.emit(0))
+	island_previous_button.pressed.connect(func() -> void: _select_relative_island(-1))
+	island_next_button.pressed.connect(func() -> void: _select_relative_island(1))
+	island_install_button.pressed.connect(func() -> void: island_install_requested.emit(_selected_island_index))
 	island_remove_button.pressed.connect(func() -> void: island_remove_requested.emit())
 	$IslandPanel/Margin/VBox/Close.pressed.connect(close_island_panel)
 
@@ -257,22 +265,57 @@ func get_system_feedback() -> String:
 	return system_feedback_label.text
 
 func refresh_islands(shards: Array[Dictionary], installed: Dictionary) -> void:
-	if shards.is_empty():
+	_island_shards.clear()
+	for shard: Dictionary in shards:
+		_island_shards.append(shard.duplicate(true))
+	_installed_island = installed.duplicate(true)
+	if _island_shards.is_empty():
+		_selected_island_index = 0
+	else:
+		_selected_island_index = clampi(_selected_island_index, 0, _island_shards.size() - 1)
+	_render_selected_island()
+
+func _render_selected_island() -> void:
+	if _island_shards.is_empty():
 		island_name_label.text = "NO ISLAND SHARDS"
 		$IslandPanel/Margin/VBox/Biome.text = "Defeat enemies to discover world loot."
 		$IslandPanel/Margin/VBox/Positive.text = ""
 		$IslandPanel/Margin/VBox/Negative.text = ""
+		island_count_label.text = "0 / 0"
+		island_previous_button.disabled = true
+		island_next_button.disabled = true
 		island_install_button.disabled = true
 	else:
-		var shard := shards[0]
+		var shard := _island_shards[_selected_island_index]
 		island_name_label.text = String(shard.get("name", "Unknown Shard")).to_upper()
 		$IslandPanel/Margin/VBox/Biome.text = "BIOME  %s    •    SEED %d" % [String(shard.get("biome", "unknown")).to_upper(), int(shard.get("seed", 0))]
-		$IslandPanel/Margin/VBox/Positive.text = "REWARD  Tree nodes yield +%d wood" % int(shard.get("tree_yield_bonus", 0))
-		$IslandPanel/Margin/VBox/Negative.text = "RISK  Enemies move %d%% faster" % int(round((float(shard.get("enemy_speed_multiplier", 1.0)) - 1.0) * 100.0))
-		island_install_button.text = "REPLACE INSTALLED SHARD" if not installed.is_empty() else "INSTALL EASTERN ISLAND"
+		$IslandPanel/Margin/VBox/Positive.text = "REWARD  %s" % String(shard.get("reward_description", "Tree nodes yield +%d wood" % int(shard.get("tree_yield_bonus", 0))))
+		$IslandPanel/Margin/VBox/Negative.text = "RISK  %s" % String(shard.get("risk_description", "Enemies move %d%% faster" % int(round((float(shard.get("enemy_speed_multiplier", 1.0)) - 1.0) * 100.0))))
+		island_count_label.text = "%d / %d" % [_selected_island_index + 1, _island_shards.size()]
+		island_previous_button.disabled = _island_shards.size() <= 1
+		island_next_button.disabled = _island_shards.size() <= 1
+		island_install_button.text = "REPLACE INSTALLED SHARD" if not _installed_island.is_empty() else "INSTALL EASTERN ISLAND"
 		island_install_button.disabled = false
-	island_remove_button.disabled = installed.is_empty()
-	island_status_label.text = "INSTALLED  %s" % String(installed.get("name", "None"))
+	island_remove_button.disabled = _installed_island.is_empty()
+	island_status_label.text = "INSTALLED  %s" % String(_installed_island.get("name", "None"))
+
+func select_island(index: int) -> bool:
+	if index < 0 or index >= _island_shards.size():
+		return false
+	_selected_island_index = index
+	_render_selected_island()
+	return true
+
+func _select_relative_island(offset: int) -> void:
+	if _island_shards.is_empty():
+		return
+	select_island(posmod(_selected_island_index + offset, _island_shards.size()))
+
+func get_selected_island_index() -> int:
+	return _selected_island_index
+
+func get_island_count() -> int:
+	return _island_shards.size()
 
 func open_island_panel() -> void:
 	island_panel.visible = true

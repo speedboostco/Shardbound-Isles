@@ -15,6 +15,7 @@
 | Save/load navigation | Arrows / Enter | D-pad / left stick / face button |
 | Close menu | Escape | East face button |
 | Island shards | J | Right shoulder button |
+| Browse owned shards | Previous/Next buttons | D-pad / left stick / face button |
 | Install/replace/remove | Arrows / Enter | D-pad / left stick / face button |
 | Enter/retreat/exit rift | K | Left shoulder button |
 

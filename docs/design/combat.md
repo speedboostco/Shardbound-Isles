@@ -7,3 +7,5 @@ The Tide Slinger is the second ordinary archetype: it maintains range, displays 
 Defeating all three arena enemies awakens the Abyssal Warden at `(0, 230)`. Phase 1 telegraphs for 0.7 seconds and fires two focused tidal lances. At half health it enters Maelstrom: its silhouette turns magenta, movement pressure increases, telegraph shortens to 0.4 seconds, and its attack becomes an eight-direction radial volley. Verdant Crucible multiplies the active phase speed from its baseline. Victory drops the deterministic legendary Riftwake Core.
 
 Equipping Riftwake Core grants Riftwake Pulse. Every player attack releases a 115-pixel ring for 2 damage after the directional strike. The primary target is excluded; nearby ordinary, elite, boss, and rift enemies can each receive one secondary hit. Pure targeting orders candidates by distance and stable ID before world damage is applied.
+
+Island risk applies from immutable combat baselines. Verdant Crucible multiplies movement by 1.25, Emberglass Reach adds 2 to player attack damage, and Tempest Loom adds 1 damage to every enemy projectile. Replacing or removing a shard clears the prior modifier before applying the new one.

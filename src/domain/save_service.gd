@@ -102,7 +102,15 @@ func _is_valid_shard(value: Variant) -> bool:
 	if not value is Dictionary:
 		return false
 	var shard := value as Dictionary
-	return shard.get("id") is String and shard.get("name") is String and shard.get("biome") is String and (shard.get("seed") is int or shard.get("seed") is float) and (shard.get("tree_yield_bonus") is int or shard.get("tree_yield_bonus") is float) and (shard.get("enemy_speed_multiplier") is int or shard.get("enemy_speed_multiplier") is float)
+	if not (shard.get("id") is String and shard.get("name") is String and shard.get("biome") is String and (shard.get("seed") is int or shard.get("seed") is float) and (shard.get("tree_yield_bonus") is int or shard.get("tree_yield_bonus") is float) and (shard.get("enemy_speed_multiplier") is int or shard.get("enemy_speed_multiplier") is float)):
+		return false
+	for key: String in ["player_attack_bonus", "production_interval_multiplier", "enemy_projectile_damage_bonus"]:
+		if shard.has(key) and not (shard.get(key) is int or shard.get(key) is float):
+			return false
+	for key: String in ["reward_description", "risk_description"]:
+		if shard.has(key) and not shard.get(key) is String:
+			return false
+	return true
 
 func _normalize_state(state: Dictionary) -> Dictionary:
 	var player := state.player as Dictionary
@@ -142,4 +150,10 @@ func _normalize_shard(shard: Dictionary) -> Dictionary:
 	normalized["seed"] = int(shard.seed)
 	normalized["tree_yield_bonus"] = int(shard.tree_yield_bonus)
 	normalized["enemy_speed_multiplier"] = float(shard.enemy_speed_multiplier)
+	if shard.has("player_attack_bonus"):
+		normalized["player_attack_bonus"] = int(shard.player_attack_bonus)
+	if shard.has("production_interval_multiplier"):
+		normalized["production_interval_multiplier"] = float(shard.production_interval_multiplier)
+	if shard.has("enemy_projectile_damage_bonus"):
+		normalized["enemy_projectile_damage_bonus"] = int(shard.enemy_projectile_damage_bonus)
 	return normalized

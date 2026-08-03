@@ -10,3 +10,9 @@ func expect(condition: bool, message: String) -> void:
 		failures.append(message)
 		push_error("TEST FAILURE: %s" % message)
 
+func require_assertion_count(actual: int, expected: int, test_path: String) -> void:
+	if actual == expected:
+		return
+	var message := "%s completed %d of %d expected assertions" % [test_path, actual, expected]
+	failures.append(message)
+	push_error("TEST INCOMPLETE: %s" % message)

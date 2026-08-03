@@ -8,6 +8,7 @@
 | Browse/navigate equipment | Previous/Next, arrows / Enter | D-pad / left stick / face button |
 | Close equipment | Escape | East face button |
 | Use workbench | C | West face button |
+| Browse workbench recipes | Previous/Next buttons | D-pad / left stick / face button |
 | Craft | Enter | South face button |
 | Construct automation | Enter | South face button |
 | Collect produced wood | Approach building | Approach building |

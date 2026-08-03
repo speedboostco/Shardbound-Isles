@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Reorganize live Godot resources under `game/`, developer tooling under `tools/`, and tracked build-output guidance under `build/` with documented layer ownership.
 - Bootstrap the Godot project, documentation system, stable developer commands, CI, tests, and debug export presets.
 - Add the first deterministic gather–fight–loot playable milestone.
 - Add controller-first equipment comparison, equipping, attack-power changes, equipped-item protection, and deterministic salvaging.
@@ -19,3 +20,6 @@
 - Add per-test assertion-count contracts so interrupted runtime tests cannot silently report a partial pass.
 - Add controller equipment-inventory browsing with selected-index equip/salvage actions, clamped selection, focus recovery, and accurate island-adjusted attack display.
 - Share rarity salvage values between domain actions and comparison UI after visual review exposed a legendary 10-versus-1 mismatch.
+- Add a three-hit cracked stone outcrop, distinct stone pickup/HUD inventory, and controller-browsed Runed Whetstone upgrade granting permanent +1 base attack.
+- Advance saves to schema 3 with explicit schema-1/schema-2 stone-era migrations and derived Whetstone restoration.
+- Stop test execution immediately after incomplete assertion contracts to prevent leaked scenes from contaminating later tests.

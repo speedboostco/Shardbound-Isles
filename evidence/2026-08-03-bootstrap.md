@@ -57,7 +57,7 @@ Seed `424242` scripted two tree hits, wood collection, three enemy hits, and equ
 
 - Save-service unit coverage adds 8 passing assertions for versioning, round trip, malformed/unsupported/missing-state rejection, and local disk IO.
 - Save/load integration adds 13 passing assertions for every scoped field, system-menu focus/feedback, stable equipment identity and damage, stored production, and mutation-free rejection.
-- `tests/visual/capture_system_menu.gd` — exit 0; current `system-menu-1280x800.png` was recaptured after migration and shows successful schema-v2 save state.
+- `tests/visual/capture_system_menu.gd` — exit 0; current `system-menu-1280x800.png` was recaptured after schema 3 and shows successful saved stone/Whetstone state.
 - Visual inspection verifies 12/12 health, 5 wood, 4/6 stored production, Save focus, schema/result readability, modal fit/layering, and no missing assets.
 
 ## Island-shard milestone evidence
@@ -123,3 +123,14 @@ Seed `424242` scripted two tree hits, wood collection, three enemy hits, and equ
 - Initial inspection found Riftwake Core displayed salvage value 1 while the action granted 10. The UI now consumes the same rarity rule as inventory salvage; integration verifies value 10 and the screenshot was recaptured.
 - Final inspection verifies 3/3 state, readable legendary behavior, correct comparison/value, EQUIP focus, modal fit/layering, no clipping, and no missing assets.
 - Physical controller hardware and subjective inventory-navigation feel were not exercised.
+
+## Stone and Runed Whetstone milestone evidence
+
+- Unit suite: 80 assertions, 0 failures, including Whetstone validation/result rules, schema-3 canonical round trip, malformed stone rejection, and schema-1/schema-2 migration defaults.
+- Integration suite: 138 assertions, 0 failures, including progressive stone cracks, exact drop/collection, HUD state, controller recipe browsing/focus, exact Whetstone deduction, derived attack, duplicate rejection, and persistence.
+- Full validation: 228 assertions, 0 failures; smoke and repeat-rift metrics remain deterministic.
+- Incomplete assertion contracts now terminate the runner immediately, preventing an interrupted test's live scene from contaminating later cases.
+- `tests/visual/capture_stone_whetstone.gd` — exit 0; captured `stone-whetstone-1280x800.png` at 1280x800.
+- The first capture grazed the objective prompt; the modal moved down 15 pixels and the artifact was recaptured. Final review verifies stone count, visible first-hit crack, recipe 2/2, exact benefit/cost, CRAFT focus, no overlap, and no missing assets.
+- `tests/visual/capture_system_menu.gd` — exit 0; recaptured `system-menu-1280x800.png` with schema 3, stone 2, derived attack 2, Save focus, and production storage.
+- Physical controller hardware, hit feel, and upgrade balance were not manually exercised.

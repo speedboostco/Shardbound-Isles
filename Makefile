@@ -1,7 +1,7 @@
 .PHONY: help setup import validate test test-unit test-integration test-simulation run export-windows export-linux
 
 POWERSHELL ?= powershell
-DEV = $(POWERSHELL) -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1
+DEV = $(POWERSHELL) -NoProfile -ExecutionPolicy Bypass -File tools/dev.ps1
 
 help:
 	$(DEV) help
@@ -25,4 +25,3 @@ export-windows:
 	$(DEV) export-windows
 export-linux:
 	$(DEV) export-linux
-

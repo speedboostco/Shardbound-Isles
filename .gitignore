@@ -1,5 +1,7 @@
 .godot/
 .godot-user/
-build/
+build/*
+!build/.gdignore
+!build/README.md
 *.log
 .env

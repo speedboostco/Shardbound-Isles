@@ -19,7 +19,7 @@ make validate
 make run
 ```
 
-On Windows without Make, use `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 help` and replace `help` with any listed command.
+On Windows without Make, use `powershell -NoProfile -ExecutionPolicy Bypass -File tools/dev.ps1 help` and replace `help` with any listed command.
 
 Move with WASD, arrow keys, left stick, or D-pad. Attack with Space, Enter, or the controller south face button. Break the tree, collect its wood automatically, defeat the red wisp, and collect its deterministic equipment drop.
 

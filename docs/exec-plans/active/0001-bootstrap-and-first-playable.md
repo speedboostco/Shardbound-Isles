@@ -34,11 +34,12 @@ Establish the repository contract and deliver one deterministic, controller-play
 ## Expected files and systems
 
 - Godot configuration and export presets.
-- `src/domain`: deterministic equipment generation.
-- `src/gameplay`: player, tree, pickup, enemy, item pickup, world orchestration.
-- `src/ui`: minimal HUD.
-- `tests`: dependency-free runners for three layers.
-- `scripts` and `Makefile`: stable developer commands.
+- `game/core`: deterministic equipment generation.
+- `game/features`: player, tree, pickup, enemy, item pickup, world orchestration.
+- `game/ui`: minimal HUD.
+- `game/content`: composed first-playable world scene.
+- `game/tests`: dependency-free runners for automated and visual layers.
+- `tools` and `Makefile`: stable developer commands.
 - Product/design/engineering documentation and CI.
 
 ## Milestones
@@ -209,7 +210,7 @@ Risk and rollback: partial load mutation could corrupt an active run. Decode and
 - Save-service unit tests pass: 8 assertions covering schema emission, semantic round trip, malformed/unsupported/missing-state rejection, and disk round trip.
 - Save/load integration tests pass: 13 assertions covering disk IO, health/position/resources, stable item seed/equipped ID/derived damage, progression, construction, stored wood, menu focus/feedback, and mutation-free malformed rejection.
 - JSON numeric fields are canonicalized after decoding so integer domain values remain typed and deterministic.
-- Reproducible system-menu evidence at `evidence/system-menu-1280x800.png` was recaptured after the island migration and now shows current schema version 2, saved 12/12 health, 5 wood, 4/6 stored wood, success feedback, and Save focus.
+- Reproducible system-menu evidence at `evidence/system-menu-1280x800.png` was recaptured for schema 3 and now shows saved 12/12 health, 5 wood, 2 stone, derived attack 2, 4/6 stored wood, success feedback, and Save focus.
 - Visual review confirms readable labels, no clipping/overlap, correct modal layering, visible focus, consistent background HUD state, and no missing assets.
 
 ## Milestone 6: first island shard
@@ -492,3 +493,45 @@ Risk and rollback: refreshing after actions can disable the currently focused co
 - The first 1280x800 capture exposed a mismatch: Riftwake Core salvaged for 10 scrap but displayed value 1. Salvage values now come from one shared domain rule, integration checks value 10, and the artifact was recaptured.
 - Final evidence is `evidence/equipment-inventory-1280x800.png`, showing item 3/3, Riftwake behavior, authoritative salvage value 10, equipped Tideglass Bow, and EQUIP focus.
 - Visual review confirms readable text, complete actions/navigation, opaque modal layering, no clipping/overlap, bounded arena, and no missing assets.
+
+## Milestone 13: stone gathering and Runed Whetstone
+
+Goal: complete the slice's second gathering branch with distinct feedback and a meaningful permanent stone sink.
+
+Assumptions:
+
+- A fixed stone outcrop at `(390, -80)` takes three discrete hits, shows progressive cracks, and drops 2 stone.
+- The existing attack and magnetic pickup contract are reused; stone receives a distinct gray-blue pickup silhouette.
+- Runed Whetstone is a unique workbench recipe costing 2 stone and permanently adding +1 base attack damage.
+- The workbench browses Reinforced Heart and Runed Whetstone through controller Previous/Next controls rather than adding a second crowded modal section.
+- Stone and the crafted flag are authoritative saved state, advancing saves to schema 3.
+- Valid schema-1 and schema-2 saves migrate with `stone = 0` and `runed_whetstone_crafted = false`; schema-1 still gains empty island state.
+
+Acceptance criteria:
+
+- Stone has a distinct fixed node, three-hit/crack progression, drop identity, automatic pickup, HUD count, and no effect on wood.
+- Workbench recipe browsing is controller-operable with explicit focus and complete cost/effect/status text.
+- Whetstone validation is pure, insufficient/duplicate attempts consume nothing, and success deducts exactly 2 stone.
+- The permanent +1 combines deterministically with equipment and island attack bonuses without stacking on refresh/load.
+- Schema 3 round-trips stone and the crafted flag; schema 1/2 migrations are explicit and tested.
+- Integration and 1280x800 evidence cover gathering, recipe focus/readability, crafting, derived damage, and persistence.
+
+Tests defined before production changes:
+
+- Unit: exact Whetstone cost, insufficient/valid/duplicate outcomes, +1 result, schema-3 round trip, malformed resource rejection, and schema-1/schema-2 migration defaults.
+- Integration: stone first-hit crack stage, three-hit pickup, automatic collection/HUD, controller recipe selection/focus, exact deduction, +1 attack, duplicate rejection, and save/load restoration.
+
+Expected changes: stone node scene behavior, world composition/drop/inventory, pickup/HUD identity, workbench recipe selection, crafting rules, derived attack calculation, schema-3 validation/migration, tests, docs, and evidence.
+
+Risk and rollback: permanent derived damage can be double-applied if stored as a computed number. Save only the crafted flag, then derive base attack from equipment, Whetstone, and island state in `_sync_player_equipment`.
+
+### Milestone 13 evidence — 2026-08-03
+
+- Crafting/save unit coverage passes within an 80-assertion unit suite: exact Whetstone validation/results, schema-3 round trip/type rejection, and explicit schema-1/schema-2 defaults.
+- Integration coverage passes within a 138-assertion suite: first-hit cracks, three-hit stone drop, distinct pickup/HUD state, recipe browse focus, exact cost, permanent derived attack, duplicate rejection, and save/load restoration with equipment.
+- Full validation passes 228 assertions; fixed-seed smoke and repeat-rift metrics remain unchanged.
+- The initial red run showed interrupted scenes contaminating later tests. Assertion-contract failure now immediately terminates the runner, preventing downstream false failures.
+- `evidence/stone-whetstone-1280x800.png` shows stone 2, a visibly cracked outcrop, recipe 2/2, exact cost/effect/status, and CRAFT focus.
+- The first Whetstone capture grazed the objective prompt; the panel moved down 15 pixels and was recaptured without overlap.
+- `evidence/system-menu-1280x800.png` was recaptured and visually verifies schema 3, stone 2, attack 2, Save focus, and existing production state.
+- Final visual review confirms readable text, controller focus, distinct node silhouette/feedback, no clipping/overlap, opaque layering, bounded arena, and no missing assets.

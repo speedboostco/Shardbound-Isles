@@ -1,0 +1,25 @@
+extends RefCounted
+
+const CraftingScript := preload("res://game/core/crafting_service.gd")
+
+func run(support: TestSupport) -> void:
+	var crafting: Variant = CraftingScript.new()
+	support.expect(not crafting.can_craft(2, 2, false), "recipe must reject insufficient wood")
+	support.expect(not crafting.can_craft(3, 1, false), "recipe must reject insufficient scrap")
+	support.expect(crafting.can_craft(3, 2, false), "recipe must accept its exact costs")
+	var result: Dictionary = crafting.craft(3, 2, false)
+	support.expect(result.get("success") == true, "affordable recipe must craft successfully")
+	support.expect(result.get("wood_spent") == 3 and result.get("scrap_spent") == 2, "craft result must state exact deductions")
+	support.expect(result.get("maximum_health_bonus") == 2, "Reinforced Heart must grant two maximum health")
+	var repeated: Dictionary = crafting.craft(10, 10, true)
+	support.expect(repeated.get("success") == false and repeated.get("reason") == "already_crafted", "unique recipe must reject duplicate crafting")
+	var poor: Dictionary = crafting.craft(0, 0, false)
+	support.expect(poor.get("success") == false and poor.get("reason") == "insufficient_resources", "failed craft must explain insufficient resources")
+	support.expect(not crafting.can_craft_whetstone(1, false), "Whetstone must reject insufficient stone")
+	support.expect(crafting.can_craft_whetstone(2, false), "Whetstone must accept its exact stone cost")
+	var whetstone: Dictionary = crafting.craft_whetstone(2, false)
+	support.expect(whetstone.get("success") == true and whetstone.get("stone_spent") == 2, "Whetstone craft must deduct exactly two stone")
+	support.expect(whetstone.get("attack_damage_bonus") == 1, "Whetstone must grant one permanent base attack")
+	var repeated_whetstone: Dictionary = crafting.craft_whetstone(9, true)
+	support.expect(repeated_whetstone.get("success") == false and repeated_whetstone.get("reason") == "already_crafted", "unique Whetstone must reject duplicate crafting")
+	support.expect(crafting.craft_whetstone(0, false).get("reason") == "insufficient_resources", "failed Whetstone must explain insufficient stone")

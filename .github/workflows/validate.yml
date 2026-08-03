@@ -18,6 +18,6 @@ jobs:
       - name: Import project
         run: godot --headless --editor --path . --quit
       - name: Run all tests
-        run: godot --headless --path . --script res://tests/run_tests.gd -- --suite=all
+        run: godot --headless --path . --script res://game/tests/run_tests.gd -- --suite=all
       - name: Export Linux debug build
         run: godot --headless --path . --export-debug Linux

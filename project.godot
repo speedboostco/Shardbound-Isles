@@ -3,7 +3,7 @@ config_version=5
 
 [application]
 config/name="Shardbound Isles"
-run/main_scene="res://src/gameplay/world.tscn"
+run/main_scene="res://game/content/world.tscn"
 
 [display]
 window/size/viewport_width=1280

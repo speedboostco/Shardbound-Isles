@@ -11,6 +11,13 @@ signal workbench_panel_requested
 signal workbench_panel_closed
 signal craft_requested(recipe_id: String)
 signal tidecatcher_build_requested
+signal upgrade_requested(confirmed: bool)
+signal placement_socket_requested(offset: int)
+signal placement_rotate_requested
+signal placement_confirm_requested
+signal placement_cancel_requested
+signal base_deposit_requested(resource_id: String)
+signal base_withdraw_requested(resource_id: String)
 signal system_menu_requested
 signal system_menu_closed
 signal save_requested
@@ -25,6 +32,7 @@ signal rift_requested
 @onready var wood_label: Label = $Margin/VBox/Wood
 @onready var stone_label: Label = $Margin/VBox/Stone
 @onready var moonleaf_label: Label = $Margin/VBox/Moonleaf
+@onready var plank_label: Label = $Margin/VBox/Plank
 @onready var loot_label: Label = $Margin/VBox/Loot
 @onready var attack_label: Label = $Margin/VBox/Attack
 @onready var equipment_panel: PanelContainer = $EquipmentPanel
@@ -50,7 +58,16 @@ signal rift_requested
 @onready var recipe_status_label: Label = $WorkbenchPanel/Margin/VBox/Status
 @onready var craft_button: Button = $WorkbenchPanel/Margin/VBox/Craft
 @onready var tidecatcher_build_button: Button = $WorkbenchPanel/Margin/VBox/BuildTidecatcher
+@onready var upgrade_preview_label: Label = $WorkbenchPanel/Margin/VBox/UpgradePreview
+@onready var upgrade_button: Button = $WorkbenchPanel/Margin/VBox/Upgrade
+@onready var base_deposit_button: Button = $WorkbenchPanel/Margin/VBox/BaseTransfer/DepositWood
+@onready var base_withdraw_button: Button = $WorkbenchPanel/Margin/VBox/BaseTransfer/CollectPlanks
 @onready var automation_label: Label = $AutomationStatus
+@onready var base_status_label: Label = $BaseStatus
+@onready var placement_panel: PanelContainer = $PlacementPanel
+@onready var placement_title_label: Label = $PlacementPanel/Margin/VBox/Title
+@onready var placement_state_label: Label = $PlacementPanel/Margin/VBox/State
+@onready var placement_confirm_button: Button = $PlacementPanel/Margin/VBox/Actions/Confirm
 @onready var system_panel: PanelContainer = $SystemPanel
 @onready var system_feedback_label: Label = $SystemPanel/Margin/VBox/Feedback
 @onready var save_button: Button = $SystemPanel/Margin/VBox/Save
@@ -84,9 +101,13 @@ var _workbench_wood: int = 0
 var _workbench_stone: int = 0
 var _workbench_moonleaf: int = 0
 var _workbench_scrap: int = 0
+var _workbench_plank: int = 0
 var _heart_crafted: bool = false
 var _whetstone_crafted: bool = false
 var _herbal_compass_crafted: bool = false
+var _workbench_unlocks: Dictionary = {}
+var _workbench_crafted: Dictionary = {}
+var _upgrade_confirmation_armed: bool = false
 var _island_shards: Array[Dictionary] = []
 var _archipelago_data: Dictionary = {}
 var _selected_island_index: int = 0
@@ -106,7 +127,15 @@ func _ready() -> void:
 	workbench_next_button.pressed.connect(func() -> void: _select_relative_recipe(1))
 	craft_button.pressed.connect(func() -> void: craft_requested.emit(get_selected_recipe_id()))
 	tidecatcher_build_button.pressed.connect(func() -> void: tidecatcher_build_requested.emit())
+	upgrade_button.pressed.connect(_on_upgrade_pressed)
+	base_deposit_button.pressed.connect(func() -> void: base_deposit_requested.emit("wood"))
+	base_withdraw_button.pressed.connect(func() -> void: base_withdraw_requested.emit("plank"))
 	$WorkbenchPanel/Margin/VBox/Close.pressed.connect(close_workbench_panel)
+	$PlacementPanel/Margin/VBox/Actions/Previous.pressed.connect(func() -> void: placement_socket_requested.emit(-1))
+	$PlacementPanel/Margin/VBox/Actions/Next.pressed.connect(func() -> void: placement_socket_requested.emit(1))
+	$PlacementPanel/Margin/VBox/Actions/Rotate.pressed.connect(func() -> void: placement_rotate_requested.emit())
+	placement_confirm_button.pressed.connect(func() -> void: placement_confirm_requested.emit())
+	$PlacementPanel/Margin/VBox/Actions/Cancel.pressed.connect(func() -> void: placement_cancel_requested.emit())
 	save_button.pressed.connect(func() -> void: save_requested.emit())
 	$SystemPanel/Margin/VBox/Load.pressed.connect(func() -> void: load_requested.emit())
 	$SystemPanel/Margin/VBox/Close.pressed.connect(close_system_menu)
@@ -159,6 +188,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif island_panel.visible and event.is_action_pressed("ui_cancel"):
 		close_island_panel()
 		get_viewport().set_input_as_handled()
+	elif placement_panel.visible and event.is_action_pressed("ui_cancel"):
+		placement_cancel_requested.emit()
+		get_viewport().set_input_as_handled()
 
 func set_health(current: int, maximum: int) -> void:
 	health_label.text = "HEALTH  %d / %d" % [current, maximum]
@@ -172,6 +204,9 @@ func set_stone(amount: int) -> void:
 
 func set_moonleaf(amount: int) -> void:
 	moonleaf_label.text = "MOONLEAF  %d" % amount
+
+func set_plank(amount: int) -> void:
+	plank_label.text = "PLANKS  %d" % amount
 
 func get_displayed_stone() -> int:
 	return _displayed_stone
@@ -357,14 +392,23 @@ func get_displayed_attack_damage() -> int:
 func get_displayed_scrap() -> int:
 	return _displayed_scrap
 
-func refresh_workbench(wood: int, stone: int, moonleaf: int, scrap: int, heart_crafted: bool, whetstone_crafted: bool, herbal_compass_crafted: bool, tidecatcher_built: bool, feedback: String = "") -> void:
+func refresh_workbench(wood: int, stone: int, moonleaf: int, scrap: int, heart_crafted: bool, whetstone_crafted: bool, herbal_compass_crafted: bool, tidecatcher_built: bool, feedback: String = "", plank: int = 0, building_states: Dictionary = {}, forest_unlocked: bool = false) -> void:
 	_workbench_wood = wood
 	_workbench_stone = stone
 	_workbench_moonleaf = moonleaf
 	_workbench_scrap = scrap
+	_workbench_plank = plank
 	_heart_crafted = heart_crafted
 	_whetstone_crafted = whetstone_crafted
 	_herbal_compass_crafted = herbal_compass_crafted
+	_workbench_unlocks = {"reinforced_heart": heart_crafted, "forest_island": forest_unlocked}
+	_workbench_crafted = {"reinforced_heart": heart_crafted, "runed_whetstone": whetstone_crafted, "herbal_compass": herbal_compass_crafted}
+	for key: Variant in building_states:
+		_workbench_crafted[String(key)] = bool(building_states[key])
+	base_deposit_button.disabled = not bool(building_states.get("lumber_mill_built", false)) or wood <= 0
+	base_deposit_button.text = "DEPOSIT ALL WOOD (%d)" % wood
+	base_withdraw_button.disabled = not bool(building_states.get("lumber_mill_built", false)) or int(building_states.get("stored_planks", 0)) <= 0
+	base_withdraw_button.text = "COLLECT PLANKS (%d)" % int(building_states.get("stored_planks", 0))
 	_render_selected_recipe(feedback)
 	if tidecatcher_built:
 		tidecatcher_build_button.text = "TIDECATCHER BUILT"
@@ -378,40 +422,42 @@ func refresh_workbench(wood: int, stone: int, moonleaf: int, scrap: int, heart_c
 	_recover_workbench_focus()
 
 func _render_selected_recipe(feedback: String = "") -> void:
-	workbench_count_label.text = "%d / 3" % (_selected_recipe_index + 1)
-	if get_selected_recipe_id() == CraftingService.HERBAL_COMPASS_RECIPE_ID:
-		workbench_recipe_label.text = "HERBAL COMPASS"
-		workbench_effect_label.text = "Permanently gain +40 pickup radius"
-		recipe_cost_label.text = "COST  %d / 3 MOONLEAF" % _workbench_moonleaf
-		craft_button.text = "CRAFT HERBAL COMPASS"
-		craft_button.disabled = _herbal_compass_crafted or _workbench_moonleaf < CraftingService.HERBAL_COMPASS_MOONLEAF_COST
-		recipe_status_label.text = feedback if not feedback.is_empty() else ("ALREADY CRAFTED" if _herbal_compass_crafted else ("READY TO CRAFT" if not craft_button.disabled else "NEED FOREST MOONLEAF"))
-	elif get_selected_recipe_id() == CraftingService.WHETSTONE_RECIPE_ID:
-		workbench_recipe_label.text = "RUNED WHETSTONE"
-		workbench_effect_label.text = "Permanently gain +1 base attack damage"
-		recipe_cost_label.text = "COST  %d / 2 STONE" % _workbench_stone
-		craft_button.text = "CRAFT RUNED WHETSTONE"
-		craft_button.disabled = _whetstone_crafted or _workbench_stone < CraftingService.WHETSTONE_STONE_COST
-		recipe_status_label.text = feedback if not feedback.is_empty() else ("ALREADY CRAFTED" if _whetstone_crafted else ("READY TO CRAFT" if not craft_button.disabled else "NEED MORE STONE"))
+	var recipes := RecipeRegistry.all()
+	_selected_recipe_index = clampi(_selected_recipe_index, 0, recipes.size() - 1)
+	var recipe: Dictionary = recipes[_selected_recipe_index]
+	workbench_count_label.text = "%d / %d" % [_selected_recipe_index + 1, recipes.size()]
+	workbench_recipe_label.text = String(recipe.name).to_upper()
+	workbench_effect_label.text = String(recipe.effect_text)
+	var resources := {"wood": _workbench_wood, "stone": _workbench_stone, "moonleaf": _workbench_moonleaf, "scrap": _workbench_scrap, "plank": _workbench_plank}
+	var cost_parts: Array[String] = []
+	for resource_value: Variant in recipe.inputs:
+		var resource_id := String(resource_value)
+		cost_parts.append("%d / %d %s" % [int(resources.get(resource_id, 0)), int(recipe.inputs[resource_value]), resource_id.to_upper()])
+	recipe_cost_label.text = "COST  %s" % "    •    ".join(cost_parts)
+	var result := CraftingService.new().evaluate(String(recipe.id), resources, _workbench_unlocks, _workbench_crafted)
+	craft_button.text = "CRAFT %s" % String(recipe.name).to_upper()
+	craft_button.disabled = not bool(result.get("success", false))
+	if not feedback.is_empty():
+		recipe_status_label.text = feedback
+	elif bool(result.get("success", false)):
+		recipe_status_label.text = "READY TO CRAFT"
+	elif String(result.get("reason", "")) == "already_crafted":
+		recipe_status_label.text = "ALREADY CRAFTED"
+	elif String(result.get("reason", "")) == "locked":
+		recipe_status_label.text = "LOCKED — REQUIRES %s" % String(result.get("requirement", "progress")).replace("_", " ").to_upper()
 	else:
-		workbench_recipe_label.text = "REINFORCED HEART"
-		workbench_effect_label.text = "Permanently gain +2 maximum health"
-		recipe_cost_label.text = "COST  %d / 3 WOOD    •    %d / 2 SCRAP" % [_workbench_wood, _workbench_scrap]
-		craft_button.text = "CRAFT REINFORCED HEART"
-		craft_button.disabled = _heart_crafted or _workbench_wood < CraftingService.WOOD_COST or _workbench_scrap < CraftingService.SCRAP_COST
-		recipe_status_label.text = feedback if not feedback.is_empty() else ("ALREADY CRAFTED" if _heart_crafted else ("READY TO CRAFT" if not craft_button.disabled else "NEED MORE RESOURCES"))
+		var missing_parts: Array[String] = []
+		for missing_id: Variant in (result.get("missing", {}) as Dictionary):
+			missing_parts.append("%d %s" % [int(result.missing[missing_id]), String(missing_id).to_upper()])
+		recipe_status_label.text = "MISSING %s" % ", ".join(missing_parts)
 
 func _select_relative_recipe(offset: int) -> void:
-	_selected_recipe_index = posmod(_selected_recipe_index + offset, 3)
+	_selected_recipe_index = posmod(_selected_recipe_index + offset, RecipeRegistry.all().size())
 	_render_selected_recipe()
 	_recover_workbench_focus()
 
 func get_selected_recipe_id() -> String:
-	if _selected_recipe_index == 1:
-		return CraftingService.WHETSTONE_RECIPE_ID
-	if _selected_recipe_index == 2:
-		return CraftingService.HERBAL_COMPASS_RECIPE_ID
-	return CraftingService.RECIPE_ID
+	return String(RecipeRegistry.all()[_selected_recipe_index].id)
 
 func get_recipe_cost_text() -> String:
 	return recipe_cost_label.text
@@ -433,6 +479,7 @@ func _recover_workbench_focus() -> void:
 func open_workbench_panel() -> void:
 	equipment_panel.visible = false
 	workbench_panel.visible = true
+	base_status_label.visible = false
 	if not craft_button.disabled:
 		craft_button.grab_focus()
 	elif not tidecatcher_build_button.disabled:
@@ -469,6 +516,64 @@ func is_tidecatcher_build_focused() -> bool:
 func focus_tidecatcher_build() -> void:
 	if workbench_panel.visible and not tidecatcher_build_button.disabled:
 		tidecatcher_build_button.grab_focus()
+
+func refresh_upgrade_preview(item: Dictionary, scrap: int, moonleaf: int, feedback: String = "") -> void:
+	_upgrade_confirmation_armed = false
+	if item.is_empty():
+		upgrade_preview_label.text = "UPGRADE STATION — EQUIP AN ITEM"
+		upgrade_button.disabled = true
+		upgrade_button.text = "UPGRADE EQUIPPED ITEM"
+		return
+	var plan := ItemUpgradeService.preview(item, {"scrap": scrap, "moonleaf": moonleaf})
+	upgrade_button.disabled = not bool(plan.get("ok", false))
+	upgrade_button.text = "UPGRADE %s" % String(item.get("name", "ITEM")).to_upper()
+	if not feedback.is_empty():
+		upgrade_preview_label.text = feedback
+	elif String(plan.get("reason", "")) == "maximum_level":
+		upgrade_preview_label.text = "%s  +10 MAX" % String(item.get("name", "ITEM")).to_upper()
+	elif bool(plan.get("ok", false)):
+		upgrade_preview_label.text = "+%d → +%d  •  POWER %d → %d  •  COST %d SCRAP%s" % [int(plan.from_level), int(plan.to_level), int(plan.power_before), int(plan.power_after), int(plan.cost.scrap), " + %d MOONLEAF" % int(plan.cost.moonleaf) if int(plan.cost.moonleaf) > 0 else ""]
+	else:
+		upgrade_preview_label.text = "UPGRADE BLOCKED — MISSING RESOURCES"
+
+func _on_upgrade_pressed() -> void:
+	if upgrade_button.disabled:
+		return
+	if not _upgrade_confirmation_armed:
+		_upgrade_confirmation_armed = true
+		upgrade_button.text = "CONFIRM UPGRADE — PRESS A AGAIN"
+		upgrade_preview_label.text += "  •  CONFIRM?"
+		return
+	upgrade_requested.emit(true)
+
+func is_upgrade_confirmation_armed() -> bool:
+	return _upgrade_confirmation_armed
+
+func show_placement(building_name: String, socket_name: String, rotation_degrees: int, valid: bool, reason: String) -> void:
+	workbench_panel.visible = false
+	base_status_label.visible = false
+	placement_panel.visible = true
+	placement_title_label.text = "PLACE %s" % building_name.to_upper()
+	placement_state_label.text = "%s  •  %d°  •  %s" % [socket_name.to_upper(), rotation_degrees, "VALID — PRESS A" if valid else "INVALID — %s" % reason.replace("_", " ").to_upper()]
+	placement_state_label.modulate = Color("75e6a5") if valid else Color("ff7181")
+	placement_confirm_button.disabled = not valid
+	if valid:
+		placement_confirm_button.grab_focus()
+	else:
+		$PlacementPanel/Margin/VBox/Actions/Next.grab_focus()
+
+func close_placement() -> void:
+	placement_panel.visible = false
+
+func is_placement_panel_open() -> bool:
+	return placement_panel.visible
+
+func set_base_status(active: bool, text_value: String) -> void:
+	base_status_label.visible = active and not workbench_panel.visible and not placement_panel.visible and not system_panel.visible and not island_panel.visible and not equipment_panel.visible
+	base_status_label.text = text_value
+
+func get_base_status() -> String:
+	return base_status_label.text
 
 func open_system_menu() -> void:
 	equipment_panel.visible = false

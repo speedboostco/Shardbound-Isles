@@ -11,7 +11,11 @@
 | Open workbench directly (shortcut) | C | None |
 | Browse workbench recipes | Previous/Next buttons | D-pad / left stick / face button |
 | Craft | Enter | South face button |
-| Construct automation | Enter | South face button |
+| Choose build socket | Arrow buttons | D-pad / left stick |
+| Rotate build preview | Rotate button | D-pad to focus, South face button |
+| Confirm/cancel placement | Enter / Escape | South / East face button |
+| Upgrade preview/confirm | Enter twice | South face button twice |
+| Deposit wood / collect planks | Workbench buttons | D-pad / South face button |
 | Collect produced wood | Approach building | Approach building |
 | System menu | P | Start |
 | Save/load navigation | Arrows / Enter | D-pad / left stick / face button |

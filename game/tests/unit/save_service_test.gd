@@ -8,7 +8,7 @@ func run(support: TestSupport) -> void:
 	var encoded: String = service.encode(state)
 	var decoded: Dictionary = service.decode(encoded)
 	support.expect(decoded.get("ok") == true, "valid save payload must decode")
-	support.expect(decoded.get("schema_version") == 5, "save payload must declare schema version five")
+	support.expect(decoded.get("schema_version") == 6, "save payload must declare schema version six")
 	support.expect(decoded.state.player == state.player and decoded.state.equipment == state.equipment and decoded.state.islands.archipelago.slots.east.installed_island.definition.shard_id == state.islands.archipelago.slots.east.installed_island.definition.shard_id, "save encode/decode must round trip authoritative scoped state")
 	support.expect(service.decode("{broken").get("error") == "malformed_json", "malformed JSON must be rejected")
 	support.expect(service.decode('{"schema_version":99,"state":{}}').get("error") == "unsupported_schema", "unsupported schema must be rejected")
@@ -39,6 +39,11 @@ func run(support: TestSupport) -> void:
 	var invalid_slots := state.duplicate(true)
 	(invalid_slots.equipment as Dictionary)["equipped_slots"] = {"cape": "starter_ranged_424242"}
 	support.expect(service.decode(service.encode(invalid_slots)).get("error") == "invalid_state", "schema five must reject unknown equipment slots")
+	var schema_five_state := state.duplicate(true)
+	schema_five_state.erase("plank")
+	schema_five_state.erase("base")
+	var migrated_five: Dictionary = service.decode(JSON.stringify({"schema_version": 5, "state": schema_five_state}))
+	support.expect(migrated_five.get("ok") == true and migrated_five.get("migrated_from") == 5 and int(migrated_five.state.plank) == 0 and (migrated_five.state.base.placement.buildings as Dictionary).is_empty(), "schema-five saves must migrate to an empty committed base")
 	var path := "user://save-service-unit.json"
 	support.expect(service.save_to_path(path, state).get("ok") == true, "valid state must write to local save path")
 	var disk_result: Dictionary = service.load_from_path(path)
@@ -54,10 +59,12 @@ func _sample_state() -> Dictionary:
 		"wood": 5,
 		"stone": 2,
 		"moonleaf": 3,
+		"plank": 2,
 		"equipment": {"scrap": 2, "equipped_id": "starter_ranged_424242", "equipped_slots": {"weapon": "starter_ranged_424242"}, "items": [EquipmentGenerator.generate(424242)]},
 		"reinforced_heart_crafted": true,
 		"runed_whetstone_crafted": true,
 		"herbal_compass_crafted": true,
 		"tidecatcher": {"built": true, "stored_wood": 4},
 		"islands": {"inventory": [IslandShardGenerator.generate(9002)], "installed": installed, "archipelago": archipelago.to_dictionary()},
+		"base": {"placement": BasePlacementModel.new().to_dictionary(), "storage": SharedStorage.new().to_dictionary(), "lumber_mill": LumberMillSimulation.new().to_dictionary(), "collector": CollectorSimulation.new().to_dictionary(), "crafted_kits": {"lumber_mill_kit": false, "collector_kit": false}, "saved_unix": 1000},
 	}

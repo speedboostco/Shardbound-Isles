@@ -16,6 +16,12 @@ Weapon profile data selects range, target shape, and splash through the shared `
 
 `IslandModifierRegistry` and `AdjacencySynergyRegistry` are authored data. `IslandModifierManager` loads small components by script path and aggregates their effects; world and UI do not switch on modifier IDs. Install, remove, replace, and load are the only adjacency invalidation points, so no graph calculation runs per frame.
 
+## M4 base model
+
+`RecipeRegistry` is the authored crafting source; `CraftingService` creates atomic transaction plans without owning inventory or UI. `BasePlacementModel` serializes committed stable socket state and deliberately excludes preview presentation. `SharedStorage`, `LumberMillSimulation`, `CollectorSimulation`, `OfflineAutomation`, and `ItemUpgradeService` are pure deterministic rules under `game/core`.
+
+The world composition root applies successful transactions and materializes `BaseBuildingVisual` projections. Collector, storage, and mill communicate through accepted/remainder quantities, so capacity boundaries cannot destroy resources. A single timer requests bounded batches; remote buildings never require independent per-frame callbacks. Save schema 6 owns the complete committed simulation state and applies catch-up only after validation.
+
 ## Determinism
 
 Domain systems use explicit `RandomNumberGenerator` instances. `SeededRngStreams` creates exact-seed generators and derives cached named streams from a root seed. Advancing one named stream must never change another. Static validation rejects global random calls in `game/core`.

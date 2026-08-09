@@ -51,20 +51,21 @@ corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
 [node name="HUD" type="CanvasLayer"]
+layer = 10
 script = ExtResource("1")
 
 [node name="Backdrop" type="ColorRect" parent="."]
 offset_left = 18.0
 offset_top = 18.0
 offset_right = 475.0
-offset_bottom = 255.0
+offset_bottom = 282.0
 color = Color(0.03, 0.07, 0.1, 0.88)
 
 [node name="Margin" type="MarginContainer" parent="."]
 offset_left = 34.0
 offset_top = 29.0
 offset_right = 465.0
-offset_bottom = 248.0
+offset_bottom = 276.0
 
 [node name="VBox" type="VBoxContainer" parent="Margin"]
 theme_override_constants/separation = 7
@@ -90,6 +91,11 @@ text = "STONE   0"
 theme_override_colors/font_color = Color(0.78, 0.52, 1, 1)
 theme_override_font_sizes/font_size = 18
 text = "MOONLEAF  0"
+
+[node name="Plank" type="Label" parent="Margin/VBox"]
+theme_override_colors/font_color = Color(0.94, 0.7, 0.35, 1)
+theme_override_font_sizes/font_size = 18
+text = "PLANKS  0"
 
 [node name="Attack" type="Label" parent="Margin/VBox"]
 theme_override_font_sizes/font_size = 18
@@ -223,19 +229,19 @@ text = "CLOSE  (B / ESC)"
 [node name="WorkbenchPanel" type="PanelContainer" parent="."]
 visible = false
 offset_left = 340.0
-offset_top = 120.0
+offset_top = 35.0
 offset_right = 940.0
-offset_bottom = 680.0
+offset_bottom = 765.0
 theme_override_styles/panel = SubResource("WorkbenchPanelStyle")
 
 [node name="Margin" type="MarginContainer" parent="WorkbenchPanel"]
 theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 26
+theme_override_constants/margin_top = 18
 theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 26
+theme_override_constants/margin_bottom = 18
 
 [node name="VBox" type="VBoxContainer" parent="WorkbenchPanel/Margin"]
-theme_override_constants/separation = 12
+theme_override_constants/separation = 8
 
 [node name="Title" type="Label" parent="WorkbenchPanel/Margin/VBox"]
 theme_override_colors/font_color = Color(1, 0.72, 0.34, 1)
@@ -291,24 +297,49 @@ text = "NEED MORE RESOURCES"
 horizontal_alignment = 1
 
 [node name="Craft" type="Button" parent="WorkbenchPanel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 55)
+custom_minimum_size = Vector2(0, 48)
 focus_neighbor_top = NodePath("../Selection/Previous")
 disabled = true
 text = "CRAFT REINFORCED HEART"
 
+[node name="UpgradePreview" type="Label" parent="WorkbenchPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(0.73, 0.65, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "UPGRADE STATION — EQUIP AN ITEM"
+horizontal_alignment = 1
+
+[node name="Upgrade" type="Button" parent="WorkbenchPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 46)
+disabled = true
+text = "UPGRADE EQUIPPED ITEM"
+
 [node name="AutomationTitle" type="Label" parent="WorkbenchPanel/Margin/VBox"]
 theme_override_colors/font_color = Color(0.55, 0.9, 0.82, 1)
 theme_override_font_sizes/font_size = 18
-text = "AUTOMATION — produces wood every 2 seconds"
+text = "M4 BASE — craft kits, place, then automate"
 horizontal_alignment = 1
 
+[node name="BaseTransfer" type="HBoxContainer" parent="WorkbenchPanel/Margin/VBox"]
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="DepositWood" type="Button" parent="WorkbenchPanel/Margin/VBox/BaseTransfer"]
+custom_minimum_size = Vector2(250, 44)
+disabled = true
+text = "DEPOSIT ALL WOOD (0)"
+
+[node name="CollectPlanks" type="Button" parent="WorkbenchPanel/Margin/VBox/BaseTransfer"]
+custom_minimum_size = Vector2(250, 44)
+disabled = true
+text = "COLLECT PLANKS (0)"
+
 [node name="BuildTidecatcher" type="Button" parent="WorkbenchPanel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 52)
+custom_minimum_size = Vector2(0, 44)
 disabled = true
 text = "TIDECATCHER — REQUIRES HEART"
 
 [node name="Close" type="Button" parent="WorkbenchPanel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 44)
 text = "CLOSE  (B / ESC)"
 
 [node name="AutomationStatus" type="Label" parent="."]
@@ -321,6 +352,72 @@ theme_override_colors/font_color = Color(0.55, 0.95, 0.83, 1)
 theme_override_font_sizes/font_size = 19
 text = "TIDECATCHER  0 / 6 WOOD  •  APPROACH TO COLLECT"
 horizontal_alignment = 1
+
+[node name="BaseStatus" type="Label" parent="."]
+visible = false
+offset_left = 470.0
+offset_top = 645.0
+offset_right = 1250.0
+offset_bottom = 705.0
+theme_override_colors/font_color = Color(0.58, 0.96, 0.78, 1)
+theme_override_colors/font_outline_color = Color(0.02, 0.05, 0.07, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 17
+text = "COLLECTOR → STORAGE → LUMBER MILL → PLANKS"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PlacementPanel" type="PanelContainer" parent="."]
+visible = false
+offset_left = 340.0
+offset_top = 570.0
+offset_right = 940.0
+offset_bottom = 785.0
+theme_override_styles/panel = SubResource("WorkbenchPanelStyle")
+
+[node name="Margin" type="MarginContainer" parent="PlacementPanel"]
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 14
+
+[node name="VBox" type="VBoxContainer" parent="PlacementPanel/Margin"]
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="PlacementPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(1, 0.75, 0.36, 1)
+theme_override_font_sizes/font_size = 22
+text = "PLACE LUMBER MILL"
+horizontal_alignment = 1
+
+[node name="State" type="Label" parent="PlacementPanel/Margin/VBox"]
+theme_override_font_sizes/font_size = 17
+text = "WEST • 0° • VALID"
+horizontal_alignment = 1
+
+[node name="Actions" type="HBoxContainer" parent="PlacementPanel/Margin/VBox"]
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="Previous" type="Button" parent="PlacementPanel/Margin/VBox/Actions"]
+custom_minimum_size = Vector2(105, 48)
+text = "< SOCKET"
+
+[node name="Rotate" type="Button" parent="PlacementPanel/Margin/VBox/Actions"]
+custom_minimum_size = Vector2(110, 48)
+text = "ROTATE X"
+
+[node name="Next" type="Button" parent="PlacementPanel/Margin/VBox/Actions"]
+custom_minimum_size = Vector2(105, 48)
+text = "SOCKET >"
+
+[node name="Confirm" type="Button" parent="PlacementPanel/Margin/VBox/Actions"]
+custom_minimum_size = Vector2(110, 48)
+text = "PLACE A"
+
+[node name="Cancel" type="Button" parent="PlacementPanel/Margin/VBox/Actions"]
+custom_minimum_size = Vector2(95, 48)
+text = "CANCEL B"
 
 [node name="SystemPanel" type="PanelContainer" parent="."]
 visible = false
@@ -347,7 +444,7 @@ horizontal_alignment = 1
 
 [node name="Slot" type="Label" parent="SystemPanel/Margin/VBox"]
 theme_override_font_sizes/font_size = 17
-text = "LOCAL SLOT • SCHEMA VERSION 5"
+text = "LOCAL SLOT • SCHEMA VERSION 6"
 horizontal_alignment = 1
 
 [node name="Feedback" type="Label" parent="SystemPanel/Margin/VBox"]

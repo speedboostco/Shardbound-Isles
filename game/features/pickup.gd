@@ -11,6 +11,12 @@ var target: Node2D
 var attraction_radius: float = 135.0
 var spawn_order: int = 0
 var important: bool = false
+var owner_id: String = "world"
+var rarity: String = "ordinary"
+var encounter_reward: bool = false
+
+func _ready() -> void:
+	add_to_group("world_pickups")
 
 func _physics_process(delta: float) -> void:
 	if not is_instance_valid(target):

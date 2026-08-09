@@ -1,7 +1,7 @@
 class_name SaveService
 extends RefCounted
 
-const SCHEMA_VERSION: int = 5
+const SCHEMA_VERSION: int = 6
 const DEFAULT_WORLD_SEED: int = 73000
 
 func encode(state: Dictionary) -> String:
@@ -18,7 +18,7 @@ func decode(payload: String) -> Dictionary:
 	if not document.has("schema_version"):
 		return {"ok": false, "error": "missing_schema"}
 	var version := int(document.get("schema_version", -1))
-	if version not in [1, 2, 3, 4, SCHEMA_VERSION]:
+	if version not in [1, 2, 3, 4, 5, SCHEMA_VERSION]:
 		return {"ok": false, "error": "unsupported_schema"}
 	if not document.get("state") is Dictionary:
 		return {"ok": false, "error": "missing_state"}
@@ -47,6 +47,9 @@ func decode(payload: String) -> Dictionary:
 			var upgraded := _upgrade_legacy_shard(legacy_installed)
 			archipelago.install("east", upgraded, IslandRuntimeState.create(upgraded))
 		state["islands"] = {"inventory": upgraded_inventory, "installed": {} if legacy_installed.is_empty() else _upgrade_legacy_shard(legacy_installed), "archipelago": archipelago.to_dictionary()}
+	if version <= 5:
+		state["plank"] = 0
+		state["base"] = _default_base_state()
 	if not _is_valid_state(state):
 		return {"ok": false, "error": "invalid_state"}
 	var result := {"ok": true, "schema_version": SCHEMA_VERSION, "state": _normalize_state(state)}
@@ -91,18 +94,19 @@ func load_from_path(path: String) -> Dictionary:
 	return decode(file.get_as_text())
 
 func _is_valid_state(state: Dictionary) -> bool:
-	if not state.get("player") is Dictionary or not state.get("equipment") is Dictionary or not state.get("tidecatcher") is Dictionary or not state.get("islands") is Dictionary:
+	if not state.get("player") is Dictionary or not state.get("equipment") is Dictionary or not state.get("tidecatcher") is Dictionary or not state.get("islands") is Dictionary or not state.get("base") is Dictionary:
 		return false
 	var player := state.player as Dictionary
 	var equipment := state.equipment as Dictionary
 	var tidecatcher := state.tidecatcher as Dictionary
 	var islands := state.islands as Dictionary
+	var base := state.base as Dictionary
 	if not player.get("position") is Dictionary or not equipment.get("items") is Array:
 		return false
 	if not islands.get("inventory") is Array or not islands.get("installed") is Dictionary or not islands.get("archipelago") is Dictionary:
 		return false
 	var position := player.position as Dictionary
-	var required_values: Array[Variant] = [player.get("health"), player.get("maximum_health"), position.get("x"), position.get("y"), state.get("wood"), state.get("stone"), state.get("moonleaf"), equipment.get("scrap"), tidecatcher.get("stored_wood")]
+	var required_values: Array[Variant] = [player.get("health"), player.get("maximum_health"), position.get("x"), position.get("y"), state.get("wood"), state.get("stone"), state.get("moonleaf"), state.get("plank"), equipment.get("scrap"), tidecatcher.get("stored_wood"), base.get("saved_unix")]
 	for value: Variant in required_values:
 		if not (value is int or value is float):
 			return false
@@ -123,6 +127,12 @@ func _is_valid_state(state: Dictionary) -> bool:
 	if not (islands.installed as Dictionary).is_empty() and not _is_valid_shard(islands.installed):
 		return false
 	if ArchipelagoModel.from_dictionary(islands.archipelago as Dictionary) == null:
+		return false
+	if BasePlacementModel.from_dictionary(base.get("placement", {}) as Dictionary) == null or SharedStorage.from_dictionary(base.get("storage", {}) as Dictionary) == null:
+		return false
+	var mill := LumberMillSimulation.new()
+	var collector := CollectorSimulation.new()
+	if not mill.restore(base.get("lumber_mill", {}) as Dictionary) or not collector.restore(base.get("collector", {}) as Dictionary) or not base.get("crafted_kits", {}) is Dictionary:
 		return false
 	return true
 
@@ -150,6 +160,10 @@ func _normalize_state(state: Dictionary) -> Dictionary:
 			item["item_level"] = int(item.get("item_level", 1))
 		if item.has("favorite"):
 			item["favorite"] = bool(item.get("favorite", false))
+		if item.has("upgrade_level"):
+			item["upgrade_level"] = clampi(int(item.upgrade_level), 0, ItemUpgradeService.MAX_LEVEL)
+		if item.has("unupgraded_power"):
+			item["unupgraded_power"] = int(item.unupgraded_power)
 		if item.get("base_stats") is Dictionary:
 			var normalized_base_stats: Dictionary = {}
 			for stat_id: String in (item.base_stats as Dictionary):
@@ -168,6 +182,7 @@ func _normalize_state(state: Dictionary) -> Dictionary:
 	for shard_value: Variant in islands.inventory:
 		normalized_shards.append(_normalize_shard(shard_value as Dictionary))
 	var installed := islands.installed as Dictionary
+	var base := state.base as Dictionary
 	return {
 		"player": {
 			"health": int(player.health),
@@ -177,6 +192,7 @@ func _normalize_state(state: Dictionary) -> Dictionary:
 		"wood": int(state.wood),
 		"stone": int(state.stone),
 		"moonleaf": int(state.moonleaf),
+		"plank": int(state.plank),
 		"equipment": {
 			"scrap": int(equipment.scrap),
 			"equipped_id": String(equipment.equipped_id),
@@ -188,7 +204,18 @@ func _normalize_state(state: Dictionary) -> Dictionary:
 		"herbal_compass_crafted": bool(state.herbal_compass_crafted),
 		"tidecatcher": {"built": bool(tidecatcher.built), "stored_wood": int(tidecatcher.stored_wood)},
 		"islands": {"inventory": normalized_shards, "installed": {} if installed.is_empty() else _normalize_shard(installed), "archipelago": (ArchipelagoModel.from_dictionary(islands.archipelago as Dictionary) as ArchipelagoModel).to_dictionary()},
+		"base": {
+			"placement": (BasePlacementModel.from_dictionary(base.placement as Dictionary) as BasePlacementModel).to_dictionary(),
+			"storage": (SharedStorage.from_dictionary(base.storage as Dictionary) as SharedStorage).to_dictionary(),
+			"lumber_mill": (base.lumber_mill as Dictionary).duplicate(true),
+			"collector": (base.collector as Dictionary).duplicate(true),
+			"crafted_kits": (base.crafted_kits as Dictionary).duplicate(true),
+			"saved_unix": int(base.saved_unix),
+		},
 	}
+
+func _default_base_state() -> Dictionary:
+	return {"placement": BasePlacementModel.new().to_dictionary(), "storage": SharedStorage.new().to_dictionary(), "lumber_mill": LumberMillSimulation.new().to_dictionary(), "collector": CollectorSimulation.new().to_dictionary(), "crafted_kits": {"lumber_mill_kit": false, "collector_kit": false}, "saved_unix": 0}
 
 func _normalize_shard(shard: Dictionary) -> Dictionary:
 	var normalized := shard.duplicate(true)

@@ -1,0 +1,629 @@
+M4 — Крафт, база и автоматизация
+CRAFT-001 — Recipe definitions
+
+Критерии:
+
+Рецепты data-driven.
+Имеют input, output, station и unlock requirements.
+Валидация обнаруживает неизвестные IDs.
+Крафт атомарный.
+CRAFT-002 — Workbench
+
+Критерии:
+
+Можно создать минимум три полезных объекта.
+UI работает с контроллера.
+Недостающие ресурсы понятны.
+Нельзя потратить ресурсы без получения результата.
+BUILD-001 — Размещение зданий
+
+Критерии:
+
+Есть preview.
+Валидная и невалидная зона различаются.
+Поворот работает с геймпада.
+Нельзя поставить поверх игрока или другого здания.
+Placement state не сохраняет временные preview nodes.
+AUTO-001 — Лесопилка
+
+Механика:
+
+Периодически перерабатывает доступный wood input в processed planks.
+
+Критерии:
+
+Производство не привязано к FPS.
+Есть входной и выходной inventory.
+Есть понятный progress.
+После загрузки производство восстанавливается корректно.
+AUTO-002 — Автоматический сборщик
+
+Механика:
+
+Собирает обычные ресурсы в ограниченном радиусе.
+
+Критерии:
+
+Не собирает rare encounter rewards.
+Не ворует предметы, предназначенные игроку.
+Имеет понятные лимиты.
+Offscreen-работа рассчитывается пакетно.
+AUTO-003 — Связь зданий и хранилища
+
+Критерии:
+
+Ресурсы можно передавать между несколькими зданиями.
+Первая версия не требует сложных конвейеров.
+Игрок понимает направление потока.
+Нет потери ресурсов при переполнении — используется safe output state.
+AUTO-004 — Offline/offscreen simulation
+
+Критерии:
+
+Удалённые здания не симулируются каждый кадр.
+Производство пересчитывается по времени и состоянию.
+Результат ограничен storage capacity.
+Нельзя эксплуатировать изменение системного времени.
+Есть deterministic tests.
+UPG-001 — Станция улучшения предметов
+
+Критерии:
+
+Предмет можно улучшить ограниченное число раз.
+Стоимость растёт.
+Улучшение не уничтожает affix.
+Результат явно показывается до подтверждения.
+Есть защита от accidental upgrade.
+UPG-002 — Система качества и заточки
+
+Пример:
+
++0 → +10
+
+Критерии:
+
+Усиление предсказуемо.
+Нет полного разрушения предмета.
+На высоких уровнях используется редкий ресурс.
+Заточка не становится единственным источником силы.
+Формула покрыта тестами.
+Gate M4
+Игрок вручную добывает ресурс.
+Строит автоматизацию.
+Старая рутина становится проще.
+Освободившееся время тратится на бой, exploration и билд.
+База не выглядит как обязательная бухгалтерия.
+M5 — Rift и бесконечная прогрессия
+RIFT-001 — Вход и выход из Rift
+
+Критерии:
+
+Есть безопасный вход.
+Есть явный выход.
+Игрок не теряет сохранение при аварийном выходе.
+Rift использует отдельный deterministic seed.
+Нельзя случайно заблокировать персонажа внутри.
+RIFT-002 — Генератор encounter sequence
+
+Первая версия:
+
+Combat room
+Combat modifier
+Elite encounter
+Reward
+Boss or exit
+
+Критерии:
+
+Sequence воспроизводится по seed.
+Невозможные комбинации отфильтрованы.
+Каждая стадия имеет clear completion condition.
+RIFT-003 — Scaling difficulty
+
+Увеличивать:
+
+enemy combinations;
+elite affix;
+environmental hazards;
+reward modifiers;
+ограничители билдов.
+
+Не ограничиваться HP scaling.
+
+Критерии:
+
+Сложность читается до входа.
+Рост награды сопоставим с риском.
+Нет резкого невозможного скачка между соседними уровнями.
+RIFT-004 — Rift rewards
+
+Критерии:
+
+Есть targeted loot tags.
+Игрок может выбирать между двумя типами награды.
+Повторный Rift имеет смысл.
+Rift не делает обычные острова бессмысленными.
+ELITE-001 — Elite modifier framework
+
+Первый набор:
+
+Vampiric;
+Explosive;
+Shielded;
+Summoner;
+Teleporter;
+Berserk.
+
+Критерии:
+
+Modifier визуально читается.
+Комбинации проверяются на совместимость.
+Элитный враг не является только большим мешком HP.
+BOSS-001 — Первый босс
+
+Критерии:
+
+Минимум три читаемые атаки.
+Есть telegraph.
+Есть смена поведения или фаза.
+Босс проверяет движение и билд.
+После победы выдаётся shard или legendary reward.
+PROG-001 — Skill constellation foundation
+
+Ветки:
+
+Warrior;
+Ranger;
+Arcanist;
+Inventor;
+Druid;
+Treasure Hunter.
+
+Первая версия — по 3–4 узла, не полное дерево.
+
+Критерии:
+
+Можно смешивать ветки.
+Respec возможен.
+Есть минимум три build-changing узла.
+Узлы data-driven.
+PROG-002 — Weapon mastery
+
+Критерии:
+
+Мастерство растёт за использование оружия.
+Есть разумный diminishing growth.
+Бонусы не заставляют навсегда оставаться на первом выбранном оружии.
+Нет бесконечного farm exploit на безопасной цели.
+PROG-003 — Endless mastery foundation
+
+Критерии:
+
+После основного уровня остаётся долгосрочная прогрессия.
+Награды ограничены diminishing returns.
+Система не даёт неограниченный multiplicative scaling.
+Есть cap или soft cap для опасных характеристик.
+Gate M5
+Игрок завершает Rift.
+Получает reward, влияющий на билд или архипелаг.
+Хочет поднять сложность.
+Сложность растёт через новые ситуации, а не только HP.
+Существует причина продолжать после сюжетного босса.
+M6 — Steam Deck и качество продукта
+SAVE-001 — Versioned save system
+
+Критерии:
+
+Atomic write.
+Backup предыдущего сохранения.
+Schema version.
+Safe load failure.
+Нет partial save.
+Есть round-trip tests.
+SAVE-002 — Save migrations
+
+Критерии:
+
+Есть минимум одна тестовая migration.
+Migration можно повторно запускать безопасно.
+Unsupported future version не перезаписывается.
+Ошибка migration сохраняет оригинальный файл.
+UX-001 — Полная controller navigation
+
+Проверить:
+
+inventory;
+equipment;
+crafting;
+shard placement;
+skill tree;
+pause menu;
+settings;
+Rift selection.
+
+Критерии:
+
+Нельзя потерять focus.
+Focus всегда визуально виден.
+Есть predictable back behavior.
+Нет mouse-only действий.
+UX-002 — Input glyph switching
+
+Критерии:
+
+Подсказки показывают актуальное устройство.
+Переключаются при смене input.
+Glyph не hard-coded в тексте.
+Steam Deck prompts читаемы.
+UX-003 — Pause и settings
+
+Настройки:
+
+master/music/SFX;
+screen shake;
+damage flash;
+UI scale;
+aim assist;
+rumble;
+controller remapping;
+graphics preset.
+
+Критерии:
+
+Игра действительно ставится на паузу.
+Изменения применяются безопасно.
+Настройки хранятся отдельно от save game.
+UX-004 — Accessibility foundation
+
+Добавить:
+
+UI scaling;
+reduced flashes;
+screen shake slider;
+hold/toggle options;
+aim assistance;
+configurable auto-pickup;
+readable font sizing.
+PERF-001 — Gameplay stress scene
+
+Сценарий:
+
+300 enemies;
+200 drops;
+100 projectiles;
+30 production buildings;
+несколько активных island modifiers.
+
+Критерии:
+
+Сценарий воспроизводим.
+Собираются FPS/frame-time/memory metrics.
+Есть budget thresholds.
+CI может хотя бы проверять отсутствие crash и runaway memory.
+PERF-002 — Activation и sleeping
+
+Критерии:
+
+Далёкие враги не выполняют full AI.
+Удалённые islands используют simplified simulation.
+Ресурсные объекты не имеют бессмысленного _process.
+Поведение после пробуждения корректно.
+DECK-001 — Steam Deck smoke checklist
+
+Проверить:
+
+Proton build;
+1280×800;
+60 FPS target;
+suspend/resume;
+offline launch;
+no virtual keyboard;
+controller-only new game;
+save/load;
+sleep and wake;
+UI readability.
+BUILD-001 — Release export profiles
+
+Критерии:
+
+Windows x86_64.
+Linux x86_64.
+Debug и release варианты.
+Версия приложения передаётся автоматически.
+Ошибка экспорта ломает pipeline.
+Gate M6
+
+Полный 30-минутный цикл можно пройти на Steam Deck:
+
+без мыши;
+без клавиатуры;
+без интернета;
+без UI-проблем;
+без повреждения сохранения;
+без серьёзных просадок FPS.
+M7 — Контент для Steam Demo
+
+Только после доказательства core loop.
+
+BIO-002 — Болотный биом
+
+Уникальность:
+
+poison;
+spores;
+алхимические ресурсы;
+moving terrain hazard;
+связь с Druid/build mechanics.
+BIO-003 — Вулканический биом
+
+Уникальность:
+
+heat zones;
+explosive ore;
+smelting synergy;
+тяжёлые противники;
+obsidian adjacency.
+ENM-002 — Набор из 8 обычных врагов
+
+Критерии:
+
+Не более двух врагов используют одинаковую роль.
+Есть melee, ranged, support, ambusher, area denial.
+Поведение читается визуально.
+ENM-003 — Набор elite combinations
+
+Критерии:
+
+Проверены dangerous combinations.
+Нет unfair instant attacks.
+Modifier визуально заметен до получения урона.
+ITEM-003 — 30 обычных affix
+
+Распределить между:
+
+combat;
+gathering;
+movement;
+crafting;
+automation;
+hybrid builds.
+LEG-005 — 12 legendary properties
+
+Критерии:
+
+Каждое свойство меняет поведение.
+Минимум четыре связывают бой и сбор.
+Минимум четыре связывают бой и базу.
+Минимум два меняют island strategy.
+Нет свойства, являющегося просто большим процентом урона.
+CONTENT-001 — Набор shard modifiers
+
+Цель для demo:
+
+15 положительных;
+15 отрицательных;
+8 encounters;
+6 adjacency interactions.
+ART-001 — Зафиксировать art bible
+
+Критерии:
+
+Размеры sprite.
+Tile size.
+Palette.
+Свет.
+Контуры.
+Animation frame counts.
+UI style.
+VFX limits.
+Примеры правильных и неправильных ассетов.
+ART-002 — AI asset validation pipeline
+
+Проверять:
+
+dimensions;
+transparency;
+palette;
+duplicate frames;
+anchor points;
+naming;
+file size;
+import settings.
+AUDIO-001 — Audio event framework
+
+Категории:
+
+combat;
+gathering;
+loot;
+crafting;
+UI;
+ambient;
+music.
+
+Критерии:
+
+Не создаётся новый audio player для каждого звука.
+Есть volume groups.
+Ограничиваются одинаковые simultaneous sounds.
+AUDIO-002 — Первый полноценный audio pass
+
+Особенно важны:
+
+удар по дереву;
+удар по камню;
+попадание по врагу;
+критический удар;
+legendary drop;
+появление острова;
+Rift entry;
+upgrade.
+TUT-001 — Onboarding без текстовой стены
+
+Критерии:
+
+Игрок начинает двигаться почти сразу.
+Обучение связано с действиями.
+Подсказка исчезает после освоения.
+Можно пропустить.
+Нет обязательного разговора на пять минут.
+METRIC-001 — Локальная playtest telemetry
+
+Собирать без отправки наружу:
+
+время до первой добычи;
+первой смерти;
+первого предмета;
+первой экипировки;
+первого shard;
+установки острова;
+первого Rift;
+quit point;
+используемые типы оружия.
+
+Критерии:
+
+Данные сохраняются локально.
+Нет персональной информации.
+Формат пригоден для анализа агентом.
+BAL-001 — Simulation guardrails
+
+CI warnings или failures:
+
+невозможно открыть первый остров;
+нет upgrade слишком долго;
+legendary frequency вне диапазона;
+один weapon archetype доминирует;
+salvage всегда выгоднее экипировки;
+ресурсный sink не способен догнать production;
+seed создаёт недоступный critical resource.
+DEMO-001 — Полный demo journey
+
+Пример:
+
+Start
+→ first equipment
+→ workbench
+→ first shard
+→ second biome
+→ first automation
+→ build synergy
+→ Rift
+→ boss
+→ build-defining reward
+→ demo ending
+
+Критерии:
+
+Demo имеет законченную дугу.
+Игрок видит главный hook.
+Demo заканчивается на желании продолжить.
+Не открывает все системы полной игры.
+DEMO-002 — Demo end screen
+
+Показывать:
+
+достигнутый билд;
+найденные legendary properties;
+построенные islands;
+следующую недоступную цель;
+wishlist call-to-action.
+Gate M7
+
+Незнакомый игрок без объяснений способен:
+
+понять управление;
+получить meaningful loot;
+установить остров;
+увидеть synergy;
+пройти Rift;
+захотеть продолжить.
+
+Главный показатель — не «он прошёл демо», а:
+
+«Он после окончания спрашивает, можно ли играть дальше».
+
+M8 — Полноценный релиз
+
+После успешной demo и внешних playtests.
+
+STEAM-001 — Steamworks integration
+
+Только:
+
+запуск через Steam;
+overlay compatibility;
+basic app lifecycle;
+build metadata.
+
+Не добавлять Steam-зависимость в core gameplay.
+
+STEAM-002 — Steam Cloud
+
+Критерии:
+
+Синхронизируются saves.
+Графические настройки не конфликтуют между PC и Deck.
+Есть conflict handling.
+Локальное сохранение остаётся полноценным без Steam.
+STEAM-003 — Achievements
+
+Критерии:
+
+Связаны с реальными игровыми целями.
+Не требуют бессмысленного grind.
+Есть offline-safe queue.
+Нет achievement logic внутри UI.
+LOC-001 — Localization architecture
+
+Критерии:
+
+Все player-facing strings вынесены.
+Поддерживаются plural forms.
+UI тестируется с длинными строками.
+IDs стабильны.
+Первая локализация: английский и русский.
+QA-001 — Save compatibility matrix
+
+Проверить:
+
+новая версия → новый save;
+старая версия → migration;
+повреждённый save;
+отсутствующий контент;
+удалённый modifier;
+неизвестный item ID;
+Steam Cloud conflict.
+QA-002 — Long-session soak test
+
+Критерии:
+
+Несколько часов симуляции.
+Нет постоянного роста памяти.
+Нет бесконечного количества сущностей.
+Autosave остаётся стабильным.
+Procedural generation не деградирует.
+QA-003 — Full controller audit
+
+Каждый экран и действие:
+
+начало игры;
+gameplay;
+инвентарь;
+настройки;
+смерть;
+загрузка;
+credits;
+выход.
+RELEASE-001 — Release candidate pipeline
+
+Pipeline должен:
+
+Запустить все тесты.
+Проверить ассеты.
+Проверить локализацию.
+Собрать Windows/Linux.
+Проверить версию.
+Сформировать changelog.
+Создать артефакты.
+Остановиться перед публикацией для ручного approval.

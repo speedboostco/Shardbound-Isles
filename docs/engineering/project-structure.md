@@ -16,7 +16,7 @@ build/
 
 ## Responsibilities
 
-- `game/core/` contains deterministic, rendering-independent rules and serializable state services. Current examples include loot generation, crafting, island generation, rift rules, and save schema handling. Code here must not depend on scenes or UI.
+- `game/core/` contains deterministic, rendering-independent rules and serializable state services. Current examples include loot generation, data-driven crafting, base placement, bounded automation, item upgrades, island generation, rift rules, and save schema handling. Code here must not depend on scenes or UI.
 - `game/features/` contains reusable gameplay nodes and scene-facing behavior, including the player, enemies, resources, automation, rifts, and world orchestration script.
 - `game/ui/` contains presentation scenes and scripts. UI observes gameplay state and emits intent; it does not own authoritative state.
 - `game/content/` contains authored composition roots that assemble features and UI. The current `world.tscn` is the first-playable content entry point.

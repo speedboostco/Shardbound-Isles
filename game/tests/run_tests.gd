@@ -19,6 +19,9 @@ func _run() -> void:
 		return
 	if suite in ["all", "unit"]:
 		for definition: Dictionary in [
+			{"path": "res://game/tests/unit/m4_recipe_placement_test.gd", "assertions": 18},
+			{"path": "res://game/tests/unit/m4_automation_test.gd", "assertions": 14},
+			{"path": "res://game/tests/unit/item_upgrade_service_test.gd", "assertions": 12},
 			{"path": "res://game/tests/unit/archipelago_model_test.gd", "assertions": 20},
 			{"path": "res://game/tests/unit/island_generation_m3_test.gd", "assertions": 24},
 			{"path": "res://game/tests/unit/island_modifier_adjacency_test.gd", "assertions": 20},
@@ -40,7 +43,7 @@ func _run() -> void:
 			{"path": "res://game/tests/unit/equipment_inventory_test.gd", "assertions": 15},
 			{"path": "res://game/tests/unit/crafting_service_test.gd", "assertions": 18},
 			{"path": "res://game/tests/unit/wood_production_test.gd", "assertions": 7},
-			{"path": "res://game/tests/unit/save_service_test.gd", "assertions": 15},
+			{"path": "res://game/tests/unit/save_service_test.gd", "assertions": 16},
 			{"path": "res://game/tests/unit/island_shard_generator_test.gd", "assertions": 10},
 			{"path": "res://game/tests/unit/ranged_attack_pattern_test.gd", "assertions": 5},
 			{"path": "res://game/tests/unit/boss_attack_pattern_test.gd", "assertions": 6},
@@ -60,6 +63,7 @@ func _run() -> void:
 			_record_result("unit", path, assertions_before, failures_before)
 	if suite in ["all", "integration"]:
 		for definition: Dictionary in [
+			{"path": "res://game/tests/integration/m4_base_flow_test.gd", "assertions": 28},
 			{"path": "res://game/tests/integration/m3_world_loot_flow_test.gd", "assertions": 40},
 			{"path": "res://game/tests/integration/m2_loot_flow_test.gd", "assertions": 31},
 			{"path": "res://game/tests/integration/m1_scene_contract_test.gd", "assertions": 26},
@@ -135,6 +139,18 @@ func _run() -> void:
 				return
 			print("M3_METRICS %s" % JSON.stringify(m3_metrics))
 		_record_result("simulation", m3_path, m3_before, m3_failures_before)
+		var m4_path := "res://game/tests/simulation/m4_automation_simulation_test.gd"
+		var m4_before := support.assertions
+		var m4_failures_before := support.failures.size()
+		var m4_simulation: Variant = _instantiate_test(m4_path)
+		if m4_simulation != null:
+			var m4_metrics: Dictionary = await m4_simulation.run(support, self)
+			if not support.require_assertion_count(support.assertions - m4_before, 10, m4_path):
+				_record_result("simulation", m4_path, m4_before, m4_failures_before)
+				_finish(suite)
+				return
+			print("M4_METRICS %s" % JSON.stringify(m4_metrics))
+		_record_result("simulation", m4_path, m4_before, m4_failures_before)
 	_finish(suite)
 
 func _finish(suite: String) -> void:

@@ -27,6 +27,7 @@ const BASE_BOSS_PHASE_TWO_SPEED: float = 105.0
 @onready var camera: CameraRig = $Player/Camera2D
 @onready var workbench: Workbench = $Workbench
 @onready var tidecatcher: Tidecatcher = $Tidecatcher
+@onready var base_buildings: Node2D = $BaseBuildings
 @onready var island_slot: IslandSlot = $IslandSlot
 @onready var north_east_island_slot: IslandSlot = $NorthEastIslandSlot
 @onready var south_east_island_slot: IslandSlot = $SouthEastIslandSlot
@@ -46,6 +47,9 @@ var stone: int:
 var moonleaf: int:
 	get: return resource_inventory.amount("moonleaf")
 	set(value): resource_inventory.set_amount("moonleaf", maxi(0, value))
+var plank: int:
+	get: return resource_inventory.amount("plank")
+	set(value): resource_inventory.set_amount("plank", maxi(0, value))
 var equipment_inventory := EquipmentInventory.new()
 var equipment: Array[Dictionary] = equipment_inventory.items
 var enemies_defeated: int = 0
@@ -71,6 +75,18 @@ var _attack_index: int = 0
 var _event_tick: int = 0
 var _pickup_spawn_order: int = 0
 var _burning_targets: Dictionary = {}
+var base_placement := BasePlacementModel.new()
+var shared_storage := SharedStorage.new()
+var lumber_mill_simulation := LumberMillSimulation.new()
+var collector_simulation := CollectorSimulation.new()
+var crafted_building_kits: Dictionary = {"lumber_mill_kit": false, "collector_kit": false}
+var last_simulation_unix: int = 0
+var _building_nodes: Dictionary = {}
+var _placement_visual: BaseBuildingVisual
+var _placement_socket_index: int = 0
+var _automation_timer: Timer
+const PLACEMENT_SOCKET_IDS: Array[String] = ["west", "north", "east", "south"]
+const PLACEMENT_WORLD_POSITIONS: Dictionary = {"west": Vector2(-245, -285), "north": Vector2(0, -390), "east": Vector2(245, -285), "south": Vector2(0, 55)}
 
 func _ready() -> void:
 	island_slots = {"east": island_slot, "north_east": north_east_island_slot, "south_east": south_east_island_slot}
@@ -112,6 +128,7 @@ func _ready() -> void:
 	hud.set_wood(wood)
 	hud.set_stone(stone)
 	hud.set_moonleaf(moonleaf)
+	hud.set_plank(plank)
 	hud.equipment_panel_requested.connect(open_equipment_panel)
 	hud.equipment_panel_closed.connect(_on_equipment_panel_closed)
 	hud.equip_requested.connect(equip_selected_item)
@@ -122,6 +139,13 @@ func _ready() -> void:
 	hud.workbench_panel_closed.connect(_on_workbench_panel_closed)
 	hud.craft_requested.connect(_on_craft_requested)
 	hud.tidecatcher_build_requested.connect(build_tidecatcher)
+	hud.upgrade_requested.connect(upgrade_equipped_item)
+	hud.placement_socket_requested.connect(cycle_placement_socket)
+	hud.placement_rotate_requested.connect(rotate_building_preview)
+	hud.placement_confirm_requested.connect(confirm_building_placement)
+	hud.placement_cancel_requested.connect(cancel_building_placement)
+	hud.base_deposit_requested.connect(func(resource_id: String) -> void: deposit_base_resource(resource_id, resource_inventory.amount(resource_id)))
+	hud.base_withdraw_requested.connect(func(resource_id: String) -> void: withdraw_base_resource(resource_id, shared_storage.amount(resource_id)))
 	hud.system_menu_requested.connect(open_system_menu)
 	hud.system_menu_closed.connect(_on_system_menu_closed)
 	hud.save_requested.connect(save_game)
@@ -136,6 +160,12 @@ func _ready() -> void:
 	rift_portal.availability_changed.connect(_refresh_interaction_target)
 	tidecatcher.wood_collected.connect(_on_tidecatcher_wood_collected)
 	tidecatcher.storage_changed.connect(_on_tidecatcher_storage_changed)
+	_automation_timer = Timer.new()
+	_automation_timer.wait_time = 0.5
+	_automation_timer.autostart = true
+	_automation_timer.timeout.connect(_on_automation_tick)
+	add_child(_automation_timer)
+	last_simulation_unix = int(Time.get_unix_time_from_system())
 	_refresh_equipment_ui()
 	_refresh_workbench_ui()
 	_refresh_island_ui()
@@ -529,7 +559,9 @@ func _on_workbench_panel_closed() -> void:
 	_restore_gameplay_if_no_modal()
 
 func _on_craft_requested(recipe_id: String) -> void:
-	if recipe_id == CraftingService.WHETSTONE_RECIPE_ID:
+	if recipe_id in ["lumber_mill_kit", "collector_kit"]:
+		craft_building_kit(recipe_id)
+	elif recipe_id == CraftingService.WHETSTONE_RECIPE_ID:
 		craft_runed_whetstone()
 	elif recipe_id == CraftingService.HERBAL_COMPASS_RECIPE_ID:
 		craft_herbal_compass()
@@ -537,42 +569,254 @@ func _on_craft_requested(recipe_id: String) -> void:
 		craft_reinforced_heart()
 
 func craft_reinforced_heart() -> bool:
-	var result := crafting_service.craft(wood, equipment_inventory.scrap, reinforced_heart_crafted)
+	var result := crafting_service.evaluate(CraftingService.RECIPE_ID, _crafting_resources(), {"reinforced_heart": reinforced_heart_crafted, "forest_island": _has_forest_island()}, _crafted_recipe_state())
 	if not bool(result.get("success", false)):
-		var reason := String(result.get("reason", ""))
-		_refresh_workbench_ui("ALREADY CRAFTED" if reason == "already_crafted" else "NEED MORE RESOURCES")
+		_refresh_workbench_ui(_crafting_failure_text(result))
 		return false
-	resource_inventory.remove("wood", int(result.get("wood_spent", 0)))
-	equipment_inventory.scrap -= int(result.get("scrap_spent", 0))
+	_apply_crafting_resources(result.resources_after as Dictionary)
 	reinforced_heart_crafted = true
-	player.add_maximum_health(int(result.get("maximum_health_bonus", 0)))
+	player.add_maximum_health(CraftingService.MAXIMUM_HEALTH_BONUS)
 	refresh_all_ui("CRAFTED — MAX HEALTH +2")
 	hud.focus_tidecatcher_build()
 	return true
 
 func craft_runed_whetstone() -> bool:
-	var result := crafting_service.craft_whetstone(stone, runed_whetstone_crafted)
+	var result := crafting_service.evaluate(CraftingService.WHETSTONE_RECIPE_ID, _crafting_resources(), {"reinforced_heart": reinforced_heart_crafted, "forest_island": _has_forest_island()}, _crafted_recipe_state())
 	if not bool(result.get("success", false)):
-		var reason := String(result.get("reason", ""))
-		_refresh_workbench_ui("ALREADY CRAFTED" if reason == "already_crafted" else "NEED MORE STONE")
+		_refresh_workbench_ui(_crafting_failure_text(result))
 		return false
-	resource_inventory.remove("stone", int(result.get("stone_spent", 0)))
+	_apply_crafting_resources(result.resources_after as Dictionary)
 	runed_whetstone_crafted = true
 	_sync_player_equipment()
 	refresh_all_ui("CRAFTED — BASE ATTACK +1")
 	return true
 
 func craft_herbal_compass() -> bool:
-	var result := crafting_service.craft_herbal_compass(moonleaf, herbal_compass_crafted)
+	var result := crafting_service.evaluate(CraftingService.HERBAL_COMPASS_RECIPE_ID, _crafting_resources(), {"reinforced_heart": reinforced_heart_crafted, "forest_island": _has_forest_island()}, _crafted_recipe_state())
 	if not bool(result.get("success", false)):
-		var reason := String(result.get("reason", ""))
-		_refresh_workbench_ui("ALREADY CRAFTED" if reason == "already_crafted" else "NEED 3 MOONLEAF")
+		_refresh_workbench_ui(_crafting_failure_text(result))
 		return false
-	resource_inventory.remove("moonleaf", int(result.get("moonleaf_spent", 0)))
+	_apply_crafting_resources(result.resources_after as Dictionary)
 	herbal_compass_crafted = true
 	_sync_player_equipment()
 	refresh_all_ui("CRAFTED — PICKUP RADIUS +40")
 	return true
+
+func craft_building_kit(recipe_id: String) -> bool:
+	var resources := _crafting_resources()
+	var result := crafting_service.evaluate(recipe_id, resources, {"reinforced_heart": reinforced_heart_crafted, "forest_island": _has_forest_island()}, _crafted_recipe_state())
+	if not bool(result.get("success", false)):
+		_refresh_workbench_ui(_crafting_failure_text(result))
+		return false
+	_apply_crafting_resources(result.resources_after as Dictionary)
+	crafted_building_kits[recipe_id] = true
+	refresh_all_ui("CRAFTED — READY TO PLACE")
+	return begin_building_placement(recipe_id.trim_suffix("_kit"))
+
+func begin_building_placement(building_id: String, socket_id: String = "west") -> bool:
+	var kit_id := "%s_kit" % building_id
+	if not bool(crafted_building_kits.get(kit_id, false)) or not base_placement.begin_preview(building_id, socket_id):
+		return false
+	_placement_socket_index = PLACEMENT_SOCKET_IDS.find(socket_id)
+	if is_instance_valid(_placement_visual):
+		_placement_visual.queue_free()
+	_placement_visual = BaseBuildingVisual.new()
+	base_buildings.add_child(_placement_visual)
+	_refresh_placement_preview()
+	player.input_enabled = false
+	_set_combat_processing(false)
+	return true
+
+func cycle_placement_socket(offset: int) -> bool:
+	if base_placement.preview.is_empty():
+		return false
+	_placement_socket_index = posmod(_placement_socket_index + offset, PLACEMENT_SOCKET_IDS.size())
+	base_placement.select_socket(PLACEMENT_SOCKET_IDS[_placement_socket_index])
+	_refresh_placement_preview()
+	return true
+
+func rotate_building_preview() -> int:
+	var result := base_placement.rotate_preview()
+	_refresh_placement_preview()
+	return result
+
+func confirm_building_placement() -> bool:
+	if base_placement.preview.is_empty():
+		return false
+	var kit_id := "%s_kit" % String(base_placement.preview.building_id)
+	var result := base_placement.commit(_player_placement_cell())
+	if not bool(result.get("valid", false)):
+		_refresh_placement_preview()
+		return false
+	crafted_building_kits[kit_id] = false
+	if is_instance_valid(_placement_visual):
+		_placement_visual.queue_free()
+	_placement_visual = null
+	hud.close_placement()
+	_materialize_base_buildings()
+	_refresh_base_ui("%s ONLINE" % String((result.building as Dictionary).building_id).replace("_", " ").to_upper())
+	_restore_gameplay_if_no_modal()
+	return true
+
+func cancel_building_placement() -> void:
+	base_placement.cancel_preview()
+	if is_instance_valid(_placement_visual):
+		_placement_visual.queue_free()
+	_placement_visual = null
+	hud.close_placement()
+	_restore_gameplay_if_no_modal()
+
+func _refresh_placement_preview() -> void:
+	if base_placement.preview.is_empty() or not is_instance_valid(_placement_visual):
+		return
+	var validation := base_placement.validate_preview(_player_placement_cell())
+	var socket_id := String(base_placement.preview.socket_id)
+	_placement_visual.position = PLACEMENT_WORLD_POSITIONS[socket_id] as Vector2
+	_placement_visual.configure(String(base_placement.preview.building_id), true, bool(validation.valid), int(base_placement.preview.rotation))
+	hud.show_placement(String(base_placement.preview.building_id).replace("_", " "), socket_id, int(base_placement.preview.rotation), bool(validation.valid), String(validation.reason))
+
+func _player_placement_cell() -> Vector2i:
+	for socket_id: String in PLACEMENT_SOCKET_IDS:
+		if player.global_position.distance_to(PLACEMENT_WORLD_POSITIONS[socket_id] as Vector2) <= 62.0:
+			return BasePlacementModel.SOCKETS[socket_id] as Vector2i
+	return Vector2i(999, 999)
+
+func _materialize_base_buildings() -> void:
+	for node_value: Variant in _building_nodes.values():
+		if is_instance_valid(node_value):
+			(node_value as Node).queue_free()
+	_building_nodes.clear()
+	for socket_id: String in base_placement.buildings:
+		var state := base_placement.buildings[socket_id] as Dictionary
+		var visual := BaseBuildingVisual.new()
+		visual.position = PLACEMENT_WORLD_POSITIONS[socket_id] as Vector2
+		visual.configure(String(state.building_id), false, true, int(state.rotation))
+		base_buildings.add_child(visual)
+		_building_nodes[socket_id] = visual
+
+func has_base_building(building_id: String) -> bool:
+	for state_value: Variant in base_placement.buildings.values():
+		if String((state_value as Dictionary).get("building_id", "")) == building_id:
+			return true
+	return false
+
+func deposit_base_resource(resource_id: String, amount: int) -> int:
+	var available: int = resource_inventory.amount(resource_id)
+	var requested: int = mini(maxi(0, amount), available)
+	var result: Dictionary = shared_storage.add(resource_id, requested)
+	var accepted: int = int(result.accepted)
+	if accepted > 0:
+		resource_inventory.remove(resource_id, accepted)
+	_refresh_base_ui("DEPOSITED %d %s" % [accepted, resource_id.to_upper()] if accepted > 0 else "STORAGE FULL — NOTHING LOST")
+	refresh_all_ui()
+	return accepted
+
+func withdraw_base_resource(resource_id: String, amount: int) -> int:
+	var transferred: int = shared_storage.remove(resource_id, amount)
+	if transferred > 0:
+		resource_inventory.add(resource_id, transferred)
+	refresh_all_ui()
+	return transferred
+
+func advance_base_automation(delta_seconds: float) -> Dictionary:
+	if has_base_building("collector"):
+		collector_simulation.flush_to(shared_storage)
+	var result := {"elapsed": 0.0, "cycles": 0, "planks_routed": 0, "blocked": false}
+	if has_base_building("lumber_mill"):
+		result = OfflineAutomation.simulate_mill(lumber_mill_simulation, shared_storage, delta_seconds)
+	_refresh_base_ui()
+	return result
+
+func collect_automation_batch() -> Dictionary:
+	if not has_base_building("collector"):
+		return {"collected_ids": [], "amount": 0}
+	var collector_position: Vector2 = _building_position("collector")
+	var candidates: Array[Dictionary] = []
+	var nodes_by_id: Dictionary = {}
+	for node: Node in get_tree().get_nodes_in_group("world_pickups"):
+		if not node is WorldPickup:
+			continue
+		var pickup := node as WorldPickup
+		if not pickup.payload is int:
+			continue
+		var stable_id := str(pickup.get_instance_id())
+		candidates.append({"id": stable_id, "resource_id": pickup.kind, "amount": int(pickup.payload), "position": pickup.global_position, "rarity": pickup.rarity, "owner": pickup.owner_id, "encounter_reward": pickup.encounter_reward or pickup.important})
+		nodes_by_id[stable_id] = pickup
+	var result: Dictionary = collector_simulation.collect_batch(candidates, collector_position)
+	for id_value: Variant in result.collected_ids:
+		var pickup: Node = nodes_by_id.get(String(id_value))
+		if is_instance_valid(pickup):
+			pickup.queue_free()
+	return result
+
+func _building_position(building_id: String) -> Vector2:
+	for socket_id: String in base_placement.buildings:
+		if String((base_placement.buildings[socket_id] as Dictionary).building_id) == building_id:
+			return PLACEMENT_WORLD_POSITIONS[socket_id] as Vector2
+	return Vector2.ZERO
+
+func _on_automation_tick() -> void:
+	collect_automation_batch()
+	advance_base_automation(0.5)
+
+func simulate_offline(current_unix: int) -> Dictionary:
+	var elapsed: float = OfflineAutomation.safe_elapsed(last_simulation_unix, current_unix)
+	var result: Dictionary = advance_base_automation(elapsed)
+	last_simulation_unix = maxi(last_simulation_unix, current_unix)
+	return result
+
+func upgrade_equipped_item(confirmed: bool = false) -> bool:
+	var equipped: Dictionary = equipment_inventory.equipped_item("weapon")
+	if equipped.is_empty():
+		_refresh_upgrade_ui("EQUIP AN ITEM FIRST")
+		return false
+	var resources: Dictionary = {"scrap": equipment_inventory.scrap, "moonleaf": moonleaf}
+	var result: Dictionary = ItemUpgradeService.apply(equipped, resources, confirmed)
+	if not bool(result.get("success", false)):
+		_refresh_upgrade_ui("CONFIRMATION REQUIRED" if String(result.reason) == "confirmation_required" else "UPGRADE BLOCKED — %s" % String(result.reason).replace("_", " ").to_upper())
+		return false
+	var item_id := String(equipped.id)
+	for index: int in equipment_inventory.items.size():
+		if String(equipment_inventory.items[index].get("id", "")) == item_id:
+			equipment_inventory.items[index] = (result.item as Dictionary).duplicate(true)
+			break
+	equipment_inventory.scrap = int(result.resources.scrap)
+	moonleaf = int(result.resources.moonleaf)
+	_sync_player_equipment()
+	refresh_all_ui("UPGRADED %s TO +%d" % [String(result.item.get("name", "ITEM")).to_upper(), int(result.item.upgrade_level)])
+	return true
+
+func _refresh_upgrade_ui(feedback: String = "") -> void:
+	hud.refresh_upgrade_preview(equipment_inventory.equipped_item("weapon"), equipment_inventory.scrap, moonleaf, feedback)
+
+func _crafting_resources() -> Dictionary:
+	return {"wood": wood, "stone": stone, "moonleaf": moonleaf, "scrap": equipment_inventory.scrap, "plank": plank}
+
+func _apply_crafting_resources(resources: Dictionary) -> void:
+	wood = int(resources.get("wood", wood))
+	stone = int(resources.get("stone", stone))
+	moonleaf = int(resources.get("moonleaf", moonleaf))
+	plank = int(resources.get("plank", plank))
+	equipment_inventory.scrap = int(resources.get("scrap", equipment_inventory.scrap))
+
+func _crafted_recipe_state() -> Dictionary:
+	return {"reinforced_heart": reinforced_heart_crafted, "runed_whetstone": runed_whetstone_crafted, "herbal_compass": herbal_compass_crafted, "lumber_mill_kit": bool(crafted_building_kits.lumber_mill_kit) or has_base_building("lumber_mill"), "collector_kit": bool(crafted_building_kits.collector_kit) or has_base_building("collector"), "lumber_mill_built": has_base_building("lumber_mill"), "collector_built": has_base_building("collector"), "stored_planks": shared_storage.amount("plank")}
+
+func _crafting_failure_text(result: Dictionary) -> String:
+	var reason := String(result.get("reason", "invalid"))
+	if reason == "insufficient_resources":
+		var parts: Array[String] = []
+		for id_value: Variant in (result.get("missing", {}) as Dictionary):
+			parts.append("%d %s" % [int(result.missing[id_value]), String(id_value).to_upper()])
+		return "MISSING %s" % ", ".join(parts)
+	return reason.replace("_", " ").to_upper()
+
+func _has_forest_island() -> bool:
+	for slot_id: String in archipelago.slot_ids():
+		var installed: Dictionary = (archipelago.slot(slot_id) as Dictionary).get("installed_island", {}) as Dictionary
+		if not installed.is_empty() and String((installed.definition as Dictionary).get("biome", "")) == "Forest":
+			return true
+	return false
 
 func build_tidecatcher() -> bool:
 	if not reinforced_heart_crafted or tidecatcher_built:
@@ -596,15 +840,27 @@ func refresh_all_ui(crafting_feedback: String = "") -> void:
 	hud.set_wood(wood)
 	hud.set_stone(stone)
 	hud.set_moonleaf(moonleaf)
+	hud.set_plank(plank)
 	_refresh_equipment_ui()
 	_refresh_workbench_ui(crafting_feedback)
+	_refresh_upgrade_ui()
+	_refresh_base_ui()
 	_refresh_island_ui()
 
 func _refresh_workbench_ui(feedback: String = "") -> void:
-	hud.refresh_workbench(wood, stone, moonleaf, equipment_inventory.scrap, reinforced_heart_crafted, runed_whetstone_crafted, herbal_compass_crafted, tidecatcher_built, feedback)
+	hud.refresh_workbench(wood, stone, moonleaf, equipment_inventory.scrap, reinforced_heart_crafted, runed_whetstone_crafted, herbal_compass_crafted, tidecatcher_built, feedback, plank, _crafted_recipe_state(), _has_forest_island())
+
+func _refresh_base_ui(feedback: String = "") -> void:
+	var active := not base_placement.buildings.is_empty()
+	var mill_state := "MILL —"
+	if has_base_building("lumber_mill"):
+		mill_state = "MILL %dW → %dP  %d%%%s" % [lumber_mill_simulation.input_wood, lumber_mill_simulation.output_planks, roundi(lumber_mill_simulation.progress_ratio() * 100.0), " BLOCKED" if lumber_mill_simulation.blocked_output else ""]
+	var collector_state := "COLLECTOR %d/%d" % [collector_simulation.total_stored(), CollectorSimulation.STORAGE_CAPACITY] if has_base_building("collector") else "COLLECTOR —"
+	var flow := "%s\n%s  →  STORAGE %d/%d  →  %s" % [feedback, collector_state, shared_storage.total(), shared_storage.capacity, mill_state] if not feedback.is_empty() else "%s  →  STORAGE %d/%d  →  %s" % [collector_state, shared_storage.total(), shared_storage.capacity, mill_state]
+	hud.set_base_status(active or not feedback.is_empty(), flow)
 
 func _restore_gameplay_if_no_modal() -> void:
-	if hud.is_equipment_panel_open() or hud.is_workbench_panel_open() or hud.is_system_menu_open() or hud.is_island_panel_open():
+	if hud.is_equipment_panel_open() or hud.is_workbench_panel_open() or hud.is_system_menu_open() or hud.is_island_panel_open() or hud.is_placement_panel_open():
 		return
 	player.input_enabled = true
 	_set_combat_processing(true)
@@ -670,6 +926,7 @@ func snapshot_state() -> Dictionary:
 		"wood": wood,
 		"stone": stone,
 		"moonleaf": moonleaf,
+		"plank": plank,
 		"equipment": {
 			"scrap": equipment_inventory.scrap,
 			"equipped_id": equipment_inventory.equipped_id,
@@ -681,6 +938,7 @@ func snapshot_state() -> Dictionary:
 		"herbal_compass_crafted": herbal_compass_crafted,
 		"tidecatcher": {"built": tidecatcher_built, "stored_wood": tidecatcher.stored_wood()},
 		"islands": {"inventory": saved_shards, "installed": installed_shard.duplicate(true), "archipelago": archipelago.to_dictionary()},
+		"base": {"placement": base_placement.to_dictionary(), "storage": shared_storage.to_dictionary(), "lumber_mill": lumber_mill_simulation.to_dictionary(), "collector": collector_simulation.to_dictionary(), "crafted_kits": crafted_building_kits.duplicate(true), "saved_unix": int(Time.get_unix_time_from_system())},
 	}
 
 func _apply_state(state: Dictionary) -> void:
@@ -689,12 +947,14 @@ func _apply_state(state: Dictionary) -> void:
 	var equipment_state := state.equipment as Dictionary
 	var tidecatcher_state := state.tidecatcher as Dictionary
 	var islands_state := state.islands as Dictionary
+	var base_state := state.base as Dictionary
 	player.maximum_health = int(player_state.maximum_health)
 	player.health = clampi(int(player_state.health), 0, player.maximum_health)
 	player.global_position = Vector2(float(position_state.x), float(position_state.y))
 	wood = maxi(0, int(state.wood))
 	stone = maxi(0, int(state.stone))
 	moonleaf = maxi(0, int(state.moonleaf))
+	plank = maxi(0, int(state.plank))
 	equipment_inventory.items.clear()
 	for item_value: Variant in equipment_state.items:
 		equipment_inventory.items.append((item_value as Dictionary).duplicate(true))
@@ -714,8 +974,20 @@ func _apply_state(state: Dictionary) -> void:
 	var restored_archipelago := ArchipelagoModel.from_dictionary(islands_state.archipelago as Dictionary)
 	if restored_archipelago != null:
 		archipelago = restored_archipelago
+	var restored_placement := BasePlacementModel.from_dictionary(base_state.placement as Dictionary)
+	var restored_storage := SharedStorage.from_dictionary(base_state.storage as Dictionary)
+	if restored_placement != null:
+		base_placement = restored_placement
+	if restored_storage != null:
+		shared_storage = restored_storage
+	lumber_mill_simulation.restore(base_state.lumber_mill as Dictionary)
+	collector_simulation.restore(base_state.collector as Dictionary)
+	crafted_building_kits = (base_state.crafted_kits as Dictionary).duplicate(true)
+	last_simulation_unix = int(base_state.saved_unix)
+	simulate_offline(int(Time.get_unix_time_from_system()))
 	_sync_archipelago_compatibility()
 	_rebuild_materialized_islands()
+	_materialize_base_buildings()
 	_apply_island_modifiers()
 	player.health_changed.emit(player.health, player.maximum_health)
 	refresh_all_ui()
@@ -871,7 +1143,11 @@ func _on_island_encounter_completed(slot_id: String, event_id: String, position_
 	runtime.encounter_completed = true
 	var bundle := _modifier_bundle(installed.definition as Dictionary, slot_id, false)
 	var reward_amount := 2 if float(bundle.effects.get("night_reward_multiplier", 1.0)) <= 1.0 else 3
-	_spawn_pickup(position_value, "moonleaf", reward_amount)
+	var encounter_pickup := _spawn_pickup(position_value + Vector2(76.0, 0.0), "moonleaf", reward_amount)
+	encounter_pickup.encounter_reward = true
+	encounter_pickup.rarity = "rare"
+	encounter_pickup.important = true
+	encounter_pickup.queue_redraw()
 	if float(bundle.effects.get("magical_loot_weight", 1.0)) > 1.0:
 		_spawn_pickup(position_value + Vector2(24, 0), "equipment", LootGenerator.generate(int(installed.definition.seed) ^ 44551, "island_event", int(installed.definition.level), "", "magic"))
 	hud.set_encounter_feedback("%s COMPLETE — MOONLEAF REWARD" % String(installed.definition.encounter).to_upper())

@@ -41,7 +41,8 @@ signal rift_requested
 @onready var equipment_count_label: Label = $EquipmentPanel/Margin/VBox/Selection/Count
 @onready var equipment_next_button: Button = $EquipmentPanel/Margin/VBox/Selection/Next
 @onready var comparison_label: Label = $EquipmentPanel/Margin/VBox/Comparison
-@onready var affix_label: Label = $EquipmentPanel/Margin/VBox/Affix
+@onready var equipment_tooltip_scroll: ScrollContainer = $EquipmentPanel/Margin/VBox/TooltipScroll
+@onready var affix_label: Label = $EquipmentPanel/Margin/VBox/TooltipScroll/Affix
 @onready var equipped_label: Label = $EquipmentPanel/Margin/VBox/Equipped
 @onready var scrap_label: Label = $EquipmentPanel/Margin/VBox/Scrap
 @onready var equip_button: Button = $EquipmentPanel/Margin/VBox/Actions/Equip
@@ -95,6 +96,7 @@ var _selected_equipment_index: int = 0
 var _displayed_attack_damage: int = 1
 var _displayed_attack_speed: float = 1.0
 var _displayed_scrap: int = 0
+var _pending_salvage_id: String = ""
 var _displayed_stone: int = 0
 var _selected_recipe_index: int = 0
 var _workbench_wood: int = 0
@@ -119,7 +121,7 @@ func _ready() -> void:
 	equipment_previous_button.pressed.connect(func() -> void: _select_relative_equipment(-1))
 	equipment_next_button.pressed.connect(func() -> void: _select_relative_equipment(1))
 	equip_button.pressed.connect(func() -> void: equip_requested.emit(_selected_equipment_index))
-	salvage_button.pressed.connect(func() -> void: salvage_requested.emit(_selected_equipment_index))
+	salvage_button.pressed.connect(_on_salvage_pressed)
 	favorite_button.pressed.connect(_toggle_selected_favorite)
 	unequip_button.pressed.connect(func() -> void: unequip_requested.emit())
 	$EquipmentPanel/Margin/VBox/Close.pressed.connect(close_equipment_panel)
@@ -148,7 +150,13 @@ func _ready() -> void:
 	$IslandPanel/Margin/VBox/Close.pressed.connect(close_island_panel)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause"):
+	if equipment_panel.visible and event.is_action_pressed("islands"):
+		scroll_equipment_details(1)
+		get_viewport().set_input_as_handled()
+	elif equipment_panel.visible and event.is_action_pressed("rift"):
+		scroll_equipment_details(-1)
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("pause"):
 		if system_panel.visible:
 			close_system_menu()
 		else:
@@ -244,8 +252,11 @@ func refresh_equipment(items: Array[Dictionary], equipped_item: Dictionary, scra
 		loot_label.text += "  |  DMG %d  |  SPEED %.2fx" % [equipped_item.get("damage", equipped_item.get("power", 0)), equipped_item.get("attack_speed", 1.0)]
 	if _items.is_empty():
 		_selected_equipment_index = 0
+		_pending_salvage_id = ""
 	else:
 		_selected_equipment_index = clampi(_selected_equipment_index, 0, _items.size() - 1)
+		if not _items.any(func(item: Dictionary) -> bool: return String(item.get("id", "")) == _pending_salvage_id):
+			_pending_salvage_id = ""
 	_render_selected_equipment()
 	_recover_equipment_focus()
 
@@ -260,36 +271,26 @@ func _render_selected_equipment() -> void:
 		equipment_next_button.disabled = true
 		equip_button.disabled = true
 		salvage_button.disabled = true
+		salvage_button.text = "SALVAGE"
 		favorite_button.disabled = true
 	else:
 		var item := _items[_selected_equipment_index]
+		var presentation := ItemTooltipPresenter.present(item)
 		var rarity := String(item.get("rarity", "common"))
-		var canonical_rarity := "magic" if rarity == "uncommon" else rarity
 		var slot := String(item.get("slot", "weapon"))
 		var current := _item_by_id(String(_equipped_slots.get(slot, "")))
-		var damage_delta := int(item.get("damage", item.get("power", 0))) - int(current.get("damage", current.get("power", 0)))
-		var speed_delta := float(item.get("attack_speed", 1.0)) - float(current.get("attack_speed", 1.0))
-		item_name_label.text = "%s\nLEVEL %d  •  %s  •  %s%s" % [item.get("name", "Unknown"), item.get("item_level", 1), slot.to_upper(), rarity.to_upper(), "  •  FAVORITE" if bool(item.get("favorite", false)) else ""]
-		item_name_label.modulate = Color(String(item.get("rarity_color", RarityRules.color(canonical_rarity))))
-		comparison_label.text = "DMG %+d    SPEED %+.2fx    |    SALVAGE VALUE  %d" % [damage_delta, speed_delta, EquipmentInventory.salvage_value(item)]
-		var tooltip_lines: Array[String] = []
-		if slot == "weapon":
-			tooltip_lines.append("BASE  %d damage  •  %.2fx attacks" % [item.get("damage", item.get("power", 0)), item.get("attack_speed", 1.0)])
-		var base_stats := item.get("base_stats", {}) as Dictionary
-		for stat_id: String in base_stats:
-			tooltip_lines.append("BASE  %s" % _format_modifier(stat_id, "add", float(base_stats[stat_id])))
-		for affix_value: Variant in item.get("affixes", []):
-			if affix_value is Dictionary:
-				var affix := affix_value as Dictionary
-				tooltip_lines.append("%s  [%s]  %s" % [String(affix.get("name", affix.get("id", "AFFIX"))).to_upper(), String(affix.get("category", "")).to_upper(), _format_modifier(String(affix.get("stat", "")), String(affix.get("operation", "add")), float(affix.get("value", 0.0)))])
-		var effect_ids: Array = item.get("legendary_effects", []) as Array
-		if effect_ids.is_empty() and not String(item.get("legendary_affix_id", "")).is_empty():
-			effect_ids = [String(item.legendary_affix_id)]
-		for effect_value: Variant in effect_ids:
-			var effect := LegendaryBehaviorRegistry.definition(String(effect_value))
-			var effect_name := String(effect.get("name", item.get("legendary_affix_name", effect_value)))
-			var effect_description := String(effect.get("description", item.get("legendary_affix_description", "Behavior-changing effect.")))
-			tooltip_lines.append("LEGENDARY — %s: %s" % [effect_name.to_upper(), effect_description])
+		var comparison := ItemTooltipPresenter.compare(item, current)
+		item_name_label.text = "%s\nLEVEL %d  •  %s  •  %s%s" % [presentation.name, presentation.level, slot.to_upper(), rarity.to_upper(), "  •  FAVORITE" if bool(presentation.favorite) else ""]
+		item_name_label.modulate = Color(String(presentation.rarity_color))
+		var delta_text := "    ".join(comparison.deltas as Array)
+		comparison_label.text = "CANDIDATE  %s    |    EQUIPPED  %s\n%s    |    SALVAGE VALUE  %d" % [comparison.candidate_name, comparison.equipped_name, delta_text if not delta_text.is_empty() else "NO NUMERIC CHANGE", EquipmentInventory.salvage_value(item)]
+		var tooltip_lines: Array[String] = ["CANDIDATE"]
+		tooltip_lines.append_array(presentation.base_lines as Array)
+		tooltip_lines.append_array(presentation.affix_lines as Array)
+		tooltip_lines.append_array(presentation.legendary_lines as Array)
+		tooltip_lines.append("EQUIPPED — %s" % String(comparison.equipped_name))
+		tooltip_lines.append_array(comparison.equipped_affixes as Array)
+		tooltip_lines.append_array(comparison.equipped_behaviors as Array)
 		affix_label.text = "\n".join(tooltip_lines)
 		equipment_count_label.text = "%d / %d" % [_selected_equipment_index + 1, _items.size()]
 		equipment_previous_button.disabled = _items.size() <= 1
@@ -297,6 +298,9 @@ func _render_selected_equipment() -> void:
 		var selected_equipped := String(item.get("id", "")) == String(_equipped_slots.get(slot, ""))
 		equip_button.disabled = selected_equipped
 		salvage_button.disabled = selected_equipped or bool(item.get("favorite", false))
+		salvage_button.text = "CONFIRM +%d" % EquipmentInventory.salvage_value(item) if _pending_salvage_id == String(item.get("id", "")) else "SALVAGE"
+		if _pending_salvage_id == String(item.get("id", "")):
+			comparison_label.text += "\nWARNING — PRESS CONFIRM TO DESTROY THIS ITEM"
 		favorite_button.disabled = false
 		favorite_button.text = "UNFAVORITE" if bool(item.get("favorite", false)) else "KEEP"
 	unequip_button.disabled = _equipped_slots.is_empty()
@@ -308,10 +312,19 @@ func _item_by_id(item_id: String) -> Dictionary:
 	return {}
 
 func _format_modifier(stat_id: String, operation: String, value: float) -> String:
-	var label := stat_id.replace("_", " ").capitalize()
-	if stat_id in ["damage_multiplier", "attack_speed", "critical_chance", "critical_damage", "gathering_power", "production_speed"]:
-		return "%+.1f%% %s%s" % [value * 100.0, label, " (multiplicative)" if operation == "multiply" else ""]
-	return "%+.1f %s%s" % [value, label, " (multiplicative)" if operation == "multiply" else ""]
+	return ItemTooltipPresenter.format_modifier(stat_id, operation, value)
+
+func _on_salvage_pressed() -> void:
+	if _items.is_empty() or salvage_button.disabled:
+		return
+	var item_id := String(_items[_selected_equipment_index].get("id", ""))
+	if _pending_salvage_id == item_id:
+		_pending_salvage_id = ""
+		salvage_requested.emit(_selected_equipment_index)
+		return
+	_pending_salvage_id = item_id
+	_render_selected_equipment()
+	salvage_button.grab_focus()
 
 func _toggle_selected_favorite() -> void:
 	if _items.is_empty():
@@ -322,10 +335,16 @@ func _toggle_selected_favorite() -> void:
 func select_equipment(index: int) -> bool:
 	if index < 0 or index >= _items.size():
 		return false
+	if index != _selected_equipment_index:
+		_pending_salvage_id = ""
 	_selected_equipment_index = index
+	equipment_tooltip_scroll.scroll_vertical = 0
 	_render_selected_equipment()
 	_recover_equipment_focus()
 	return true
+
+func scroll_equipment_details(direction: int) -> void:
+	equipment_tooltip_scroll.scroll_vertical += direction * 96
 
 func _select_relative_equipment(offset: int) -> void:
 	if _items.is_empty():
@@ -360,6 +379,7 @@ func open_equipment_panel() -> void:
 		$EquipmentPanel/Margin/VBox/Close.grab_focus()
 
 func close_equipment_panel() -> void:
+	_pending_salvage_id = ""
 	equipment_panel.visible = false
 	equipment_panel_closed.emit()
 
@@ -391,6 +411,9 @@ func get_displayed_attack_damage() -> int:
 
 func get_displayed_scrap() -> int:
 	return _displayed_scrap
+
+func is_salvage_confirmation_armed() -> bool:
+	return not _pending_salvage_id.is_empty()
 
 func refresh_workbench(wood: int, stone: int, moonleaf: int, scrap: int, heart_crafted: bool, whetstone_crafted: bool, herbal_compass_crafted: bool, tidecatcher_built: bool, feedback: String = "", plank: int = 0, building_states: Dictionary = {}, forest_unlocked: bool = false) -> void:
 	_workbench_wood = wood

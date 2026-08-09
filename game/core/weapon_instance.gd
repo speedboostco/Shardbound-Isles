@@ -24,7 +24,7 @@ static func from_definition(definition: Resource, seed_value: int, context: Stri
 
 static func from_dictionary(payload: Dictionary) -> Variant:
 	var instance: Variant = (load("res://game/core/weapon_instance.gd") as Script).new()
-	instance.instance_id = String(payload.get("item_id", payload.get("id", "")))
+	instance.instance_id = String(payload.get("instance_id", payload.get("item_id", payload.get("id", ""))))
 	instance.definition_id = String(payload.get("definition_id", ""))
 	instance.display_name = String(payload.get("name", "Unknown Weapon"))
 	instance.base_type = String(payload.get("base_type", payload.get("archetype", "melee")))
@@ -36,6 +36,7 @@ static func from_dictionary(payload: Dictionary) -> Variant:
 
 func to_dictionary() -> Dictionary:
 	return {
+		"instance_id": instance_id,
 		"item_id": instance_id,
 		"id": instance_id,
 		"definition_id": definition_id,
@@ -48,3 +49,19 @@ func to_dictionary() -> Dictionary:
 		"rarity": rarity,
 		"seed": seed,
 	}
+
+func validation_errors() -> Array[String]:
+	var errors: Array[String] = []
+	if instance_id.strip_edges().is_empty():
+		errors.append("weapon instance_id must be non-empty")
+	if definition_id.strip_edges().is_empty():
+		errors.append("weapon definition_id must be non-empty")
+	if base_type.strip_edges().is_empty():
+		errors.append("weapon base_type must be non-empty")
+	if damage <= 0:
+		errors.append("weapon damage must be greater than zero")
+	if not is_finite(attack_speed) or attack_speed <= 0.0:
+		errors.append("weapon attack_speed must be finite and greater than zero")
+	if rarity.strip_edges().is_empty():
+		errors.append("weapon rarity must be non-empty")
+	return errors

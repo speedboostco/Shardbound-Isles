@@ -1,6 +1,10 @@
 class_name EquipmentInventory
 extends RefCounted
 
+signal inventory_changed(reason: String, item_id: String)
+signal equipment_changed(slot: String, previous_id: String, current_id: String)
+signal salvage_completed(item_id: String, reward: int)
+
 const SLOTS: Array[String] = ["weapon", "helmet", "body", "boots", "ring", "amulet"]
 
 var items: Array[Dictionary] = []
@@ -18,11 +22,19 @@ var compatible_types: Array[String]
 func _init(compatible_types_value: Array[String] = ["melee", "ranged", "magic", "sword", "bow", "wand"]) -> void:
 	compatible_types = compatible_types_value.duplicate()
 
-func collect(item: Dictionary) -> void:
+func collect(item: Dictionary) -> bool:
+	var item_id := String(item.get("id", item.get("instance_id", item.get("item_id", ""))))
+	if item_id.is_empty() or items.any(func(owned: Dictionary) -> bool: return String(owned.get("id", owned.get("instance_id", owned.get("item_id", "")))) == item_id):
+		return false
 	var owned := item.duplicate(true)
+	owned["id"] = item_id
+	owned["item_id"] = item_id
+	owned["instance_id"] = item_id
 	if not owned.has("favorite"):
 		owned["favorite"] = false
 	items.append(owned)
+	inventory_changed.emit("collected", item_id)
+	return true
 
 func comparison_delta(index: int) -> int:
 	if not _is_valid_index(index):
@@ -69,13 +81,19 @@ func equip_item_in_slot(index: int, slot: String) -> bool:
 	var item_id := String(item.get("id", ""))
 	if item_id.is_empty():
 		return false
+	var previous_id := String(equipped_slots.get(slot, ""))
+	if previous_id == item_id:
+		return true
 	equipped_slots[slot] = item_id
+	equipment_changed.emit(slot, previous_id, item_id)
 	return true
 
 func unequip(slot: String = "weapon") -> bool:
 	if slot not in equipped_slots:
 		return false
+	var previous_id := String(equipped_slots.get(slot, ""))
 	equipped_slots.erase(slot)
+	equipment_changed.emit(slot, previous_id, "")
 	return true
 
 func restore_slots(saved_slots: Dictionary) -> bool:
@@ -91,21 +109,48 @@ func restore_slots(saved_slots: Dictionary) -> bool:
 func set_favorite(index: int, favorite: bool) -> bool:
 	if not _is_valid_index(index):
 		return false
+	if bool(items[index].get("favorite", false)) == favorite:
+		return true
 	items[index]["favorite"] = favorite
+	inventory_changed.emit("protection_changed", String(items[index].get("id", "")))
 	return true
 
 func salvage(index: int) -> int:
+	var result := commit_salvage(plan_salvage(index))
+	return int(result.get("reward", 0)) if bool(result.get("ok", false)) else 0
+
+func plan_salvage(index: int) -> Dictionary:
 	if not _is_valid_index(index):
-		return 0
+		return {"ok": false, "reason": "invalid_index"}
 	var item := items[index]
-	if String(item.get("id", "")) in equipped_slots.values() or bool(item.get("favorite", false)):
-		return 0
+	var item_id := String(item.get("id", ""))
+	if item_id in equipped_slots.values():
+		return {"ok": false, "reason": "equipped", "item_id": item_id}
+	if bool(item.get("favorite", false)):
+		return {"ok": false, "reason": "protected", "item_id": item_id}
 	var reward := salvage_value(item)
 	if reward <= 0:
-		return 0
+		return {"ok": false, "reason": "no_reward", "item_id": item_id}
+	return {"ok": true, "reason": "ready", "item_id": item_id, "reward": reward}
+
+func commit_salvage(plan: Dictionary) -> Dictionary:
+	if not bool(plan.get("ok", false)):
+		return {"ok": false, "reason": String(plan.get("reason", "invalid_plan")), "reward": 0}
+	var item_id := String(plan.get("item_id", ""))
+	var index := _index_by_id(item_id)
+	if index < 0:
+		return {"ok": false, "reason": "not_owned", "item_id": item_id, "reward": 0}
+	var current_plan := plan_salvage(index)
+	if not bool(current_plan.get("ok", false)):
+		return {"ok": false, "reason": String(current_plan.get("reason", "rejected")), "item_id": item_id, "reward": 0}
+	var reward := int(current_plan.reward)
+	if reward != int(plan.get("reward", -1)):
+		return {"ok": false, "reason": "stale_reward", "item_id": item_id, "reward": 0}
 	items.remove_at(index)
 	scrap += reward
-	return reward
+	inventory_changed.emit("salvaged", item_id)
+	salvage_completed.emit(item_id, reward)
+	return {"ok": true, "reason": "salvaged", "item_id": item_id, "reward": reward}
 
 func attack_damage() -> int:
 	return 1 + int(equipped_item("weapon").get("damage", _equipped_power()))
@@ -153,6 +198,12 @@ func _item_slot(item: Dictionary) -> String:
 
 func _is_valid_index(index: int) -> bool:
 	return index >= 0 and index < items.size()
+
+func _index_by_id(item_id: String) -> int:
+	for index: int in items.size():
+		if String(items[index].get("id", "")) == item_id:
+			return index
+	return -1
 
 static func salvage_value(item: Dictionary) -> int:
 	var base := salvage_value_for_rarity(String(item.get("rarity", "common")))

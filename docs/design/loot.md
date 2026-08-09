@@ -10,11 +10,13 @@ Equipment generation is one deterministic pipeline driven by an explicit seed an
 6. Add an eligible legendary behavior without consuming an ordinary slot.
 7. Finalize a plain JSON-serializable item instance with stable identity.
 
+Rarity definitions are validated data with non-negative weights, affix-count bounds, and presentation metadata. Zero-weight tiers are ineligible and a single positive tier is safe. Affix definitions expose a stable display key, category, range/parameters, weight, compatible slots/base types/item tags, required and excluded tags, level/tier limits, and an optional conflict group. Eligibility returns diagnostic reasons in validation builds without mutating the candidate or selected list.
+
 Rarity controls affix opportunities and salvage value, not just color. Rolls overlap deliberately: a higher-rarity item is not guaranteed to be better for a particular build. Every tooltip therefore exposes the base, rolls, and behavior rather than an invented item score.
 
 Items use typed `weapon`, `helmet`, `body`, `boots`, `ring`, and `amulet` slots. Replacing an equipped item leaves the previous item owned. Derived stats are recomputed from immutable bases on every equipment change, so repeated equip operations cannot accumulate modifiers.
 
-Salvage consumes an unequipped, non-favorite item only after the transaction succeeds. Reward scales with rarity and item level. Equipped and favorited items are protected. The equipment screen provides quick equip, unequip, keep/unfavorite, and salvage actions with controller focus.
+Salvage consumes an unequipped, non-favorite item only after a stable-ID transaction succeeds. Reward scales with rarity and item level. Equipped and favorited items are protected; repeated or stale commits grant nothing. The equipment screen provides quick equip, unequip, keep/unfavorite, and a two-press salvage confirmation with controller focus.
 
 Ground equipment is capped at 40. When pressure exceeds the cap, the oldest lowest-rarity non-legendary item is removed first; Epic and Legendary drops receive an importance beam, and Legendary drops are never cleanup candidates. Material pickups continue to merge. `LootFilter` already separates keep and optional auto-salvage policy, but automatic salvage is disabled for M2.
 

@@ -85,6 +85,8 @@ var _building_nodes: Dictionary = {}
 var _placement_visual: BaseBuildingVisual
 var _placement_socket_index: int = 0
 var _automation_timer: Timer
+var _active_weapon_instance_id: String = ""
+var _resolve_player_projectiles_immediately: bool = false
 const PLACEMENT_SOCKET_IDS: Array[String] = ["west", "north", "east", "south"]
 const PLACEMENT_WORLD_POSITIONS: Dictionary = {"west": Vector2(-245, -285), "north": Vector2(0, -390), "east": Vector2(245, -285), "south": Vector2(0, 55)}
 
@@ -108,6 +110,8 @@ func _ready() -> void:
 	player.health_changed.connect(hud.set_health)
 	player.defeated.connect(_on_player_defeated)
 	resource_inventory.changed.connect(_on_resource_inventory_changed)
+	equipment_inventory.inventory_changed.connect(_on_equipment_inventory_changed)
+	equipment_inventory.equipment_changed.connect(_on_equipment_changed)
 	tree.depleted.connect(_on_resource_depleted)
 	stone_node.depleted.connect(_on_resource_depleted)
 	enemy.target = player
@@ -190,6 +194,7 @@ func _on_attack_requested(origin: Vector2, direction: Vector2) -> void:
 	var primary_damage := player.attack_damage
 	if critical_rng.randf() < player.critical_chance:
 		primary_damage = maxi(1, roundi(float(primary_damage) * player.critical_damage))
+	var weapon_type := _canonical_weapon_type()
 	for index: int in selected_ids.size():
 		var target_node: Node = targets_by_id.get(selected_ids[index])
 		if not is_instance_valid(target_node) or not target_node.has_method("receive_attack"):
@@ -199,16 +204,43 @@ func _on_attack_requested(origin: Vector2, direction: Vector2) -> void:
 		var damage := primary_damage if index == 0 else maxi(1, primary_damage / 2)
 		if target_node is ResourceNode:
 			damage = maxi(1, roundi(player.gathering_power))
+		if weapon_type == "bow":
+			_spawn_player_projectile(origin, direction, target_node as Node2D, damage)
+			continue
 		target_node.receive_attack(damage)
 		if _canonical_weapon_type() == "wand" and not target_node is ResourceNode:
 			_burning_targets[str(target_node.get_instance_id())] = true
-	if is_instance_valid(primary_target):
+	if is_instance_valid(primary_target) and weapon_type != "bow":
 		player.confirm_hit()
 		camera.request_shake(4.0, 0.1)
 		if primary_target is ResourceNode:
 			_emit_resource_hit(primary_target, primary_damage)
 	var impact_position := primary_target.global_position if is_instance_valid(primary_target) else origin + direction.normalized() * 90.0
 	legendary_event_bus.emit_attack({"origin": origin, "impact_position": impact_position, "primary_target_id": str(primary_target.get_instance_id()) if is_instance_valid(primary_target) else "", "weapon_type": _canonical_weapon_type(), "seed": _equipped_weapon_seed(), "attack_index": _attack_index})
+
+func _spawn_player_projectile(origin: Vector2, direction: Vector2, target_node: Node2D, damage: int) -> PlayerWeaponProjectile:
+	var projectile := PlayerWeaponProjectile.new()
+	projectile.global_position = origin
+	projectile.configure(target_node, damage, direction)
+	projectile.impacted.connect(_on_player_projectile_impacted)
+	add_child(projectile)
+	if _resolve_player_projectiles_immediately:
+		projectile.resolve_immediately()
+	return projectile
+
+func _on_player_projectile_impacted(target_node: Node2D, damage: int) -> void:
+	if not is_instance_valid(target_node) or not target_node.has_method("receive_attack"):
+		return
+	target_node.receive_attack(damage)
+	player.confirm_hit()
+	camera.request_shake(4.0, 0.1)
+	if target_node is ResourceNode:
+		_emit_resource_hit(target_node, damage)
+
+func _clear_player_weapon_effects() -> void:
+	for projectile: Node in get_tree().get_nodes_in_group("player_weapon_projectile"):
+		if is_ancestor_of(projectile):
+			projectile.queue_free()
 
 func _canonical_weapon_type() -> String:
 	return "bow" if player.weapon_base_type == "ranged" else ("wand" if player.weapon_base_type == "magic" else ("sword" if player.weapon_base_type == "melee" else player.weapon_base_type))
@@ -303,14 +335,17 @@ func _on_enemy_defeated(drop_position: Vector2) -> void:
 	_emit_enemy_killed(enemy, drop_position)
 	enemies_defeated += 1
 	logger.debug(GameLoggerScript.LOOT, "enemy loot generated", {"equipment_seed": EQUIPMENT_SEED, "island_seed": ISLAND_SHARD_SEED})
-	_spawn_pickup(drop_position, "equipment", EquipmentGenerator.generate(EQUIPMENT_SEED))
+	if LootDropDecision.decide(EQUIPMENT_SEED, "arena_first_slime", 0.99):
+		_spawn_pickup(drop_position, "equipment", EquipmentGenerator.generate(EQUIPMENT_SEED))
 	_spawn_pickup(drop_position + Vector2(25.0, 0.0), "island_shard", IslandShardGenerator.generate(ISLAND_SHARD_SEED))
 	_check_boss_unlock()
 
 func _on_second_slime_defeated(_drop_position: Vector2) -> void:
 	_emit_enemy_killed(second_slime, _drop_position)
 	enemies_defeated += 1
-	logger.debug(GameLoggerScript.LOOT, "slime defeated without loot roll", {"enemy_id": "second_slime"})
+	logger.debug(GameLoggerScript.LOOT, "slime loot roll completed", {"enemy_id": "second_slime", "equipment_seed": EQUIPMENT_SEED})
+	if LootDropDecision.decide(EQUIPMENT_SEED, "arena_second_slime", 0.01):
+		_spawn_pickup(_drop_position, "equipment", EquipmentGenerator.generate(EQUIPMENT_SEED, "second_slime"))
 	_check_boss_unlock()
 
 func _on_ranged_enemy_defeated(drop_position: Vector2, loot_seed: int) -> void:
@@ -405,27 +440,42 @@ func _spawn_pickup(drop_position: Vector2, kind: String, payload: Variant) -> Wo
 	pickup.spawn_order = _pickup_spawn_order
 	_pickup_spawn_order += 1
 	pickup.important = kind == "equipment" and payload is Dictionary and LootDropPolicy.is_important(payload as Dictionary)
-	pickup.collected.connect(_on_pickup_collected)
+	pickup.collector = _on_pickup_collected
 	add_child(pickup)
 	return pickup
 
-func _on_pickup_collected(kind: String, payload: Variant) -> void:
+func _on_pickup_collected(kind: String, payload: Variant) -> bool:
 	if kind in ["wood", "stone"]:
-		resource_inventory.add(kind, int(payload))
+		return resource_inventory.add(kind, int(payload))
 	elif kind == "equipment":
+		if not payload is Dictionary:
+			return false
 		var item := payload as Dictionary
 		if loot_filter.should_auto_salvage(item):
 			equipment_inventory.scrap += EquipmentInventory.salvage_value(item)
 			_refresh_equipment_ui()
-			return
-		equipment_inventory.collect(item)
+			return true
+		if not equipment_inventory.collect(item):
+			return false
 		hud.set_loot(item)
-		_refresh_equipment_ui()
+		return true
 	elif kind == "island_shard":
+		if not payload is Dictionary:
+			return false
 		var shard := payload as Dictionary
 		if not _has_shard(String(shard.get("id", ""))):
 			island_shards.append(shard.duplicate(true))
-		_refresh_island_ui()
+			_refresh_island_ui()
+			return true
+		return false
+	return false
+
+func _on_equipment_inventory_changed(_reason: String, _item_id: String) -> void:
+	_refresh_equipment_ui()
+
+func _on_equipment_changed(_slot: String, _previous_id: String, _current_id: String) -> void:
+	_sync_player_equipment()
+	_refresh_equipment_ui()
 
 func _on_resource_inventory_changed(resource_id: String, amount: int, _delta: int) -> void:
 	if resource_id == "wood":
@@ -478,8 +528,6 @@ func _on_equipment_panel_closed() -> void:
 
 func equip_selected_item(index: int) -> bool:
 	var equipped := equipment_inventory.equip(index)
-	_sync_player_equipment()
-	_refresh_equipment_ui()
 	return equipped
 
 func unequip_item(slot: String = "") -> bool:
@@ -494,19 +542,13 @@ func unequip_item(slot: String = "") -> bool:
 	if target_slot.is_empty():
 		target_slot = "weapon"
 	var unequipped := equipment_inventory.unequip(target_slot)
-	_sync_player_equipment()
-	_refresh_equipment_ui()
 	return unequipped
 
 func salvage_selected_item(index: int) -> int:
-	var reward := equipment_inventory.salvage(index)
-	_refresh_equipment_ui()
-	return reward
+	return equipment_inventory.salvage(index)
 
 func set_item_favorite(index: int, favorite: bool) -> bool:
-	var changed := equipment_inventory.set_favorite(index, favorite)
-	_refresh_equipment_ui()
-	return changed
+	return equipment_inventory.set_favorite(index, favorite)
 
 func _refresh_equipment_ui() -> void:
 	hud.refresh_equipment(equipment_inventory.items, equipment_inventory.equipped_item("weapon"), equipment_inventory.scrap, player.attack_damage, player.attack_speed, equipment_inventory.equipped_slots)
@@ -514,6 +556,10 @@ func _refresh_equipment_ui() -> void:
 
 func _sync_player_equipment() -> void:
 	var equipped := equipment_inventory.equipped_item("weapon")
+	var weapon_instance_id := String(equipped.get("id", ""))
+	if weapon_instance_id != _active_weapon_instance_id:
+		_clear_player_weapon_effects()
+		_active_weapon_instance_id = weapon_instance_id
 	var upgrade_bonus := CraftingService.WHETSTONE_ATTACK_BONUS if runed_whetstone_crafted else 0
 	var base_stats := StatBlock.default_base_stats()
 	base_stats.max_health = 10.0 + (2.0 if reinforced_heart_crafted else 0.0)
@@ -1270,6 +1316,7 @@ func _clear_enemy_projectiles() -> void:
 
 func run_scripted_smoke() -> Dictionary:
 	_set_combat_processing(false)
+	_resolve_player_projectiles_immediately = true
 	player.global_position = Vector2.ZERO
 	enemy.global_position = Vector2(-270, 80)
 	second_slime.global_position = Vector2(-70, 300)
@@ -1301,7 +1348,7 @@ func run_scripted_smoke() -> Dictionary:
 	while is_instance_valid(second_slime) and second_slime.remaining_health > 0:
 		_on_attack_requested(second_slime.global_position + Vector2(50, 0), Vector2.LEFT)
 		equipped_hits += 1
-	return {
+	var metrics := {
 		"seed": EQUIPMENT_SEED,
 		"wood": wood,
 		"stone": stone,
@@ -1316,6 +1363,8 @@ func run_scripted_smoke() -> Dictionary:
 		"unarmed_hits": unarmed_hits,
 		"equipped_hits": equipped_hits,
 	}
+	_resolve_player_projectiles_immediately = false
+	return metrics
 
 func _scripted_move_to(destination: Vector2) -> int:
 	var steps := 0

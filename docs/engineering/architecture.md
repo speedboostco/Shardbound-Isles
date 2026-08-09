@@ -8,7 +8,13 @@ There are no Autoloads in the first playable. The world scene is a composition r
 
 `ItemBaseRegistry`, `RarityRules`, `AffixRegistry`, and `LegendaryBehaviorRegistry` are authored domain contracts. `LootGenerator` consumes them through an explicit seeded pipeline and produces serializable runtime dictionaries; UI and generators do not hardcode individual affix IDs. Equipment owns six typed slots and derives a new `StatBlock` after every mutation. A stat resolves as `(base + sum(additive)) * product(1 + multiplicative)`, then applies the stat-specific lower bound. Immutable base values are never overwritten by derived results.
 
+Runtime item identity is canonicalized as `instance_id`; `item_id` and `id` remain serialized compatibility aliases. `LootDropDecision` derives its own explicit stream from seed plus encounter context. Affix eligibility is a pure diagnostic query over slot/base type, allowed/required/excluded item tags, level/tier bounds, duplicates, and conflict groups. Results and rejection reasons are stable regardless of selected-affix iteration order.
+
+`EquipmentInventory` rejects duplicate owned IDs and emits inventory/equipment mutations. Salvage is a two-phase domain transaction (`plan_salvage` then `commit_salvage`) bound to a stable item ID and deterministic reward; stale, protected, equipped, or duplicate commits do not mutate state. `ItemTooltipPresenter` maps item/comparison data into presentation-only text structures so the HUD never calculates authoritative item rules.
+
 Weapon profile data selects range, target shape, and splash through the shared `AttackProfileRules`. Legendary behaviors are small attachable components connected to `LegendaryEventBus`; `LegendaryBehaviorManager` owns their lifecycle and disconnects them on load, replace, or unequip. The world maps behavior events to scene effects, while domain behavior remains independent of visuals.
+
+Sword and wand resolve their deterministic target shapes immediately. Bow attacks materialize a tracked `PlayerWeaponProjectile` that applies its one resolved hit on impact. Any outstanding player projectile is removed when the equipped weapon identity changes.
 
 ## M3 world model
 

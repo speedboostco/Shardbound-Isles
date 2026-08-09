@@ -19,6 +19,7 @@ func _run() -> void:
 		return
 	if suite in ["all", "unit"]:
 		for definition: Dictionary in [
+			{"path": "res://game/tests/unit/tasks_16_30_conformance_test.gd", "assertions": 33},
 			{"path": "res://game/tests/unit/m4_recipe_placement_test.gd", "assertions": 18},
 			{"path": "res://game/tests/unit/m4_automation_test.gd", "assertions": 14},
 			{"path": "res://game/tests/unit/item_upgrade_service_test.gd", "assertions": 12},
@@ -63,13 +64,14 @@ func _run() -> void:
 			_record_result("unit", path, assertions_before, failures_before)
 	if suite in ["all", "integration"]:
 		for definition: Dictionary in [
+			{"path": "res://game/tests/integration/tasks_16_30_conformance_flow_test.gd", "assertions": 12},
 			{"path": "res://game/tests/integration/m4_base_flow_test.gd", "assertions": 28},
 			{"path": "res://game/tests/integration/m3_world_loot_flow_test.gd", "assertions": 40},
 			{"path": "res://game/tests/integration/m2_loot_flow_test.gd", "assertions": 31},
 			{"path": "res://game/tests/integration/m1_scene_contract_test.gd", "assertions": 26},
 			{"path": "res://game/tests/integration/slime_obstacle_flow_test.gd", "assertions": 4},
 			{"path": "res://game/tests/integration/gameplay_flow_test.gd", "assertions": 10},
-			{"path": "res://game/tests/integration/equipment_ui_flow_test.gd", "assertions": 18},
+			{"path": "res://game/tests/integration/equipment_ui_flow_test.gd", "assertions": 19},
 			{"path": "res://game/tests/integration/workbench_flow_test.gd", "assertions": 17},
 			{"path": "res://game/tests/integration/tidecatcher_flow_test.gd", "assertions": 8},
 			{"path": "res://game/tests/integration/save_load_flow_test.gd", "assertions": 13},
@@ -91,6 +93,18 @@ func _run() -> void:
 					return
 			_record_result("integration", path, assertions_before, failures_before)
 	if suite in ["all", "simulation"]:
+		var conformance_path := "res://game/tests/simulation/tasks_16_30_invariant_simulation_test.gd"
+		var conformance_before := support.assertions
+		var conformance_failures_before := support.failures.size()
+		var conformance_simulation: Variant = _instantiate_test(conformance_path)
+		if conformance_simulation != null:
+			var conformance_metrics: Dictionary = await conformance_simulation.run(support, self)
+			if not support.require_assertion_count(support.assertions - conformance_before, 6, conformance_path):
+				_record_result("simulation", conformance_path, conformance_before, conformance_failures_before)
+				_finish(suite)
+				return
+			print("TASKS_16_30_METRICS %s" % JSON.stringify(conformance_metrics))
+		_record_result("simulation", conformance_path, conformance_before, conformance_failures_before)
 		var smoke_path := "res://game/tests/simulation/first_playable_smoke_test.gd"
 		var smoke_before := support.assertions
 		var smoke_failures_before := support.failures.size()

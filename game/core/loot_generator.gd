@@ -14,7 +14,7 @@ static func generate(seed_value: int, context: String, item_level: int, forced_b
 		var pool: Array[Dictionary] = []
 		var total_weight := 0.0
 		for definition: Dictionary in AffixRegistry.ordinary_definitions():
-			if AffixRegistry.is_eligible(definition, item_base, selected):
+			if AffixRegistry.is_eligible(definition, item_base, selected, maxi(1, item_level), RarityRules.rank(rarity)):
 				pool.append(definition)
 				total_weight += float(definition.weight)
 		if pool.is_empty():
@@ -39,6 +39,7 @@ static func generate(seed_value: int, context: String, item_level: int, forced_b
 	var instance_id := "%s_%s_%d_%d" % [context, String(item_base.id), level, seed_value]
 	var prefix := rarity.capitalize() + " " if rarity != "common" else ""
 	var item := {
+		"instance_id": instance_id,
 		"item_id": instance_id,
 		"id": instance_id,
 		"definition_id": String(item_base.id),
@@ -76,10 +77,14 @@ static func validate_item(item: Dictionary) -> bool:
 			return false
 		var affix := affix_value as Dictionary
 		var definition := AffixRegistry.get_definition(String(affix.get("id", "")))
-		if not AffixRegistry.is_eligible(definition, item_base, selected):
+		if not AffixRegistry.is_eligible(definition, item_base, selected, int(item.get("item_level", 1)), RarityRules.rank(String(item.get("rarity", "common")))):
+			return false
+		var rolled_value := float(affix.get("value", NAN))
+		if not is_finite(rolled_value) or rolled_value < float(definition.get("minimum", 0.0)) or rolled_value > float(definition.get("maximum", 0.0)):
 			return false
 		selected.append(affix)
-	if selected.size() > RarityRules.affix_range(String(item.rarity)).y:
+	var limits := RarityRules.affix_range(String(item.rarity))
+	if selected.size() < limits.x or selected.size() > limits.y:
 		return false
 	for effect_value: Variant in item.legendary_effects:
 		if String(effect_value) not in LegendaryBehaviorRegistry.eligible_ids(item_base):

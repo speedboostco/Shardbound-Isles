@@ -23,7 +23,8 @@ func run(support: TestSupport, scene_tree: SceneTree) -> void:
 	support.expect(world.enemy.remaining_health == sword_target_health, "sword must not reach a distant target")
 	world.equip_selected_item(1)
 	world._on_attack_requested(Vector2.ZERO, Vector2.RIGHT)
-	support.expect(world.enemy.remaining_health < sword_target_health, "bow must hit the same distant target through its long narrow profile")
+	await scene_tree.create_timer(0.4).timeout
+	support.expect(not is_instance_valid(world.enemy) or world.enemy.remaining_health < sword_target_health, "bow must hit the same distant target through its long narrow profile")
 	_isolate_targets(world, [world.ranged_enemy, world.elite_ranged_enemy])
 	world.ranged_enemy.global_position = Vector2(105, 0)
 	world.elite_ranged_enemy.global_position = Vector2(120, 30)

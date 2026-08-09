@@ -6,6 +6,8 @@ The target slice covers movement, gathering, combat, procedural equipment, craft
 
 M4 proves crafting, a compact base, and automation. Five data-driven workbench recipes include three useful permanent objects and two placeable building kits. Four stable sockets provide controller-first preview, rotation, invalid-zone feedback, atomic placement, and preview-free persistence.
 
+The Tasks 16-30 conformance pass hardens the retained M1/M2 loop: seeded optional drops, canonical item identity and validation, physical bow projectiles, complete affix eligibility diagnostics, atomic equipment/salvage events, pure item presentation, same-slot comparison, and destructive confirmation. Repository-side checks are complete; the source task's real Steam Deck controller playtest remains a human hardware gate.
+
 An ordinary-resource collector, bounded shared storage, and lumber mill form the visible flow `collector → storage → mill → planks`. Work is timer/batch driven rather than per-building frame simulation; storage, offline time, target count, and output are capped. A +0…+10 upgrade station previews exact cost and outcome, requires double confirmation, preserves affixes/legendary behavior, and contributes at most +5 power.
 
 Schema 6 persists the committed base, local inventories, production progress, planks, upgrade state, and bounded catch-up timestamp while migrating schema 5 safely. Deterministic layered tests and three 1280×800 artifacts cover the complete M4 route.

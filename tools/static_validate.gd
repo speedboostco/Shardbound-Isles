@@ -45,7 +45,7 @@ func _run() -> void:
 	_validate_m3_definitions()
 	for failure: String in failures:
 		push_error("STATIC VALIDATION: %s" % failure)
-	print("STATIC_RESULT checks=%d failures=%d" % [REQUIRED_DIRECTORIES.size() + REQUIRED_DOCUMENTS.size() + 8, failures.size()])
+	print("STATIC_RESULT checks=%d failures=%d" % [REQUIRED_DIRECTORIES.size() + REQUIRED_DOCUMENTS.size() + 9, failures.size()])
 	quit(0 if failures.is_empty() else 1)
 
 func _scan_core_directory(path: String) -> void:
@@ -79,6 +79,7 @@ func _scan_core_script(path: String) -> void:
 func _validate_m2_definitions() -> void:
 	var registries: Array[Dictionary] = [
 		{"name": "item base", "path": "res://game/core/item_base_registry.gd"},
+		{"name": "rarity", "path": "res://game/core/rarity_rules.gd"},
 		{"name": "affix", "path": "res://game/core/affix_registry.gd"},
 		{"name": "legendary behavior", "path": "res://game/core/legendary_behavior_registry.gd"},
 	]

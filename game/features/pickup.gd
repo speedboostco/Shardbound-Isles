@@ -14,24 +14,30 @@ var important: bool = false
 var owner_id: String = "world"
 var rarity: String = "ordinary"
 var encounter_reward: bool = false
+var collector: Callable
+var _retry_cooldown: float = 0.0
 
 func _ready() -> void:
 	add_to_group("world_pickups")
 
 func _physics_process(delta: float) -> void:
+	_retry_cooldown = maxf(0.0, _retry_cooldown - delta)
 	if not is_instance_valid(target):
 		return
 	attraction_radius = maxf(attraction_radius, float(target.get("pickup_radius")) if target.get("pickup_radius") != null else attraction_radius)
 	var distance := global_position.distance_to(target.global_position)
 	if distance <= attraction_radius:
 		global_position = global_position.move_toward(target.global_position, 420.0 * delta)
-	if distance <= 24.0:
-		collected.emit(kind, payload)
-		queue_free()
+	if distance <= 24.0 and _retry_cooldown <= 0.0:
+		collect_immediately()
 
-func collect_immediately() -> void:
+func collect_immediately() -> bool:
+	if collector.is_valid() and not bool(collector.call(kind, payload)):
+		_retry_cooldown = 0.25
+		return false
 	collected.emit(kind, payload)
 	queue_free()
+	return true
 
 func merge_amount(amount: int) -> bool:
 	if kind not in ["wood", "stone"] or not payload is int or amount <= 0:

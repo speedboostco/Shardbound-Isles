@@ -5,6 +5,7 @@ signal resource_depleted(slot_id: String, instance_id: String, position_value: V
 signal encounter_completed(slot_id: String, event_id: String, position_value: Vector2)
 signal modifier_triggered(slot_id: String, modifier_id: String, position_value: Vector2)
 signal enemy_volley_requested(origin: Vector2, direction: Vector2, angles: Array[float], damage: int)
+signal enemy_defeated(enemy_id: String, position_value: Vector2)
 
 var slot_id: String
 var definition: Dictionary = {}
@@ -86,6 +87,7 @@ func _build_enemies() -> void:
 	slime.position = Vector2(-72, 58)
 	slime.target = player_target
 	slime.move_speed *= float(effects.get("night_enemy_multiplier", 1.0))
+	slime.defeated.connect(func(position_value: Vector2) -> void: _on_enemy_defeated(slime, position_value))
 	add_child(slime)
 	var ranger := RangedEnemy.new()
 	ranger.name = "ForestRanger"
@@ -93,6 +95,7 @@ func _build_enemies() -> void:
 	ranger.target = player_target
 	ranger.move_speed *= float(effects.get("night_enemy_multiplier", 1.0))
 	ranger.volley_requested.connect(func(origin: Vector2, direction: Vector2, angles: Array[float], damage: int) -> void: enemy_volley_requested.emit(origin, direction, angles, damage))
+	ranger.defeated.connect(func(position_value: Vector2, _loot_seed: int) -> void: _on_enemy_defeated(ranger, position_value))
 	add_child(ranger)
 	for elite_index: int in int(effects.get("elite_count_bonus", 0)):
 		var elite := RangedEnemy.new()
@@ -101,7 +104,18 @@ func _build_enemies() -> void:
 		elite.position = Vector2(0, -72)
 		elite.target = player_target
 		elite.volley_requested.connect(func(origin: Vector2, direction: Vector2, angles: Array[float], damage: int) -> void: enemy_volley_requested.emit(origin, direction, angles, damage))
+		elite.defeated.connect(func(position_value: Vector2, _loot_seed: int) -> void: _on_enemy_defeated(elite, position_value))
 		add_child(elite)
+
+func _on_enemy_defeated(combatant: Node2D, position_value: Vector2) -> void:
+	enemy_defeated.emit(str(combatant.get_instance_id()), position_value)
+	_spawn_enemy_death_vfx(position_value)
+
+func _spawn_enemy_death_vfx(position_value: Vector2) -> void:
+	var visual := GameplayVfx.new()
+	visual.configure("death", VfxSettings.from_project_settings())
+	visual.global_position = position_value
+	add_child(visual)
 
 func _build_event() -> void:
 	var event_id := String(definition.encounter).to_snake_case()

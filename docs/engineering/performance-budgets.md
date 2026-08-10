@@ -1,5 +1,11 @@
 # Performance Budgets
 
+## Emberwood visual pass
+
+Each visible hero, normal enemy, tree, stone, pickup, or temporary plant receives one presentation sprite. Arena terrain is one retained root draw using 64px cells; decorative leaf/stone accents are deterministic, non-colliding, and present in roughly 10-15% of grass cells. VFX live at most 0.68 seconds (0.85 hard art-bible limit), are group-trackable, and do not process after cleanup.
+
+Before visual integration, the stable simulation suite completed in 2290.7 ms on the Windows validation host. The new gate separately creates and retires 300 mixed hit/critical effects in 6,170 microseconds while returning the active VFX group to zero; final stable-suite elapsed time is recorded in Task 45 evidence. These are algorithmic/lifecycle comparisons, not Steam Deck frame-time certification.
+
 Reference resolution is 1280x800. Ordinary play targets stable 60 FPS; validated worst cases must remain at least 30 FPS. Establish measured scenarios before optimization. Avoid unnecessary per-frame work and speculative pooling.
 
 The M1 pickup scenario spawns 100 colocated drops through the normal world API. Same-resource drops coalesce into one magnetic stack, and the integration contract requires the operation to complete in less than 500 ms while preserving all 100 units. The test prints `M1_PICKUP_METRICS` so CI logs retain the measured duration. This is a regression guard for the explicit M1 case, not a substitute for Steam Deck frame-time profiling.

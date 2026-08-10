@@ -1,7 +1,7 @@
 class_name PlayerWeaponProjectile
 extends Node2D
 
-signal impacted(target: Node2D, damage: int)
+signal impacted(target: Node2D, damage: int, critical: bool, weapon_seed: int, attack_index: int)
 
 var target: Node2D
 var damage: int = 1
@@ -9,11 +9,17 @@ var speed: float = 720.0
 var lifetime: float = 0.75
 var direction: Vector2 = Vector2.RIGHT
 var _resolved: bool = false
+var critical: bool = false
+var weapon_seed: int = 0
+var attack_index: int = 0
 
-func configure(target_value: Node2D, damage_value: int, direction_value: Vector2) -> void:
+func configure(target_value: Node2D, damage_value: int, direction_value: Vector2, critical_value: bool = false, weapon_seed_value: int = 0, attack_index_value: int = 0) -> void:
 	target = target_value
 	damage = maxi(1, damage_value)
 	direction = direction_value.normalized() if not direction_value.is_zero_approx() else Vector2.RIGHT
+	critical = critical_value
+	weapon_seed = weapon_seed_value
+	attack_index = attack_index_value
 
 func _ready() -> void:
 	add_to_group("player_weapon_projectile")
@@ -37,7 +43,7 @@ func resolve_immediately() -> bool:
 	if _resolved or not is_instance_valid(target):
 		return false
 	_resolved = true
-	impacted.emit(target, damage)
+	impacted.emit(target, damage, critical, weapon_seed, attack_index)
 	queue_free()
 	return true
 

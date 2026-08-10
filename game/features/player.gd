@@ -10,6 +10,7 @@ signal defeated
 const MovementRulesScript := preload("res://game/core/movement_rules.gd")
 const HealthComponentScript := preload("res://game/core/health_component.gd")
 const BASE_ATTACK_INTERVAL: float = 0.28
+const VISUAL_SCALE: float = 1.35
 
 @export var move_speed: float = 240.0
 var health_component: Variant = HealthComponentScript.new(10, 0.45)
@@ -34,11 +35,16 @@ var input_enabled: bool = true
 var _attack_cooldown: float = 0.0
 var _attack_flash_remaining: float = 0.0
 var _hit_flash_remaining: float = 0.0
+var _visual_sprite: Sprite2D
+var _visual_facing: String = "east"
+var _visual_asset_id: String = "hero_east"
+var _visual_time: float = 0.0
 
 func _ready() -> void:
 	health_component.changed.connect(_on_health_changed)
 	health_component.died.connect(_on_died)
 	_ensure_collision_shape()
+	_ensure_visual_sprite()
 	queue_redraw()
 	health_changed.emit(health, maximum_health)
 
@@ -51,6 +57,7 @@ func _physics_process(delta: float) -> void:
 		queue_redraw()
 	if not input_enabled:
 		velocity = Vector2.ZERO
+		_update_visual(delta)
 		return
 	var input_vector := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if not input_vector.is_zero_approx():
@@ -66,6 +73,7 @@ func _physics_process(delta: float) -> void:
 		request_attack()
 	if Input.is_action_just_pressed("interact"):
 		interaction_requested.emit()
+	_update_visual(delta)
 
 func request_attack() -> bool:
 	if _attack_cooldown > 0.0:
@@ -79,6 +87,14 @@ func request_attack() -> bool:
 func confirm_hit() -> void:
 	_hit_flash_remaining = 0.16
 	queue_redraw()
+
+func visual_state() -> Dictionary:
+	return {
+		"facing": _visual_facing,
+		"moving": not velocity.is_zero_approx(),
+		"attacking": _attack_flash_remaining > 0.0,
+		"hit_reaction": _hit_flash_remaining > 0.0,
+	}
 
 func attack_cooldown_remaining() -> float:
 	return _attack_cooldown
@@ -114,6 +130,7 @@ func _default_attack_profile(base_type: String) -> Dictionary:
 func take_damage(amount: int) -> bool:
 	var applied: bool = health_component.damage(amount)
 	if applied:
+		_hit_flash_remaining = 0.14
 		queue_redraw()
 	return applied
 
@@ -142,9 +159,34 @@ func _ensure_collision_shape() -> void:
 	collision.name = "CollisionShape2D"
 	add_child(collision)
 
+func _ensure_visual_sprite() -> void:
+	if is_instance_valid(_visual_sprite):
+		return
+	_visual_sprite = VisualAssetLibrary.sprite("hero_east", VISUAL_SCALE)
+	_visual_sprite.position = Vector2(0, -12)
+	_visual_sprite.z_index = 2
+	add_child(_visual_sprite)
+
+func _update_visual(delta: float) -> void:
+	if not is_instance_valid(_visual_sprite):
+		return
+	_visual_time += maxf(0.0, delta)
+	_visual_facing = FacingRules.resolve(facing, _visual_facing)
+	var asset_id := "hero_%s" % _visual_facing
+	if asset_id != _visual_asset_id:
+		_visual_sprite.texture = VisualAssetLibrary.texture(asset_id)
+		_visual_asset_id = asset_id
+	var moving := not velocity.is_zero_approx()
+	var bob := sin(_visual_time * (12.0 if moving else 3.0)) * (2.0 if moving else 0.6)
+	_visual_sprite.position = Vector2(0, -12 + bob)
+	var attack_scale := 1.08 if _attack_flash_remaining > 0.0 else 1.0
+	_visual_sprite.scale = Vector2.ONE * VISUAL_SCALE * attack_scale
+	_visual_sprite.modulate = Color("fff2c4") if _hit_flash_remaining > 0.0 else Color.WHITE
+
 func _draw() -> void:
-	var body_color := Color("8de7ff") if health_component.is_invulnerable() else Color("4cc9f0")
-	draw_circle(Vector2.ZERO, 18.0, body_color)
+	draw_set_transform(Vector2(0, 12), 0.0, Vector2(1.0, 0.32))
+	draw_circle(Vector2.ZERO, 20.0, Color(0.03, 0.08, 0.09, 0.3))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	var canonical := "bow" if weapon_base_type == "ranged" else ("wand" if weapon_base_type == "magic" else ("sword" if weapon_base_type == "melee" else weapon_base_type))
 	var weapon_color := Color("f0c55b") if canonical == "sword" else (Color("9ce7ff") if canonical == "bow" else Color("d09cff"))
 	draw_line(Vector2.ZERO, facing * (31.0 if weapon_base_type != "unarmed" else 27.0), weapon_color, 6.0 if weapon_base_type != "unarmed" else 5.0)
@@ -156,6 +198,5 @@ func _draw() -> void:
 			draw_arc(facing * 42.0, 18.0, 0.0, TAU, 18, Color("e7c4ff"), 4.0)
 		else:
 			draw_arc(Vector2.ZERO, 34.0, facing.angle() - 0.7, facing.angle() + 0.7, 16, Color("fff1a6"), 5.0)
-	if _hit_flash_remaining > 0.0:
+	if _hit_flash_remaining > 0.0 or health_component.is_invulnerable():
 		draw_arc(Vector2.ZERO, 39.0, 0.0, TAU, 28, Color("ffffff"), 4.0)
-	draw_arc(Vector2.ZERO, 21.0, 0.0, TAU, 24, Color("132a3a"), 3.0)

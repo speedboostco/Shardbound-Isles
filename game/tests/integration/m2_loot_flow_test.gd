@@ -82,7 +82,7 @@ func run(support: TestSupport, scene_tree: SceneTree) -> void:
 	world.equip_selected_item(6)
 	support.expect(world.legendary_manager.active_ids().has("living_arrows"), "equipping Living Arrows must attach its separate behavior component")
 	for index: int in 100:
-		world.legendary_event_bus.emit_attack({"weapon_type": "bow", "seed": 82003, "attack_index": index, "impact_position": Vector2(50, 50)})
+		world.legendary_event_bus.emit_hit({"weapon_type": "bow", "seed": 82003, "attack_index": index, "position": Vector2(50, 50)})
 	await scene_tree.process_frame
 	var plants := world.get_tree().get_nodes_in_group("temporary_legendary")
 	support.expect(not plants.is_empty(), "Living Arrows must deterministically create a temporary attacking plant")

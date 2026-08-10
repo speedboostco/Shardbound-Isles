@@ -37,18 +37,17 @@ func run(support: TestSupport) -> void:
 	support.expect(manager.sync(["living_arrows"]), "Living Arrows behavior must activate through the same registry")
 	var living_start := effects.size()
 	for index: int in 100:
-		event_bus.emit_attack({"weapon_type": "bow", "seed": 71000, "attack_index": index})
+		event_bus.emit_hit({"weapon_type": "bow", "seed": 71000, "attack_index": index, "position": Vector2.ZERO})
 	var living_effects := effects.slice(living_start)
 	support.expect(living_effects.size() <= 3 and not living_effects.is_empty(), "Living Arrows must deterministically spawn up to its active-plant limit")
 	var expired_id := String((living_effects[0].payload as Dictionary).get("plant_id", ""))
 	event_bus.emit_temporary_expired(expired_id)
 	for index: int in 100:
-		event_bus.emit_attack({"weapon_type": "bow", "seed": 72000, "attack_index": index})
+		event_bus.emit_hit({"weapon_type": "bow", "seed": 72000, "attack_index": index, "position": Vector2.ZERO})
 	support.expect(effects.size() > living_start + living_effects.size(), "expired plants must release capacity for later Living Arrows")
-	var attack_connections := event_bus.attack.get_connections().size()
+	var hit_connections := event_bus.hit.get_connections().size()
 	manager.clear()
-	support.expect(manager.active_ids().is_empty() and event_bus.attack.get_connections().size() < attack_connections, "unequipping must disconnect legendary behavior without signal leaks")
-	event_bus.emit_attack({"weapon_type": "bow", "seed": 1, "attack_index": 1})
+	support.expect(manager.active_ids().is_empty() and event_bus.hit.get_connections().size() < hit_connections, "unequipping must disconnect legendary behavior without signal leaks")
+	event_bus.emit_hit({"weapon_type": "bow", "seed": 1, "attack_index": 1, "position": Vector2.ZERO})
 	support.expect(manager.active_ids().is_empty(), "cleared manager must remain inert after later events")
 	support.expect(LegendaryBehaviorRegistry.ids().has("riftwake_pulse") and LegendaryBehaviorRegistry.ids().has("chain_mining") and LegendaryBehaviorRegistry.ids().has("burning_smelter") and LegendaryBehaviorRegistry.ids().has("living_arrows"), "framework must expose existing and three M2 legendary properties")
-

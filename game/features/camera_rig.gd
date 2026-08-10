@@ -1,7 +1,7 @@
 class_name CameraRig
 extends Camera2D
 
-@export var follow_smoothing_enabled: bool = true
+@export var follow_smoothing_enabled: bool = false
 @export var follow_smoothing_speed: float = 7.0
 @export var shake_enabled: bool = false
 var _shake_strength: float = 0.0
@@ -12,7 +12,7 @@ var _shake_phase: float = 0.0
 func _ready() -> void:
 	position_smoothing_enabled = follow_smoothing_enabled
 	position_smoothing_speed = follow_smoothing_speed
-	limit_smoothed = true
+	limit_smoothed = follow_smoothing_enabled
 
 func request_shake(strength: float = 5.0, duration: float = 0.16) -> bool:
 	if not shake_enabled or strength <= 0.0 or duration <= 0.0:

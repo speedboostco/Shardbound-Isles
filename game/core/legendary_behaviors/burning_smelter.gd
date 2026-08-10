@@ -3,6 +3,10 @@ extends RefCounted
 
 var _bus: LegendaryEventBus
 var _resolved_deaths: Dictionary = {}
+var _ore_radius: float = 220.0
+
+func configure(parameters: Dictionary) -> void:
+	_ore_radius = maxf(0.0, float(parameters.get("ore_radius", 220.0)))
 
 func activate(bus: LegendaryEventBus) -> void:
 	_bus = bus
@@ -21,7 +25,7 @@ func _on_enemy_killed(context: Dictionary) -> void:
 	_resolved_deaths[enemy_id] = true
 	var ores: Array[Dictionary] = []
 	for value: Variant in context.get("nearby_ores", []):
-		if value is Dictionary:
+		if value is Dictionary and float((value as Dictionary).get("distance", INF)) <= _ore_radius:
 			ores.append((value as Dictionary).duplicate(true))
 	ores.sort_custom(func(first: Dictionary, second: Dictionary) -> bool:
 		var first_distance := float(first.get("distance", INF))
@@ -29,7 +33,6 @@ func _on_enemy_killed(context: Dictionary) -> void:
 		return first_distance < second_distance if not is_equal_approx(first_distance, second_distance) else String(first.get("id", "")) < String(second.get("id", ""))
 	)
 	if ores.is_empty():
-		_bus.trigger("burning_smelter", {"enemy_id": enemy_id, "smelting_charges": 1, "ore_id": ""})
+		_bus.trigger("burning_smelter", {"enemy_id": enemy_id, "smelting_charges": 1, "ore_id": "", "position": context.get("position", Vector2.ZERO)})
 	else:
-		_bus.trigger("burning_smelter", {"enemy_id": enemy_id, "smelting_charges": 0, "ore_id": String(ores[0].get("id", ""))})
-
+		_bus.trigger("burning_smelter", {"enemy_id": enemy_id, "smelting_charges": 0, "ore_id": String(ores[0].get("id", "")), "position": context.get("position", Vector2.ZERO)})

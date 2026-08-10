@@ -4,6 +4,12 @@ The target slice covers movement, gathering, combat, procedural equipment, craft
 
 ## Current milestone
 
+Tasks 31-45 establish the Emberwood visual foundation and harden the first three behavior-changing Legendary effects. One registered AI-assisted project-original family supplies semantic hero, Slime, Forest Ranger, resource, drop, terrain, and VFX cells under a numeric Art Bible and deterministic import validator. The arena now uses crisp nearest-filtered terrain, animated presentation sprites, sparse non-colliding decoration, distinct hit/reward/death feedback, and one controller-first UI skin at 1280x800.
+
+The shared Legendary lifecycle is duplicate-safe and exposes attack/hit/critical/kill/resource/world hooks. Chain Mining selects four unique targets inside 150 px; Burning Smelter resolves an eligible burning death once and visibly converts one stored charge into one bonus Stone without a resource loop; Living Arrows starts only from confirmed bow impacts, deterministically caps temporary six-second plants at three, and removes them on unequip. Seed `314159` exercises the automated gate with bounded dense drops/VFX, a three-plant cap measurement, and eight 1280x800 visual artifacts.
+
+Repository-side acceptance is complete only after full validation/export evidence and independent review are recorded. The physical Steam Deck/controller feel test and subjective voluntary play-style change remain human product gates and must not be inferred from desktop automation.
+
 M4 proves crafting, a compact base, and automation. Five data-driven workbench recipes include three useful permanent objects and two placeable building kits. Four stable sockets provide controller-first preview, rotation, invalid-zone feedback, atomic placement, and preview-free persistence.
 
 The Tasks 16-30 conformance pass hardens the retained M1/M2 loop: seeded optional drops, canonical item identity and validation, physical bow projectiles, complete affix eligibility diagnostics, atomic equipment/salvage events, pure item presentation, same-slot comparison, and destructive confirmation. Repository-side checks are complete; the source task's real Steam Deck controller playtest remains a human hardware gate.

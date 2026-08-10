@@ -8,6 +8,8 @@ const DefinitionScript := preload("res://game/core/resource_node_definition.gd")
 @export var definition: Resource
 var remaining_hits: int
 var yield_bonus: int = 0
+var _hit_feedback_remaining: float = 0.0
+var _visual_sprite: Sprite2D
 var hit_points: int:
 	get: return int(definition.get("maximum_health")) if definition != null else 1
 var resource_id: String:
@@ -21,13 +23,22 @@ func _ready() -> void:
 		definition = _fallback_definition()
 	remaining_hits = hit_points
 	_ensure_collision_shape()
+	_ensure_visual_sprite()
 	add_to_group("attackable")
 	queue_redraw()
+
+func _process(delta: float) -> void:
+	if _hit_feedback_remaining <= 0.0:
+		return
+	_hit_feedback_remaining = maxf(0.0, _hit_feedback_remaining - delta)
+	_update_visual()
 
 func receive_attack(damage: int) -> void:
 	if remaining_hits <= 0:
 		return
 	remaining_hits -= maxi(1, damage)
+	_hit_feedback_remaining = 0.14
+	_update_visual()
 	queue_redraw()
 	if remaining_hits <= 0:
 		depleted.emit(global_position, resource_id, _drop_amount())
@@ -38,6 +49,9 @@ func damage_stage() -> int:
 
 func display_name() -> String:
 	return String(definition.get("display_name"))
+
+func hit_feedback_active() -> bool:
+	return _hit_feedback_remaining > 0.0
 
 func _drop_amount() -> int:
 	return maxi(0, int(definition.get("drop_amount")) + yield_bonus)
@@ -61,13 +75,29 @@ func _ensure_collision_shape() -> void:
 	collision.name = "CollisionShape2D"
 	add_child(collision)
 
+func _ensure_visual_sprite() -> void:
+	var visual_kind := String(definition.get("visual_kind"))
+	if visual_kind == "herb":
+		return
+	_visual_sprite = VisualAssetLibrary.sprite("stone" if visual_kind == "stone" else "tree", 1.38 if visual_kind == "stone" else 1.55)
+	_visual_sprite.position = Vector2(0, -20 if visual_kind == "tree" else -11)
+	_visual_sprite.z_index = 1
+	add_child(_visual_sprite)
+
+func _update_visual() -> void:
+	if not is_instance_valid(_visual_sprite):
+		return
+	_visual_sprite.position.x = 4.0 if _hit_feedback_remaining > 0.0 else 0.0
+	_visual_sprite.modulate = Color("fff1b0") if _hit_feedback_remaining > 0.0 else (Color("d8e39a") if damage_stage() > 0 else Color.WHITE)
+	queue_redraw()
+
 func _draw() -> void:
 	if String(definition.get("visual_kind")) == "herb":
 		_draw_herb()
-	elif String(definition.get("visual_kind")) == "stone":
-		_draw_stone()
 	else:
-		_draw_tree()
+		draw_set_transform(Vector2(0, 22), 0.0, Vector2(1.0, 0.28))
+		draw_circle(Vector2.ZERO, 31.0, Color(0.03, 0.08, 0.09, 0.28))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _draw_tree() -> void:
 	var shake := 3.0 if damage_stage() > 0 else 0.0

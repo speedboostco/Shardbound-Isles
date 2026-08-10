@@ -70,6 +70,7 @@ var current_interaction_target: Node
 var loot_filter := LootFilter.new()
 var legendary_event_bus := LegendaryEventBus.new()
 var legendary_manager := LegendaryBehaviorManager.new(legendary_event_bus)
+var vfx_settings := VfxSettings.from_project_settings()
 var _legendary_effect_handlers: Dictionary = {}
 var _attack_index: int = 0
 var _event_tick: int = 0
@@ -91,6 +92,7 @@ const PLACEMENT_SOCKET_IDS: Array[String] = ["west", "north", "east", "south"]
 const PLACEMENT_WORLD_POSITIONS: Dictionary = {"west": Vector2(-245, -285), "north": Vector2(0, -390), "east": Vector2(245, -285), "south": Vector2(0, 55)}
 
 func _ready() -> void:
+	y_sort_enabled = true
 	island_slots = {"east": island_slot, "north_east": north_east_island_slot, "south_east": south_east_island_slot}
 	island_slot.configure_slot("east", Vector2i(1, 0))
 	north_east_island_slot.configure_slot("north_east", Vector2i(1, -1))
@@ -192,7 +194,8 @@ func _on_attack_requested(origin: Vector2, direction: Vector2) -> void:
 	var primary_target: Node2D
 	var critical_rng := SeededRngStreams.from_seed(_equipped_weapon_seed() ^ (_attack_index * 65537))
 	var primary_damage := player.attack_damage
-	if critical_rng.randf() < player.critical_chance:
+	var critical := critical_rng.randf() < player.critical_chance
+	if critical:
 		primary_damage = maxi(1, roundi(float(primary_damage) * player.critical_damage))
 	var weapon_type := _canonical_weapon_type()
 	for index: int in selected_ids.size():
@@ -205,35 +208,45 @@ func _on_attack_requested(origin: Vector2, direction: Vector2) -> void:
 		if target_node is ResourceNode:
 			damage = maxi(1, roundi(player.gathering_power))
 		if weapon_type == "bow":
-			_spawn_player_projectile(origin, direction, target_node as Node2D, damage)
+			_spawn_player_projectile(origin, direction, target_node as Node2D, damage, critical and index == 0)
 			continue
+		var target_position := (target_node as Node2D).global_position
 		target_node.receive_attack(damage)
+		legendary_event_bus.emit_hit({"target_id": selected_ids[index], "position": target_position, "damage": damage, "critical": critical and index == 0, "weapon_type": weapon_type})
+		if critical and index == 0:
+			legendary_event_bus.emit_critical_hit({"target_id": selected_ids[index], "position": target_position, "damage": damage, "weapon_type": weapon_type})
+		_spawn_gameplay_vfx(target_position, "gather_hit" if target_node is ResourceNode else ("critical_hit" if critical and index == 0 else "normal_hit"))
 		if _canonical_weapon_type() == "wand" and not target_node is ResourceNode:
 			_burning_targets[str(target_node.get_instance_id())] = true
 	if is_instance_valid(primary_target) and weapon_type != "bow":
 		player.confirm_hit()
-		camera.request_shake(4.0, 0.1)
+		camera.request_shake(4.0 * vfx_settings.shake_scale(), 0.1)
 		if primary_target is ResourceNode:
 			_emit_resource_hit(primary_target, primary_damage)
 	var impact_position := primary_target.global_position if is_instance_valid(primary_target) else origin + direction.normalized() * 90.0
 	legendary_event_bus.emit_attack({"origin": origin, "impact_position": impact_position, "primary_target_id": str(primary_target.get_instance_id()) if is_instance_valid(primary_target) else "", "weapon_type": _canonical_weapon_type(), "seed": _equipped_weapon_seed(), "attack_index": _attack_index})
 
-func _spawn_player_projectile(origin: Vector2, direction: Vector2, target_node: Node2D, damage: int) -> PlayerWeaponProjectile:
+func _spawn_player_projectile(origin: Vector2, direction: Vector2, target_node: Node2D, damage: int, critical: bool = false) -> PlayerWeaponProjectile:
 	var projectile := PlayerWeaponProjectile.new()
 	projectile.global_position = origin
-	projectile.configure(target_node, damage, direction)
+	projectile.configure(target_node, damage, direction, critical, _equipped_weapon_seed(), _attack_index)
 	projectile.impacted.connect(_on_player_projectile_impacted)
 	add_child(projectile)
 	if _resolve_player_projectiles_immediately:
 		projectile.resolve_immediately()
 	return projectile
 
-func _on_player_projectile_impacted(target_node: Node2D, damage: int) -> void:
+func _on_player_projectile_impacted(target_node: Node2D, damage: int, critical: bool, weapon_seed: int, attack_index: int) -> void:
 	if not is_instance_valid(target_node) or not target_node.has_method("receive_attack"):
 		return
+	var target_position := target_node.global_position
 	target_node.receive_attack(damage)
+	legendary_event_bus.emit_hit({"target_id": str(target_node.get_instance_id()), "position": target_position, "damage": damage, "critical": critical, "weapon_type": "bow", "seed": weapon_seed, "attack_index": attack_index})
+	if critical:
+		legendary_event_bus.emit_critical_hit({"target_id": str(target_node.get_instance_id()), "position": target_position, "damage": damage, "weapon_type": "bow"})
+	_spawn_gameplay_vfx(target_position, "gather_hit" if target_node is ResourceNode else ("critical_hit" if critical else "projectile_impact"))
 	player.confirm_hit()
-	camera.request_shake(4.0, 0.1)
+	camera.request_shake(4.0 * vfx_settings.shake_scale(), 0.1)
 	if target_node is ResourceNode:
 		_emit_resource_hit(target_node, damage)
 
@@ -257,7 +270,7 @@ func _emit_resource_hit(primary_target: Node2D, source_damage: int) -> void:
 		var distance := primary_target.global_position.distance_to(target_node.global_position)
 		if distance <= 150.0:
 			nearby.append({"id": str(target_node.get_instance_id()), "kind": "resource" if target_node is ResourceNode else "enemy", "distance": distance})
-	legendary_event_bus.emit_resource_hit({"tick": _event_tick, "chain_depth": 0, "source_damage": source_damage, "targets": nearby})
+	legendary_event_bus.emit_resource_hit({"tick": _event_tick, "chain_depth": 0, "source_damage": source_damage, "origin": primary_target.global_position, "targets": nearby})
 
 func _on_legendary_effect_triggered(effect_id: String, payload: Dictionary) -> void:
 	var handler: Callable = _legendary_effect_handlers.get(effect_id, Callable())
@@ -274,13 +287,16 @@ func _handle_riftwake_effect(payload: Dictionary) -> void:
 	_trigger_legendary_pulse(payload.get("origin", player.global_position) as Vector2, primary)
 
 func _handle_chain_mining_effect(payload: Dictionary) -> void:
+	var target_positions: Array[Vector2] = []
 	for target_value: Variant in payload.get("targets", []):
 		if not target_value is Dictionary:
 			continue
 		var target: Object = instance_from_id(int((target_value as Dictionary).get("id", "0")))
 		if is_instance_valid(target) and target.has_method("receive_attack"):
+			if target is Node2D:
+				target_positions.append((target as Node2D).global_position)
 			target.receive_attack(int(payload.get("damage", 1)))
-	_spawn_legendary_visual(player.global_position, "chain_mining")
+	_spawn_legendary_visual(payload.get("origin", player.global_position) as Vector2, "chain_mining", target_positions)
 
 func _handle_burning_smelter_effect(payload: Dictionary) -> void:
 	var ore_id := String(payload.get("ore_id", ""))
@@ -289,8 +305,11 @@ func _handle_burning_smelter_effect(payload: Dictionary) -> void:
 		if is_instance_valid(ore) and ore is ResourceNode:
 			ore.receive_attack((ore as ResourceNode).remaining_hits)
 	else:
-		resource_inventory.add("smelting_charge", int(payload.get("smelting_charges", 0)))
-	_spawn_legendary_visual(player.global_position, "burning_smelter")
+		var awarded := int(payload.get("smelting_charges", 0))
+		if awarded > 0:
+			resource_inventory.add("smelting_charge", awarded)
+			hud.set_encounter_feedback("BURNING SMELTER — +%d CHARGE; NEXT STONE YIELDS +1" % awarded)
+	_spawn_legendary_visual(payload.get("position", player.global_position) as Vector2, "burning_smelter")
 
 func _handle_living_arrows_effect(payload: Dictionary) -> void:
 	if get_tree().get_nodes_in_group("temporary_legendary").size() >= 3:
@@ -303,11 +322,20 @@ func _handle_living_arrows_effect(payload: Dictionary) -> void:
 	add_child(plant)
 	_spawn_legendary_visual(plant.global_position, "living_arrows")
 
-func _spawn_legendary_visual(position_value: Vector2, effect_id: String) -> void:
+func _spawn_legendary_visual(position_value: Vector2, effect_id: String, target_positions: Array[Vector2] = []) -> void:
 	var visual := LegendaryEffectVisual.new()
 	visual.effect_id = effect_id
 	visual.global_position = position_value
+	for target_position: Vector2 in target_positions:
+		visual.target_offsets.append(target_position - position_value)
 	add_child(visual)
+
+func _spawn_gameplay_vfx(position_value: Vector2, effect_kind: String) -> GameplayVfx:
+	var visual := GameplayVfx.new()
+	visual.configure(effect_kind, vfx_settings)
+	visual.global_position = position_value
+	add_child(visual)
+	return visual
 
 func _trigger_legendary_pulse(origin: Vector2, primary_target: Node2D) -> void:
 	var candidates: Array[Dictionary] = []
@@ -329,10 +357,13 @@ func _trigger_legendary_pulse(origin: Vector2, primary_target: Node2D) -> void:
 	add_child(pulse)
 
 func _on_resource_depleted(drop_position: Vector2, resource_id: String, amount: int) -> void:
+	legendary_event_bus.emit_resource_destroyed({"position": drop_position, "resource_id": resource_id, "amount": amount})
+	_spawn_gameplay_vfx(drop_position, "resource_break")
 	_spawn_pickup(drop_position, resource_id, amount)
 
 func _on_enemy_defeated(drop_position: Vector2) -> void:
 	_emit_enemy_killed(enemy, drop_position)
+	_spawn_gameplay_vfx(drop_position, "death")
 	enemies_defeated += 1
 	logger.debug(GameLoggerScript.LOOT, "enemy loot generated", {"equipment_seed": EQUIPMENT_SEED, "island_seed": ISLAND_SHARD_SEED})
 	if LootDropDecision.decide(EQUIPMENT_SEED, "arena_first_slime", 0.99):
@@ -342,6 +373,7 @@ func _on_enemy_defeated(drop_position: Vector2) -> void:
 
 func _on_second_slime_defeated(_drop_position: Vector2) -> void:
 	_emit_enemy_killed(second_slime, _drop_position)
+	_spawn_gameplay_vfx(_drop_position, "death")
 	enemies_defeated += 1
 	logger.debug(GameLoggerScript.LOOT, "slime loot roll completed", {"enemy_id": "second_slime", "equipment_seed": EQUIPMENT_SEED})
 	if LootDropDecision.decide(EQUIPMENT_SEED, "arena_second_slime", 0.01):
@@ -351,6 +383,7 @@ func _on_second_slime_defeated(_drop_position: Vector2) -> void:
 func _on_ranged_enemy_defeated(drop_position: Vector2, loot_seed: int) -> void:
 	_emit_enemy_killed(ranged_enemy if loot_seed == RANGED_LOOT_SEED else elite_ranged_enemy, drop_position)
 	enemies_defeated += 1
+	_spawn_gameplay_vfx(drop_position, "death")
 	var base_id := "sword" if loot_seed == RANGED_LOOT_SEED else "wand"
 	var rarity := "rare" if loot_seed == RANGED_LOOT_SEED else "epic"
 	var item_level := 12 if loot_seed == RANGED_LOOT_SEED else 18
@@ -377,6 +410,7 @@ func _on_boss_phase_changed(_phase: int, base_speed: float) -> void:
 
 func _on_boss_defeated(drop_position: Vector2) -> void:
 	_emit_enemy_killed(boss, drop_position)
+	_spawn_gameplay_vfx(drop_position, "death")
 	_spawn_pickup(drop_position, "equipment", BossReward.generate())
 	hud.set_encounter_feedback("WARDEN DEFEATED — RIFTWAKE CORE DROPPED")
 	rift_portal.unlock()
@@ -389,7 +423,7 @@ func _emit_enemy_killed(combatant: Node2D, death_position: Vector2) -> void:
 		var distance := death_position.distance_to(stone_node.global_position)
 		if distance <= 220.0:
 			nearby_ores.append({"id": str(stone_node.get_instance_id()), "distance": distance})
-	legendary_event_bus.emit_enemy_killed({"enemy_id": combatant_id, "burning": bool(_burning_targets.get(combatant_id, false)), "nearby_ores": nearby_ores})
+	legendary_event_bus.emit_enemy_killed({"enemy_id": combatant_id, "burning": bool(_burning_targets.get(combatant_id, false)), "nearby_ores": nearby_ores, "position": death_position})
 	_burning_targets.erase(combatant_id)
 
 func _check_boss_unlock() -> void:
@@ -435,6 +469,7 @@ func _spawn_pickup(drop_position: Vector2, kind: String, payload: Variant) -> Wo
 	var pickup := WorldPickup.new()
 	pickup.kind = kind
 	pickup.payload = payload
+	pickup.rarity = String(payload.get("rarity", "common")).to_lower() if payload is Dictionary else ("rare" if kind == "island_shard" else "ordinary")
 	pickup.target = player
 	pickup.position = drop_position
 	pickup.spawn_order = _pickup_spawn_order
@@ -442,11 +477,21 @@ func _spawn_pickup(drop_position: Vector2, kind: String, payload: Variant) -> Wo
 	pickup.important = kind == "equipment" and payload is Dictionary and LootDropPolicy.is_important(payload as Dictionary)
 	pickup.collector = _on_pickup_collected
 	add_child(pickup)
+	pickup.collected.connect(func(_kind: String, _payload: Variant) -> void:
+		_spawn_gameplay_vfx(pickup.global_position, "reward" if pickup.important else "pickup")
+	)
+	if pickup.important:
+		_spawn_gameplay_vfx(drop_position, "reward")
 	return pickup
 
 func _on_pickup_collected(kind: String, payload: Variant) -> bool:
 	if kind in ["wood", "stone"]:
-		return resource_inventory.add(kind, int(payload))
+		var amount := int(payload)
+		if kind == "stone" and resource_inventory.amount("smelting_charge") > 0:
+			resource_inventory.remove("smelting_charge", 1)
+			amount += 1
+			hud.set_encounter_feedback("BURNING SMELTER — CHARGE REFINED +1 STONE")
+		return resource_inventory.add(kind, amount)
 	elif kind == "equipment":
 		if not payload is Dictionary:
 			return false
@@ -484,6 +529,8 @@ func _on_resource_inventory_changed(resource_id: String, amount: int, _delta: in
 		hud.set_stone(amount)
 	elif resource_id == "moonleaf":
 		hud.set_moonleaf(amount)
+	elif resource_id == "smelting_charge":
+		hud.set_smelting_charge(amount)
 
 func _on_player_moved(_position_value: Vector2) -> void:
 	_refresh_interaction_target()
@@ -555,6 +602,7 @@ func _refresh_equipment_ui() -> void:
 	_refresh_workbench_ui()
 
 func _sync_player_equipment() -> void:
+	var living_was_active := legendary_manager.is_active("living_arrows")
 	var equipped := equipment_inventory.equipped_item("weapon")
 	var weapon_instance_id := String(equipped.get("id", ""))
 	if weapon_instance_id != _active_weapon_instance_id:
@@ -585,7 +633,14 @@ func _sync_player_equipment() -> void:
 		if not legacy_effect.is_empty() and legacy_effect not in effect_ids:
 			effect_ids.append(legacy_effect)
 	legendary_manager.sync(effect_ids)
+	if living_was_active and not legendary_manager.is_active("living_arrows"):
+		_clear_living_arrow_plants()
 	player.set_weapon_stats(damage, equipment_inventory.attack_speed() * float(derived.attack_speed), base_type, String(equipped.get("legendary_affix_id", "")), profile, effect_ids)
+
+func _clear_living_arrow_plants() -> void:
+	for plant_value: Node in get_tree().get_nodes_in_group("temporary_legendary"):
+		if plant_value is LivingArrowPlant and is_ancestor_of(plant_value):
+			(plant_value as LivingArrowPlant).cleanup()
 
 func try_open_workbench() -> bool:
 	if not workbench.is_player_in_range(player.global_position):
@@ -1154,6 +1209,7 @@ func _materialize_slot(slot_id: String) -> bool:
 	materialized.encounter_completed.connect(_on_island_encounter_completed)
 	materialized.modifier_triggered.connect(_on_island_modifier_triggered)
 	materialized.enemy_volley_requested.connect(_on_enemy_volley_requested)
+	materialized.enemy_defeated.connect(_on_island_enemy_defeated)
 	return true
 
 func _modifier_bundle(definition: Dictionary, slot_id: String, preview_candidate: bool) -> Dictionary:
@@ -1178,7 +1234,19 @@ func _on_island_resource_depleted(slot_id: String, instance_id: String, position
 	var runtime := archipelago.slots[slot_id].installed_island.runtime as Dictionary
 	if instance_id not in (runtime.destroyed_resources as Array):
 		(runtime.destroyed_resources as Array).append(instance_id)
+	legendary_event_bus.emit_resource_destroyed({"position": position_value, "resource_id": resource_id, "amount": amount, "island_slot": slot_id})
+	_spawn_gameplay_vfx(position_value, "resource_break")
 	_spawn_pickup(position_value, resource_id, amount)
+
+func _on_island_enemy_defeated(enemy_id: String, position_value: Vector2) -> void:
+	var nearby_ores: Array[Dictionary] = []
+	for candidate: Node in get_tree().get_nodes_in_group("attackable"):
+		if candidate is ResourceNode and (candidate as ResourceNode).resource_id == "stone" and not candidate.is_queued_for_deletion():
+			var distance := position_value.distance_to((candidate as Node2D).global_position)
+			if distance <= 220.0:
+				nearby_ores.append({"id": str(candidate.get_instance_id()), "distance": distance})
+	legendary_event_bus.emit_enemy_killed({"enemy_id": enemy_id, "burning": bool(_burning_targets.get(enemy_id, false)), "nearby_ores": nearby_ores, "position": position_value})
+	_burning_targets.erase(enemy_id)
 
 func _on_island_encounter_completed(slot_id: String, event_id: String, position_value: Vector2) -> void:
 	var installed := archipelago.slots[slot_id].installed_island as Dictionary
@@ -1282,6 +1350,7 @@ func _on_rift_ranged_defeated(_position: Vector2, _loot_seed: int, combatant: Ra
 
 func _resolve_rift_enemy(combatant: Node2D) -> void:
 	_emit_enemy_killed(combatant, combatant.global_position)
+	_spawn_gameplay_vfx(combatant.global_position, "death")
 	rift_enemies.erase(combatant)
 	if not rift_enemies.is_empty() or rift_controller.status != RiftRunController.Status.ACTIVE:
 		return
@@ -1388,8 +1457,22 @@ func _find_pickup(kind: String) -> WorldPickup:
 	return null
 
 func _draw() -> void:
-	draw_rect(Rect2(-900.0, -600.0, 1800.0, 1200.0), Color("173f46"))
-	for x: int in range(-860, 861, 80):
-		for y: int in range(-560, 561, 80):
-			draw_circle(Vector2(x, y), 2.0, Color("2c6261"))
-	draw_rect(Rect2(-880.0, -580.0, 1760.0, 1160.0), Color("7ac6a3"), false, 6.0)
+	draw_rect(Rect2(-900.0, -600.0, 1800.0, 1200.0), Color("172331"))
+	for x: int in range(-896, 896, 64):
+		for y: int in range(-576, 576, 64):
+			var main_path := absf(float(y)) < 64.0 and x >= -640 and x <= 704
+			var north_path := absf(float(x)) < 64.0 and y >= -448 and y <= 128
+			var asset_id := "dirt" if main_path or north_path else "grass"
+			draw_texture_rect_region(VisualAssetLibrary.FOREST_TILES, Rect2(x, y, 64, 64), VisualAssetLibrary.terrain_region(asset_id))
+			if asset_id == "grass":
+				var grid_x: int = floori(float(x) / 64.0)
+				var grid_y: int = floori(float(y) / 64.0)
+				var decoration_hash := absi(grid_x * 31 + grid_y * 17)
+				var center := Vector2(x + 32, y + 32)
+				if decoration_hash % 11 == 0:
+					draw_line(center + Vector2(0, 7), center + Vector2(-5, -5), Color("214e46"), 3.0)
+					draw_circle(center + Vector2(-6, -7), 5.0, Color("76a85b"))
+					draw_circle(center + Vector2(5, -4), 4.0, Color("4d7a4a"))
+				elif decoration_hash % 19 == 0:
+					draw_colored_polygon(PackedVector2Array([center + Vector2(-7, 5), center + Vector2(-5, -4), center + Vector2(2, -8), center + Vector2(8, -1), center + Vector2(6, 6)]), Color("637783"))
+	draw_rect(Rect2(-880.0, -580.0, 1760.0, 1160.0), Color("e8d8a8"), false, 4.0)

@@ -14,11 +14,16 @@ window/stretch/mode="canvas_items"
 
 [shardbound]
 logging/debug_enabled=false
+visual/reduced_effects=false
+visual/effect_intensity=1.0
 
 [rendering]
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/default_filters/use_nearest_mipmap_filter=false
+textures/canvas_textures/default_texture_filter=0
+2d/snap/snap_2d_transforms_to_pixel=true
+2d/snap/snap_2d_vertices_to_pixel=true
 
 [input]
 move_left={"deadzone":0.2,"events":[Object(InputEventKey,"physical_keycode":65),Object(InputEventKey,"physical_keycode":4194311),Object(InputEventJoypadMotion,"axis":0,"axis_value":-1.0),Object(InputEventJoypadButton,"button_index":13)]}

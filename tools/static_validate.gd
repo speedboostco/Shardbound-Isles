@@ -1,5 +1,7 @@
 extends SceneTree
 
+const ArtAssetValidatorScript := preload("res://tools/art_asset_validator.gd")
+
 const REQUIRED_DIRECTORIES: Array[String] = [
 	"res://game/core",
 	"res://game/features",
@@ -43,9 +45,11 @@ func _run() -> void:
 	_scan_core_directory("res://game/core")
 	_validate_m2_definitions()
 	_validate_m3_definitions()
+	for error_value: String in ArtAssetValidatorScript.validate_repository():
+		failures.append("art asset: %s" % error_value)
 	for failure: String in failures:
 		push_error("STATIC VALIDATION: %s" % failure)
-	print("STATIC_RESULT checks=%d failures=%d" % [REQUIRED_DIRECTORIES.size() + REQUIRED_DOCUMENTS.size() + 9, failures.size()])
+	print("STATIC_RESULT checks=%d failures=%d" % [REQUIRED_DIRECTORIES.size() + REQUIRED_DOCUMENTS.size() + 10, failures.size()])
 	quit(0 if failures.is_empty() else 1)
 
 func _scan_core_directory(path: String) -> void:

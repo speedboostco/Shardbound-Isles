@@ -5,7 +5,7 @@ func run(support: TestSupport, scene_tree: SceneTree) -> void:
 	scene_tree.root.add_child(world)
 	await scene_tree.process_frame
 
-	support.expect(world.camera.position_smoothing_enabled and world.camera.position_smoothing_speed > 0.0, "camera must follow with smoothing enabled")
+	support.expect(not world.camera.position_smoothing_enabled and bool(ProjectSettings.get_setting("rendering/2d/snap/snap_2d_transforms_to_pixel", false)) and bool(ProjectSettings.get_setting("rendering/2d/snap/snap_2d_vertices_to_pixel", false)), "pixel-art camera projection must disable fractional smoothing and snap 2D transforms/vertices without rounding gameplay state")
 	support.expect(world.camera.limit_right - world.camera.limit_left >= 1280 and world.camera.limit_bottom - world.camera.limit_top >= 800, "camera limits must contain a full 1280x800 viewport")
 	support.expect(not world.camera.request_shake() and world.camera.offset == Vector2.ZERO, "camera shake must be independently disabled by default")
 	world.camera.shake_enabled = true

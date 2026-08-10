@@ -49,7 +49,7 @@ func _run_scenario() -> Dictionary:
 	bus.emit_resource_hit({"tick": 100, "chain_depth": 0, "source_damage": 8, "targets": nearby})
 	bus.emit_enemy_killed({"enemy_id": "sim_burning", "burning": true, "nearby_ores": []})
 	for index: int in 100:
-		bus.emit_attack({"weapon_type": "bow", "seed": 100008, "attack_index": index})
+		bus.emit_hit({"weapon_type": "bow", "seed": 100008, "attack_index": index, "position": Vector2.ZERO})
 	var triggered: Array[String] = []
 	var chain_targets := 0
 	var smelting_charges := 0
@@ -82,4 +82,3 @@ func _run_scenario() -> Dictionary:
 		"items_valid": valid,
 		"weapon_styles": styles.size(),
 	}
-

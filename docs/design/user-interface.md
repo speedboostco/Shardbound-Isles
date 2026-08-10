@@ -1,5 +1,11 @@
 # User Interface
 
+## Emberwood UI family
+
+All implemented modals inherit one UI family: 96-99% ink panels, six-pixel corners, 18 px normal button text, minimum 44 px targets, cream/gold pressed state, and a four-pixel focus outline. The HUD includes an observed health bar; its concise title remains inside the left safe panel. Opening equipment suppresses transient encounter/rift overlays so they cannot cover comparison content.
+
+Rarity is always written by name in addition to color. Salvage confirmation changes the focused action to `> CONFIRM DESTROY +N` and shows a full warning sentence, so destructive meaning is not color-only. The longest Legendary comparison stays in the bounded scroll region, with LB/RB scrolling and every action inside 1280x800.
+
 The reference viewport is 1280x800. HUD information must be legible, anchored safely, and non-authoritative. It observes health, wood, stone, and equipment through state-change signals rather than frame polling. The equipped weapon line shows damage and attack speed, while a bottom-safe contextual prompt names the nearest usable target and its shared `A / E` action without obstructing the center of play. Menus require explicit controller focus and no mandatory text input or mouse hover.
 
 The equipment modal browses every collected item with Previous/Next controls and a selected-position count. A pure presenter supplies level, slot, rarity by both name and color, base weapon/stat values, every formatted ordinary affix with category, and the full legendary behavior. Comparison names both candidate and same-slot equipped item, includes both affix/behavior sets and signed gameplay-stat changes, and never invents an item score. An empty slot is labeled explicitly. Long content wraps inside a bounded scroll area; LB/RB scroll its details without a pointer. Equip, Unequip, and Keep/Unfavorite are direct controller actions; Salvage requires a second focused confirmation that names the reward and warns that the item will be destroyed. Equipped and favorited items visibly reject salvage. Opening the modal focuses a valid action and suspends player/enemy movement. Explicit focus neighbors recover when an action disables itself.

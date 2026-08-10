@@ -28,6 +28,20 @@ Sword and wand resolve their deterministic target shapes immediately. Bow attack
 
 The world composition root applies successful transactions and materializes `BaseBuildingVisual` projections. Collector, storage, and mill communicate through accepted/remainder quantities, so capacity boundaries cannot destroy resources. A single timer requests bounded batches; remote buildings never require independent per-frame callbacks. Save schema 6 owns the complete committed simulation state and applies catch-up only after validation.
 
+## Visual foundation
+
+`VisualAssetLibrary` is the semantic boundary for the registered Emberwood atlas and terrain derivative. Gameplay nodes compose presentation-only `Sprite2D` children while retaining their prior collision, health, target, movement, reward, and serialization contracts. `FacingRules` is the pure deterministic direction mapping; animation reads it but never advances authoritative transforms or hit timing.
+
+`GameplayVfx` owns only a short kind/lifetime and always self-cleans. The world spawns normal hit, critical, projectile, gathering, resource-break, pickup, reward, and death presentation after authoritative events. `VfxSettings` is an injected project-settings snapshot that centralizes reduced-effects intensity and screen-shake scaling without an Autoload. The HUD consumes one shared Theme for buttons, focus, panels, and health presentation; it remains an observer of domain state.
+
+The source master is excluded from import/export. `ArtAssetValidator` checks every registered runtime raster for lowercase naming, bounded cell-aligned dimensions, lossless/no-mipmap import metadata, project nearest filtering, source isolation, and raw archive exclusion during `static-validate`.
+
+## Legendary effect runtime
+
+Stable effect definitions include bounded parameters and separate scripts. `LegendaryBehaviorManager.sync` canonicalizes duplicate IDs, is idempotent for an unchanged loadout, and owns every attach/detach. `LegendaryEventBus` exposes attack, hit, critical hit, kill, resource hit, resource destroyed, resource used, and temporary-expiry hooks; payload copies prevent effect code from mutating the caller.
+
+Chain Mining consumes authored radius/power/cap/cooldown parameters and filters duplicate IDs before stable distance/ID ordering. Burning Smelter owns a per-activation resolved-death set and can consume one ore or create one visible, non-recursive charge; that charge is consumed by the next Stone pickup for exactly one bonus Stone. Living Arrows consumes authored chance/cap/lifetime parameters and listens to confirmed bow hits, never predicted attacks; world summons expire and are actively cleaned when the effect is removed. Installed-island deaths use the same authoritative kill hook. VFX observe effect triggers but never grant damage or rewards.
+
 ## Determinism
 
 Domain systems use explicit `RandomNumberGenerator` instances. `SeededRngStreams` creates exact-seed generators and derives cached named streams from a root seed. Advancing one named stream must never change another. Static validation rejects global random calls in `game/core`.

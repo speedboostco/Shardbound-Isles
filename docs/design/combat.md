@@ -1,5 +1,11 @@
 # Combat
 
+## Emberwood presentation
+
+The hero has four deterministic facings with presentation-only idle/movement bob, attack emphasis, and hit flash. Slimes use separate idle/attack silhouettes and begin contact damage with a 0.22-second tell. Forest Rangers retain their 0.55-second line tell and switch to a distinct drawn-bow silhouette. Authoritative death happens before cleanup; a short death burst represents the death animation without delaying drops or allowing a dead actor to act.
+
+Normal hit, critical hit, projectile impact, gathering hit, resource break, death, and Legendary triggers use distinct bounded VFX. Reduced-effects mode keeps the primary glyph, suppresses secondary detail, and halves camera shake. No VFX or sprite frame emits gameplay damage.
+
 The player uses a short-range directional strike aimed by the latest non-zero movement input. Attack speed controls its real cooldown, and each swing chooses at most one primary target so one hit cannot apply damage repeatedly. Successful hits flash the attacker and target. Player and enemies share `HealthComponent`; it clamps damage/healing, emits death once, and gives the player 0.45 seconds of post-hit invulnerability.
 
 The first ordinary melee enemy is a green Slime with explicit Idle, Chase, Attack, and Dead states. It has collision recovery around simple obstacles, stops immediately after death, and takes three unarmed hits in the M1 scenario. The first Slime drops the seeded starter weapon; the second deliberately drops no item, proving that loot is optional per death.
@@ -12,6 +18,6 @@ Equipping Riftwake Core grants Riftwake Pulse. Every player attack releases a 11
 
 M2 weapons share one attack-resolution path and differ through data-defined profiles. The sword performs a short 82-pixel slash against one close target. The bow fires a visible tracked projectile along a forgiving 280-pixel targeting line and applies one hit on impact. The wand resolves a 175-pixel arcane burst that splashes half damage to nearby secondary targets. Weapon replacement removes outstanding player projectiles. Controller aim and attack bindings are shared; weapon code does not duplicate target or damage rules.
 
-Chain Mining, Burning Smelter, and Living Arrows are modular legendary components. Chain Mining is bounded to four deterministic secondary targets and cannot recurse. Burning Smelter consumes one burning-death event and either smelts nearby ore or stores a fallback charge. Living Arrows uses its own seeded stream, caps temporary plants at three, and expires them after six seconds.
+Chain Mining, Burning Smelter, and Living Arrows are modular legendary components configured from their registry definitions. Chain Mining is bounded to four deterministic secondary targets and cannot recurse. Burning Smelter consumes one burning-death event and either smelts nearby ore or stores a visible fallback charge; one charge refines the next collected Stone into exactly one bonus Stone. Living Arrows rolls only after a confirmed bow impact, uses its own seeded stream, caps temporary plants at three, and expires them after six seconds.
 
 Island risk applies from immutable combat baselines. Verdant Crucible multiplies movement by 1.25, Emberglass Reach adds 2 to player attack damage, and Tempest Loom adds 1 damage to every enemy projectile. Replacing or removing a shard clears the prior modifier before applying the new one.

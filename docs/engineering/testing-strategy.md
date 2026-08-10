@@ -1,5 +1,11 @@
 # Testing Strategy
 
+## Tasks 31-45 visual and Legendary gate
+
+Unit coverage validates deterministic facing, semantic atlas/import contracts including binary alpha and the 16-color cell ceiling, reduced-effects bounds, every Legendary event hook, idempotent duplicate-free lifecycle, authored parameter consumption, Chain Mining radius/uniqueness, Burning Smelter one-shot eligibility, and Living Arrows cap. Integration instantiates both visual and gameplay scenes, preserves collision/damage contracts, proves the Slime tell, Ranger silhouette, VFX cleanup, five distinct rarity shapes, shared focus style, visible/consumable Smelter value, confirmed-impact Living Arrows behavior, installed-island kill propagation, all three equip/use/unequip routes, and summon cleanup.
+
+The fixed seed `314159` gate simulation covers gather/combat/first item, controller-opened comparison, two-press salvage, all three Legendary effects, 200 repeated lifecycle syncs, five-plus enemies, 200 drop pressure, and 300 VFX cleanup. It prints `VISUAL_LEGENDARY_GATE_METRICS`. Eight reproducible 1280x800 captures cover the art scene, forest loop, dense combat/loot, three Legendary identities, comparison, and destructive confirmation.
+
 The project uses a small dependency-free Godot test harness under `game/tests/` to avoid an unreviewed dependency. Unit tests cover pure rules; integration tests instantiate cooperating nodes; simulation tests drive fixed actions and assert player-facing milestones. All procedural assertions use fixed seeds. Visual scripts produce reproducible 1280x800 artifacts for manual inspection.
 
 Every CLI test command writes a JUnit report under `build/test-results/`; set `TEST_REPORT_DIR` to choose another directory. A missing script, compile failure, assertion failure, incomplete assertion contract, or report-write failure returns a nonzero exit code. `validate` imports the project, runs static validation, and then runs the complete test suite.

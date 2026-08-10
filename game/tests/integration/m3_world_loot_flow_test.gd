@@ -31,6 +31,16 @@ func run(support: TestSupport, scene_tree: SceneTree) -> void:
 	support.expect(is_instance_valid(forest_island.event_marker) and forest_island.event_marker.display_name.contains("Grove"), "Forest island must contain its small Grove event")
 	support.expect(resource_ids.count("wood") == 2, "Dense Growth must physically add a resource node")
 	support.expect(forest_island.active_enemy_count() == 3, "Predatory must physically add an elite enemy")
+	var island_smelter := LootGenerator.generate(9050, "island_smelter", 20, "wand", "legendary")
+	island_smelter.legendary_effects = ["burning_smelter"]
+	island_smelter.legendary_affix_id = "burning_smelter"
+	world._on_pickup_collected("equipment", island_smelter)
+	world.equip_selected_item(0)
+	var island_slime := forest_island.get_node("ForestSlime") as ChaserEnemy
+	world._burning_targets[str(island_slime.get_instance_id())] = true
+	island_slime.receive_attack(99)
+	await scene_tree.process_frame
+	support.expect(_has_pickup(world, "stone"), "a burning installed-island enemy death must reach the shared Smelter path and produce exactly one visible ore reward")
 	world.island_shards.append({"id": "invalid"})
 	var inventory_before_invalid := world.island_shards.size()
 	support.expect(not world.install_selected_shard(inventory_before_invalid - 1, "north_east") and world.island_shards.size() == inventory_before_invalid, "invalid generation must preserve the shard inventory transaction")

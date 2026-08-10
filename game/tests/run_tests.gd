@@ -19,6 +19,7 @@ func _run() -> void:
 		return
 	if suite in ["all", "unit"]:
 		for definition: Dictionary in [
+			{"path": "res://game/tests/unit/visual_legendary_foundation_test.gd", "assertions": 36},
 			{"path": "res://game/tests/unit/tasks_16_30_conformance_test.gd", "assertions": 33},
 			{"path": "res://game/tests/unit/m4_recipe_placement_test.gd", "assertions": 18},
 			{"path": "res://game/tests/unit/m4_automation_test.gd", "assertions": 14},
@@ -64,9 +65,10 @@ func _run() -> void:
 			_record_result("unit", path, assertions_before, failures_before)
 	if suite in ["all", "integration"]:
 		for definition: Dictionary in [
+			{"path": "res://game/tests/integration/visual_legendary_foundation_flow_test.gd", "assertions": 34},
 			{"path": "res://game/tests/integration/tasks_16_30_conformance_flow_test.gd", "assertions": 12},
 			{"path": "res://game/tests/integration/m4_base_flow_test.gd", "assertions": 28},
-			{"path": "res://game/tests/integration/m3_world_loot_flow_test.gd", "assertions": 40},
+			{"path": "res://game/tests/integration/m3_world_loot_flow_test.gd", "assertions": 41},
 			{"path": "res://game/tests/integration/m2_loot_flow_test.gd", "assertions": 31},
 			{"path": "res://game/tests/integration/m1_scene_contract_test.gd", "assertions": 26},
 			{"path": "res://game/tests/integration/slime_obstacle_flow_test.gd", "assertions": 4},
@@ -93,6 +95,18 @@ func _run() -> void:
 					return
 			_record_result("integration", path, assertions_before, failures_before)
 	if suite in ["all", "simulation"]:
+		var visual_gate_path := "res://game/tests/simulation/visual_legendary_gate_simulation_test.gd"
+		var visual_gate_before := support.assertions
+		var visual_gate_failures_before := support.failures.size()
+		var visual_gate_simulation: Variant = _instantiate_test(visual_gate_path)
+		if visual_gate_simulation != null:
+			var visual_gate_metrics: Dictionary = await visual_gate_simulation.run(support, self)
+			if not support.require_assertion_count(support.assertions - visual_gate_before, 17, visual_gate_path):
+				_record_result("simulation", visual_gate_path, visual_gate_before, visual_gate_failures_before)
+				_finish(suite)
+				return
+			print("VISUAL_LEGENDARY_GATE_METRICS %s" % JSON.stringify(visual_gate_metrics))
+		_record_result("simulation", visual_gate_path, visual_gate_before, visual_gate_failures_before)
 		var conformance_path := "res://game/tests/simulation/tasks_16_30_invariant_simulation_test.gd"
 		var conformance_before := support.assertions
 		var conformance_failures_before := support.failures.size()

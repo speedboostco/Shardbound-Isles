@@ -1,5 +1,7 @@
 # Build and Release
 
+Export presets exclude `assets/*/*/source/*` and raw `.zip`, `.7z`, `.rar`, `.psd`, and `.aseprite` sources. Only registered runtime raster derivatives may enter platform builds.
+
 Stable commands are exposed through `Makefile` and `tools/dev.ps1`. `GODOT_BIN` may identify a Godot executable; otherwise the script searches PATH and common local locations. Debug exports target Windows and Linux under `build/`. Generated export files are ignored. Publishing always requires human approval.
 
 All commands are non-interactive except `run`, which launches the game. `validate` performs headless import, static validation, and all tests. Test commands write JUnit XML to `build/test-results/` by default; `TEST_REPORT_DIR` overrides that destination. A failed Godot process or report write propagates a nonzero exit code.

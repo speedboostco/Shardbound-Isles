@@ -29,10 +29,12 @@ signal island_remove_requested(slot_id: String)
 signal rift_requested
 
 @onready var health_label: Label = $Margin/VBox/Health
+@onready var health_bar: ProgressBar = $Margin/VBox/HealthBar
 @onready var wood_label: Label = $Margin/VBox/Wood
 @onready var stone_label: Label = $Margin/VBox/Stone
 @onready var moonleaf_label: Label = $Margin/VBox/Moonleaf
 @onready var plank_label: Label = $Margin/VBox/Plank
+@onready var smelting_charge_label: Label = $Margin/VBox/SmeltingCharge
 @onready var loot_label: Label = $Margin/VBox/Loot
 @onready var attack_label: Label = $Margin/VBox/Attack
 @onready var equipment_panel: PanelContainer = $EquipmentPanel
@@ -202,6 +204,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func set_health(current: int, maximum: int) -> void:
 	health_label.text = "HEALTH  %d / %d" % [current, maximum]
+	health_bar.max_value = maxf(1.0, float(maximum))
+	health_bar.value = float(current)
 
 func set_wood(amount: int) -> void:
 	wood_label.text = "WOOD    %d" % amount
@@ -215,6 +219,9 @@ func set_moonleaf(amount: int) -> void:
 
 func set_plank(amount: int) -> void:
 	plank_label.text = "PLANKS  %d" % amount
+
+func set_smelting_charge(amount: int) -> void:
+	smelting_charge_label.text = "SMELT CHARGE  %d" % amount
 
 func get_displayed_stone() -> int:
 	return _displayed_stone
@@ -298,7 +305,7 @@ func _render_selected_equipment() -> void:
 		var selected_equipped := String(item.get("id", "")) == String(_equipped_slots.get(slot, ""))
 		equip_button.disabled = selected_equipped
 		salvage_button.disabled = selected_equipped or bool(item.get("favorite", false))
-		salvage_button.text = "CONFIRM +%d" % EquipmentInventory.salvage_value(item) if _pending_salvage_id == String(item.get("id", "")) else "SALVAGE"
+		salvage_button.text = "> CONFIRM DESTROY +%d" % EquipmentInventory.salvage_value(item) if _pending_salvage_id == String(item.get("id", "")) else "SALVAGE"
 		if _pending_salvage_id == String(item.get("id", "")):
 			comparison_label.text += "\nWARNING — PRESS CONFIRM TO DESTROY THIS ITEM"
 		favorite_button.disabled = false
@@ -370,6 +377,8 @@ func _recover_equipment_focus() -> void:
 		$EquipmentPanel/Margin/VBox/Close.grab_focus()
 
 func open_equipment_panel() -> void:
+	encounter_label.visible = false
+	rift_label.visible = false
 	equipment_panel.visible = true
 	if not equip_button.disabled:
 		equip_button.grab_focus()
@@ -381,6 +390,8 @@ func open_equipment_panel() -> void:
 func close_equipment_panel() -> void:
 	_pending_salvage_id = ""
 	equipment_panel.visible = false
+	encounter_label.visible = not encounter_label.text.is_empty()
+	rift_label.visible = not rift_label.text.is_empty()
 	equipment_panel_closed.emit()
 
 func is_equipment_panel_open() -> bool:

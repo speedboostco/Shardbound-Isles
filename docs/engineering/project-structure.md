@@ -12,6 +12,7 @@ game/
 docs/
 tools/
 build/
+assets/
 ```
 
 ## Responsibilities
@@ -24,6 +25,7 @@ build/
 - `docs/` is the product, design, engineering, decision, and execution-plan system of record.
 - `tools/` contains repository-local developer command implementations. `dev.ps1` backs the stable `make` interface, and `static_validate.gd` enforces repository and deterministic-domain invariants.
 - `build/` is the local destination for generated Windows and Linux exports. Generated output is ignored; its tracked README and `.gdignore` document and enforce that responsibility.
+- `assets/original/` contains registered project-created source families and runtime atlases. `assets/third_party/` is reserved for assets whose exact license/provenance has already been recorded; it is not created as an empty architectural layer.
 
 Supporting root entries have concrete repository roles: `project.godot` and `export_presets.cfg` configure Godot, `Makefile` exposes stable commands, `.github/` defines CI, and `evidence/` stores approved reproducible review artifacts.
 

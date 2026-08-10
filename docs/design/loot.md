@@ -1,5 +1,11 @@
 # Loot
 
+## Visual rarity and Legendary identity
+
+World drops use semantic Emberwood sprites and non-color rarity cues. Ordinary equipment has a pointed ring, important Epic/Legendary equipment adds a tall beam and stronger emblem, and island shards retain a diamond outline. Pickup pop/trail and reward bursts are presentation-only; collection acceptance still decides ownership before feedback is emitted.
+
+The first three shared-framework Legendary identities are visually distinct: Chain Mining uses a violet zig-zag between the bounded target area, Burning Smelter uses an ember diamond/flame arc tied to a burning kill, and Living Arrows materializes up to three attacking plant emblems. Their authored tooltip text includes exact cap/chance/radius or one-shot economy language.
+
 Equipment generation is one deterministic pipeline driven by an explicit seed and context:
 
 1. Choose a base definition and item level.

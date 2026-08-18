@@ -21,12 +21,23 @@ func _draw() -> void:
 	var intensity := VfxSettings.from_project_settings().intensity
 	var alpha := progress * intensity
 	var reduced := VfxSettings.from_project_settings().reduced_effects
-	var frame_count := 4 if reduced else VisualAssetLibrary.vfx_frame_count()
-	var frame := clampi(floori(reveal * float(frame_count)), 0, frame_count - 1)
-	if reduced:
-		frame = mini(frame * 2, VisualAssetLibrary.vfx_frame_count() - 1)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * 2.15)
-	draw_texture(VisualAssetLibrary.vfx_texture("materialize", frame), Vector2(-32, -32), Color(1, 1, 1, alpha))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	var spread := 54.0 if reduced else 88.0
+	var shard_count := 5 if reduced else 9
+	for index: int in shard_count:
+		var normalized := float(index) / float(maxi(1, shard_count - 1))
+		var x := lerpf(-spread, spread, normalized)
+		var height := 18.0 + float(posmod(index * 17, 31)) + reveal * 36.0
+		var rise := reveal * (22.0 + float(posmod(index * 11, 19)))
+		var center := Vector2(x, 16.0 - rise)
+		var half_width := 3.0 + float(index % 2)
+		var diamond := PackedVector2Array([
+			center + Vector2(0, -height * 0.5), center + Vector2(half_width, 0),
+			center + Vector2(0, height * 0.5), center + Vector2(-half_width, 0),
+		])
+		draw_colored_polygon(diamond, Color(0.35, 0.95, 0.75, alpha * (0.45 + normalized * 0.25)))
 	if not reduced:
-		draw_arc(Vector2.ZERO, 28.0 + reveal * 84.0, 0.0, TAU, 40, Color(0.35, 0.95, 0.75, alpha * 0.55), 4.0)
+		var beam_width := lerpf(15.0, 3.0, reveal)
+		draw_rect(Rect2(-beam_width * 0.5, -72.0, beam_width, 86.0), Color(0.56, 1.0, 0.84, alpha * 0.18))
+
+func uses_circular_overlay() -> bool:
+	return false

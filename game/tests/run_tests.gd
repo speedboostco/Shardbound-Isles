@@ -19,6 +19,11 @@ func _run() -> void:
 		return
 	if suite in ["all", "unit"]:
 		for definition: Dictionary in [
+			{"path": "res://game/tests/unit/forest_warden_pattern_test.gd", "assertions": 25},
+			{"path": "res://game/tests/unit/island_story_quest_test.gd", "assertions": 34},
+			{"path": "res://game/tests/unit/expedition_contract_test.gd", "assertions": 27},
+			{"path": "res://game/tests/unit/expedition_cycle_test.gd", "assertions": 28},
+			{"path": "res://game/tests/unit/survival_journey_test.gd", "assertions": 24},
 			{"path": "res://game/tests/unit/progression_mana_test.gd", "assertions": 38},
 			{"path": "res://game/tests/unit/contact_shadow_profile_test.gd", "assertions": 23},
 			{"path": "res://game/tests/unit/cohesive_art_collision_test.gd", "assertions": 12},
@@ -70,6 +75,11 @@ func _run() -> void:
 			_record_result("unit", path, assertions_before, failures_before)
 	if suite in ["all", "integration"]:
 		for definition: Dictionary in [
+			{"path": "res://game/tests/integration/forest_warden_encounter_flow_test.gd", "assertions": 28},
+			{"path": "res://game/tests/integration/island_story_flow_test.gd", "assertions": 34},
+			{"path": "res://game/tests/integration/expedition_contract_flow_test.gd", "assertions": 32},
+			{"path": "res://game/tests/integration/expedition_cycle_flow_test.gd", "assertions": 21},
+			{"path": "res://game/tests/integration/survival_journey_flow_test.gd", "assertions": 16},
 			{"path": "res://game/tests/integration/exploration_progression_targeting_flow_test.gd", "assertions": 30},
 			{"path": "res://game/tests/integration/world_obstacle_collision_flow_test.gd", "assertions": 6},
 			{"path": "res://game/tests/integration/living_world_animation_polish_flow_test.gd", "assertions": 17},

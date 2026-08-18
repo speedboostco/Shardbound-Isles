@@ -27,7 +27,7 @@ func run(support: TestSupport, scene_tree: SceneTree) -> void:
 	support.expect(world.technology_tree.is_learned("combat_training"), "second controller learn action must commit Combat Training")
 	support.expect(world.is_combat_unlocked() and world.enemy.visible and world.enemy.is_in_group("attackable"), "Combat Training must awaken authored threats exactly through progression")
 	support.expect(world.terrain_micro_biome_count() == 4 and world.world_obstacle_count() >= 28 and world.world_resident_count() == 2, "terrain must contain distinct dressed micro-biomes, collision landmarks, and interactive residents")
-	support.expect(RecipeRegistry.all().size() >= 18 and RecipeRegistry.validate().is_empty(), "workbench content must expose at least eighteen validated recipes")
+	support.expect(RecipeRegistry.all().size() >= 19 and RecipeRegistry.validate().is_empty(), "workbench content must expose at least nineteen validated recipes")
 	world.crafted_building_kits["precision_quiver"] = true
 	world.crafted_building_kits["foresters_toolkit"] = true
 	world.crafted_building_kits["surveyors_lens"] = true

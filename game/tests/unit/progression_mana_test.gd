@@ -63,5 +63,5 @@ func run(support: TestSupport) -> void:
 	var vessel: Dictionary = crafting.evaluate("mana_vessel", upgrade_resources, {"mana_channeling": true})
 	support.expect(bool(vessel.success) and String(vessel.output.id) == "mana_vessel", "unlocked mana vessel recipe must produce its authored upgrade")
 	support.expect(vessel.resources_after.stone == 0 and vessel.resources_after.moonleaf == 0, "expanded recipe deductions must remain atomic and exact")
-	support.expect(RecipeRegistry.all().size() == 18 and RecipeRegistry.validate().is_empty(), "all eighteen production recipes must validate")
+	support.expect(RecipeRegistry.all().size() == 19 and RecipeRegistry.validate().is_empty(), "all nineteen survival and production recipes must validate")
 	support.expect(bool(crafting.evaluate("precision_quiver", {"wood": 4, "stone": 0, "moonleaf": 3, "scrap": 0, "plank": 0}, {"ranger_instinct": true}).success), "an advanced technology unlocks its named craftable item")

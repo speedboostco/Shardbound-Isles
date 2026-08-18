@@ -167,6 +167,41 @@ theme_override_font_sizes/font_size = 17
 text = "EXPLORE • GATHER • GROW\n[L] MOVE   [X] ATTACK   [A] USE   [Y] GEAR   [RB] ISLANDS"
 horizontal_alignment = 2
 
+[node name="ExpeditionStatus" type="Label" parent="."]
+offset_left = 20.0
+offset_top = 151.0
+offset_right = 590.0
+offset_bottom = 181.0
+theme_override_colors/font_color = Color(0.7, 0.92, 0.95, 1)
+theme_override_colors/font_outline_color = Color(0.02, 0.05, 0.07, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 17
+text = "DAY 1  |  06:00  |  DAWN  |  CLEAR"
+
+[node name="ContractStatus" type="Label" parent="."]
+visible = false
+offset_left = 20.0
+offset_top = 181.0
+offset_right = 650.0
+offset_bottom = 211.0
+theme_override_colors/font_color = Color(1, 0.82, 0.36, 1)
+theme_override_colors/font_outline_color = Color(0.02, 0.05, 0.07, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 17
+text = "CONTRACT  SUNLIT SURVEY  0/2"
+
+[node name="IslandStoryStatus" type="Label" parent="."]
+visible = false
+offset_left = 20.0
+offset_top = 211.0
+offset_right = 760.0
+offset_bottom = 241.0
+theme_override_colors/font_color = Color(0.52, 0.95, 0.78, 1)
+theme_override_colors/font_outline_color = Color(0.02, 0.05, 0.07, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 17
+text = "TALA HAS AN ISLAND STORY"
+
 [node name="EquipmentPanel" type="PanelContainer" parent="."]
 visible = false
 offset_left = 240.0
@@ -192,10 +227,10 @@ text = "EQUIPMENT — LB/RB SCROLL DETAILS"
 horizontal_alignment = 1
 
 [node name="StatsSummary" type="Label" parent="EquipmentPanel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 72)
 theme_override_colors/font_color = Color(0.68, 0.88, 0.9, 1)
 theme_override_font_sizes/font_size = 13
-text = "RESOURCES  WOOD 0  •  STONE 0  •  MOONLEAF 0  •  PLANK 0  •  SCRAP 0\nVITALS  HEALTH 10/10  •  MANA 60/60  •  REGEN 6.0/s\nCOMBAT  ATTACK 1  •  SPEED 1.00x  •  CRIT 5%\nUTILITY  GATHER 1.00  •  PICKUP 135  •  PRODUCTION 1.00x"
+text = "MATERIALS  WOOD 0  •  STONE 0  •  MOONLEAF 0  •  PLANK 0  •  SCRAP 0\nSURVIVAL  FIBER 0  •  BERRIES 0  •  RATIONS 0/3  •  PREPARED 0\nVITALS  HEALTH 10/10  •  MANA 60/60  •  REGEN 6.0/s\nCOMBAT  ATTACK 1  •  SPEED 1.00x  •  CRIT 5%\nUTILITY  GATHER 1.00  •  PICKUP 135  •  PRODUCTION 1.00x"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -253,7 +288,7 @@ disabled = true
 text = "NEXT >"
 
 [node name="InventoryStrip" type="HBoxContainer" parent="EquipmentPanel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 32)
 alignment = 1
 theme_override_constants/separation = 8
 
@@ -293,40 +328,50 @@ theme_override_constants/separation = 14
 [node name="Equip" type="Button" parent="EquipmentPanel/Margin/VBox/Actions"]
 custom_minimum_size = Vector2(120, 44)
 focus_neighbor_top = NodePath("../../Selection/Previous")
-focus_neighbor_bottom = NodePath("../../OpenTechnology")
+focus_neighbor_bottom = NodePath("../../ProgressionActions/OpenTechnology")
 disabled = true
 text = "EQUIP"
 
 [node name="Salvage" type="Button" parent="EquipmentPanel/Margin/VBox/Actions"]
 custom_minimum_size = Vector2(120, 44)
 focus_neighbor_top = NodePath("../../Selection/Previous")
-focus_neighbor_bottom = NodePath("../../OpenTechnology")
+focus_neighbor_bottom = NodePath("../../ProgressionActions/OpenTechnology")
 disabled = true
 text = "SALVAGE"
 
 [node name="Favorite" type="Button" parent="EquipmentPanel/Margin/VBox/Actions"]
 custom_minimum_size = Vector2(120, 44)
 focus_neighbor_top = NodePath("../../Selection/Previous")
-focus_neighbor_bottom = NodePath("../../OpenTechnology")
+focus_neighbor_bottom = NodePath("../../ProgressionActions/OpenTechnology")
 disabled = true
 text = "KEEP"
 
 [node name="Unequip" type="Button" parent="EquipmentPanel/Margin/VBox/Actions"]
 custom_minimum_size = Vector2(120, 44)
 focus_neighbor_top = NodePath("../../Selection/Next")
-focus_neighbor_bottom = NodePath("../../OpenTechnology")
+focus_neighbor_bottom = NodePath("../../ProgressionActions/OpenTechnology")
 disabled = true
 text = "UNEQUIP"
 
-[node name="OpenTechnology" type="Button" parent="EquipmentPanel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 42)
-focus_neighbor_top = NodePath("../Actions/Equip")
-focus_neighbor_bottom = NodePath("../Close")
+[node name="ProgressionActions" type="HBoxContainer" parent="EquipmentPanel/Margin/VBox"]
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="OpenTechnology" type="Button" parent="EquipmentPanel/Margin/VBox/ProgressionActions"]
+custom_minimum_size = Vector2(330, 42)
+focus_neighbor_top = NodePath("../../Actions/Equip")
+focus_neighbor_bottom = NodePath("../OpenJourney")
 text = "OPEN TECHNOLOGY TREE"
+
+[node name="OpenJourney" type="Button" parent="EquipmentPanel/Margin/VBox/ProgressionActions"]
+custom_minimum_size = Vector2(330, 42)
+focus_neighbor_top = NodePath("../OpenTechnology")
+focus_neighbor_bottom = NodePath("../../Close")
+text = "OPEN JOURNEY JOURNAL"
 
 [node name="Close" type="Button" parent="EquipmentPanel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 36)
-focus_neighbor_top = NodePath("../OpenTechnology")
+focus_neighbor_top = NodePath("../ProgressionActions/OpenJourney")
 text = "CLOSE  (B / ESC)"
 
 [node name="TechnologyPage" type="MarginContainer" parent="EquipmentPanel"]
@@ -396,6 +441,68 @@ text = "LEARN TECHNOLOGY"
 [node name="Back" type="Button" parent="EquipmentPanel/TechnologyPage/VBox/Actions"]
 custom_minimum_size = Vector2(110, 42)
 focus_neighbor_left = NodePath("../Learn")
+focus_neighbor_right = NodePath("../Previous")
+text = "BACK"
+
+[node name="JourneyPage" type="MarginContainer" parent="EquipmentPanel"]
+visible = false
+theme_override_constants/margin_left = 42
+theme_override_constants/margin_top = 34
+theme_override_constants/margin_right = 42
+theme_override_constants/margin_bottom = 34
+
+[node name="VBox" type="VBoxContainer" parent="EquipmentPanel/JourneyPage"]
+theme_override_constants/separation = 18
+
+[node name="Heading" type="Label" parent="EquipmentPanel/JourneyPage/VBox"]
+theme_override_colors/font_color = Color(1, 0.78, 0.34, 1)
+theme_override_font_sizes/font_size = 27
+text = "FIRST-HOUR JOURNEY  •  0 / 11 COMPLETE"
+horizontal_alignment = 1
+
+[node name="Route" type="Label" parent="EquipmentPanel/JourneyPage/VBox"]
+custom_minimum_size = Vector2(0, 250)
+theme_override_colors/font_color = Color(0.62, 0.84, 0.78, 1)
+theme_override_font_sizes/font_size = 18
+text = "GATHER  →  PREPARE  →  LEARN\n\nFIGHT  →  LOOT  →  RECOVER SHARD\n\nINSTALL ISLAND  →  ESTABLISH PRODUCTION"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Details" type="Label" parent="EquipmentPanel/JourneyPage/VBox"]
+custom_minimum_size = Vector2(0, 210)
+theme_override_colors/font_color = Color(0.94, 0.96, 0.89, 1)
+theme_override_font_sizes/font_size = 20
+text = "SHELTER MATERIALS  •  ACTIVE\nHarvest 3 Wood for tools and shelter.\nPROGRESS  0 / 3\nREWARD  1 STONE"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="Actions" type="HBoxContainer" parent="EquipmentPanel/JourneyPage/VBox"]
+alignment = 1
+theme_override_constants/separation = 14
+
+[node name="Previous" type="Button" parent="EquipmentPanel/JourneyPage/VBox/Actions"]
+custom_minimum_size = Vector2(145, 48)
+focus_neighbor_left = NodePath("../Back")
+focus_neighbor_right = NodePath("../Next")
+text = "< PREVIOUS"
+
+[node name="Count" type="Label" parent="EquipmentPanel/JourneyPage/VBox/Actions"]
+custom_minimum_size = Vector2(90, 48)
+theme_override_font_sizes/font_size = 18
+text = "1 / 11"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Next" type="Button" parent="EquipmentPanel/JourneyPage/VBox/Actions"]
+custom_minimum_size = Vector2(145, 48)
+focus_neighbor_left = NodePath("../Previous")
+focus_neighbor_right = NodePath("../Back")
+text = "NEXT >"
+
+[node name="Back" type="Button" parent="EquipmentPanel/JourneyPage/VBox/Actions"]
+custom_minimum_size = Vector2(130, 48)
+focus_neighbor_left = NodePath("../Next")
 focus_neighbor_right = NodePath("../Previous")
 text = "BACK"
 
@@ -620,7 +727,7 @@ horizontal_alignment = 1
 
 [node name="Slot" type="Label" parent="SystemPanel/Margin/VBox"]
 theme_override_font_sizes/font_size = 17
-text = "LOCAL SLOT • SCHEMA VERSION 7"
+text = "LOCAL SLOT • SCHEMA VERSION 10"
 horizontal_alignment = 1
 
 [node name="Feedback" type="Label" parent="SystemPanel/Margin/VBox"]
@@ -807,6 +914,158 @@ text = "REMOVE"
 [node name="Close" type="Button" parent="IslandPanel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 45)
 text = "CANCEL / CLOSE  (B / ESC)"
+
+[node name="ContractPanel" type="PanelContainer" parent="."]
+visible = false
+offset_left = 285.0
+offset_top = 150.0
+offset_right = 995.0
+offset_bottom = 625.0
+theme_override_styles/panel = SubResource("IslandPanelStyle")
+theme = ExtResource("2")
+
+[node name="Margin" type="MarginContainer" parent="ContractPanel"]
+theme_override_constants/margin_left = 34
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 34
+theme_override_constants/margin_bottom = 30
+
+[node name="VBox" type="VBoxContainer" parent="ContractPanel/Margin"]
+theme_override_constants/separation = 20
+
+[node name="Header" type="Label" parent="ContractPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(0.52, 0.95, 0.78, 1)
+theme_override_font_sizes/font_size = 19
+text = "WAYFINDER CONTRACT  •  MIRA, CARTOGRAPHER"
+horizontal_alignment = 1
+
+[node name="Title" type="Label" parent="ContractPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(1, 0.84, 0.38, 1)
+theme_override_font_sizes/font_size = 28
+text = "SUNLIT SURVEY"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Details" type="Label" parent="ContractPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 118)
+theme_override_font_sizes/font_size = 20
+text = "Attune two sun markers while the sky is clear.\n\nPROGRESS  0 / 2"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="Reward" type="Label" parent="ContractPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 64)
+theme_override_colors/font_color = Color(0.76, 0.88, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "REWARD  1 EXPEDITION MARK  •  SEEDED RARE GEAR  •  ISLAND SHARD"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="Actions" type="HBoxContainer" parent="ContractPanel/Margin/VBox"]
+alignment = 1
+theme_override_constants/separation = 18
+
+[node name="Action" type="Button" parent="ContractPanel/Margin/VBox/Actions"]
+custom_minimum_size = Vector2(280, 54)
+focus_neighbor_left = NodePath("../Close")
+focus_neighbor_right = NodePath("../Close")
+text = "ACCEPT CONTRACT"
+
+[node name="Close" type="Button" parent="ContractPanel/Margin/VBox/Actions"]
+custom_minimum_size = Vector2(190, 54)
+focus_neighbor_left = NodePath("../Action")
+focus_neighbor_right = NodePath("../Action")
+text = "NOT NOW  (B)"
+
+[node name="Hint" type="Label" parent="ContractPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(0.62, 0.74, 0.75, 1)
+theme_override_font_sizes/font_size = 16
+text = "Contracts never expire while active. Weather changes only reroll completed work."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="IslandStoryPanel" type="PanelContainer" parent="."]
+visible = false
+offset_left = 205.0
+offset_top = 105.0
+offset_right = 1075.0
+offset_bottom = 690.0
+theme_override_styles/panel = SubResource("IslandPanelStyle")
+theme = ExtResource("2")
+
+[node name="Margin" type="MarginContainer" parent="IslandStoryPanel"]
+theme_override_constants/margin_left = 34
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 34
+theme_override_constants/margin_bottom = 28
+
+[node name="VBox" type="VBoxContainer" parent="IslandStoryPanel/Margin"]
+theme_override_constants/separation = 18
+
+[node name="Header" type="Label" parent="IslandStoryPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(0.52, 0.95, 0.78, 1)
+theme_override_font_sizes/font_size = 19
+text = "ISLAND STORY  •  TALA, SHARD WARDEN"
+horizontal_alignment = 1
+
+[node name="Title" type="Label" parent="IslandStoryPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(1, 0.84, 0.38, 1)
+theme_override_font_sizes/font_size = 27
+text = "ECHOES OF THE VERDANT CRUCIBLE"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Details" type="Label" parent="IslandStoryPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 148)
+theme_override_font_sizes/font_size = 20
+text = "Survey the installed island before choosing its fate."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="Reward" type="Label" parent="IslandStoryPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 76)
+theme_override_colors/font_color = Color(0.76, 0.88, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "RESTORE OR PURGE  •  YOUR CHOICE CHANGES THE FINAL LOOT"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="Actions" type="HBoxContainer" parent="IslandStoryPanel/Margin/VBox"]
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="ActionA" type="Button" parent="IslandStoryPanel/Margin/VBox/Actions"]
+custom_minimum_size = Vector2(238, 54)
+focus_neighbor_left = NodePath("../ActionC")
+focus_neighbor_right = NodePath("../ActionB")
+text = "BEGIN SURVEY"
+
+[node name="ActionB" type="Button" parent="IslandStoryPanel/Margin/VBox/Actions"]
+custom_minimum_size = Vector2(238, 54)
+focus_neighbor_left = NodePath("../ActionA")
+focus_neighbor_right = NodePath("../ActionC")
+text = "PURGE CORRUPTION"
+
+[node name="ActionC" type="Button" parent="IslandStoryPanel/Margin/VBox/Actions"]
+custom_minimum_size = Vector2(238, 54)
+focus_neighbor_left = NodePath("../ActionB")
+focus_neighbor_right = NodePath("../ActionA")
+text = "FIELD SUPPLIES"
+
+[node name="Close" type="Button" parent="IslandStoryPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 48)
+text = "CLOSE  (B / ESC)"
+
+[node name="Hint" type="Label" parent="IslandStoryPanel/Margin/VBox"]
+theme_override_colors/font_color = Color(0.62, 0.74, 0.75, 1)
+theme_override_font_sizes/font_size = 16
+text = "Island stories persist with their shard. Removing the island suspends its physical actors."
+horizontal_alignment = 1
+autowrap_mode = 2
 
 [node name="EncounterStatus" type="Label" parent="."]
 visible = false

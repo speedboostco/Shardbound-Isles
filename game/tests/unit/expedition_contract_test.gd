@@ -1,0 +1,58 @@
+extends RefCounted
+
+const CONTRACT_PATH := "res://game/core/expedition_contract.gd"
+
+func run(support: TestSupport) -> void:
+	var Contract: Variant = load(CONTRACT_PATH)
+	support.expect(Contract != null, "expedition contract rules must load")
+	if Contract == null:
+		return
+	var rain: Dictionary = Contract.generate(314159, 2, "Forest", "rain")
+	support.expect(Contract.validate_definition(rain).is_empty(), "generated rain contract satisfies its complete data contract")
+	support.expect(rain.objective_kind == "forage" and int(rain.target) == 3 and rain.event_type == "rainbloom", "rain authors a forage-specific objective and event identity")
+	var repeat: Dictionary = Contract.generate(314159, 2, "Forest", "rain")
+	support.expect(repeat == rain, "same seed, day, biome, and weather reproduce the exact contract and loot seeds")
+	var changed: Dictionary = Contract.generate(314160, 2, "Forest", "rain")
+	support.expect(changed.contract_id == rain.contract_id and changed.reward != rain.reward, "world seed changes rewards without changing authored objective identity")
+	var clear: Dictionary = Contract.generate(314159, 2, "Forest", "clear")
+	var fog: Dictionary = Contract.generate(314159, 2, "Forest", "fog")
+	var gale: Dictionary = Contract.generate(314159, 2, "Forest", "gale")
+	support.expect(clear.objective_kind == "weather_event" and clear.event_type == "sun_marker" and int(clear.target) == 2, "clear weather authors a landmark interaction quest")
+	support.expect(fog.objective_kind == "weather_event" and fog.event_type == "wisp_cache" and int(fog.target) == 2, "fog authors a hidden-cache interaction quest")
+	support.expect(gale.objective_kind == "gather_wood" and int(gale.target) == 4 and gale.event_type == "windfall", "gale authors a timber gathering quest")
+	support.expect((rain.reward as Dictionary).keys().all(func(key: Variant) -> bool: return key in ["expedition_marks", "equipment_seed", "shard_seed", "shard_level"]), "contract reward describes only supported inventory and loot outputs")
+
+	var contract: Variant = Contract.new()
+	support.expect(contract.status == "none" and contract.objective_text() == "NO ACTIVE CONTRACT", "new contract state is empty and readable")
+	var offered: Dictionary = contract.ensure_offer(314159, 2, "Forest", "rain")
+	support.expect(contract.status == "offered" and offered == rain, "ensure offer creates the current deterministic contract")
+	support.expect(contract.ensure_offer(1, 9, "Swamp", "fog") == offered, "an unresolved offer cannot be silently rerolled")
+	support.expect(contract.accept() and contract.status == "active", "offered contract accepts exactly once")
+	support.expect(not contract.accept(), "active contract rejects duplicate acceptance")
+	var wrong: Dictionary = contract.record("gather_wood", 4)
+	support.expect(not bool(wrong.accepted) and contract.progress == 0, "unrelated gameplay cannot advance a contract")
+	var first: Dictionary = contract.record("forage", 1, "fiber_west")
+	support.expect(bool(first.accepted) and not bool(first.completed_now) and contract.progress == 1, "matching gameplay advances exact progress")
+	var duplicate: Dictionary = contract.record("forage", 1, "fiber_west")
+	support.expect(not bool(duplicate.accepted) and contract.progress == 1, "stable event token blocks duplicate quest credit")
+	var completed: Dictionary = contract.record("forage", 9, "emberberry_north")
+	support.expect(bool(completed.completed_now) and contract.progress == 3 and contract.status == "completed", "progress clamps at target and completes once")
+	support.expect(not bool(contract.record("forage", 1, "fiber_south").accepted), "completed contract cannot receive extra progress")
+	var claimed: Dictionary = contract.claim()
+	support.expect(bool(claimed.success) and claimed.reward == rain.reward and contract.status == "claimed", "claim returns the authored reward and closes the contract")
+	support.expect(not bool(contract.claim().success), "claimed reward cannot be duplicated")
+	var next_offer: Dictionary = contract.ensure_offer(314159, 3, "Forest", "fog")
+	support.expect(contract.status == "offered" and next_offer.contract_id != rain.contract_id and contract.progress == 0, "claimed contract rolls forward to a new day")
+	support.expect(contract.decline() and contract.status == "none" and contract.definition.is_empty(), "decline clears only an unresolved offer")
+
+	contract.ensure_offer(314159, 2, "Forest", "rain")
+	contract.accept()
+	contract.record("forage", 1, "fiber_west")
+	var saved: Dictionary = contract.to_dictionary()
+	var restored: Variant = Contract.new()
+	support.expect(restored.restore(saved) and restored.to_dictionary() == saved, "active contract and claimed event IDs round-trip through primitive state")
+	support.expect(not restored.restore({"definition": rain, "status": "active", "progress": 3, "claimed_event_ids": []}), "active state at target is rejected")
+	support.expect(not restored.restore({"definition": rain, "status": "active", "progress": 1, "claimed_event_ids": ["same", "same"]}), "duplicate claimed event IDs are rejected")
+	var invalid := rain.duplicate(true)
+	invalid["weather"] = "meteor"
+	support.expect(not Contract.validate_definition(invalid).is_empty(), "unsupported contract weather fails validation")

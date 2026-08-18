@@ -2,9 +2,16 @@ class_name SaveService
 extends RefCounted
 
 const TechnologyTreeScript := preload("res://game/core/technology_tree.gd")
+const SurvivalPreparationScript := preload("res://game/core/survival_preparation.gd")
+const JourneyJournalScript := preload("res://game/core/journey_journal.gd")
+const ExpeditionCycleScript := preload("res://game/core/expedition_cycle.gd")
+const RenewableForageStateScript := preload("res://game/core/renewable_forage_state.gd")
+const ExpeditionContractScript := preload("res://game/core/expedition_contract.gd")
+const IslandStoryQuestScript := preload("res://game/core/island_story_quest.gd")
 
-const SCHEMA_VERSION: int = 7
+const SCHEMA_VERSION: int = 11
 const DEFAULT_WORLD_SEED: int = 73000
+const FORAGE_REGROW_LIMITS: Dictionary = {"fiber_west": 45.0, "fiber_south": 45.0, "emberberry_north": 60.0, "emberberry_east": 60.0}
 
 func encode(state: Dictionary) -> String:
 	return JSON.stringify({"schema_version": SCHEMA_VERSION, "state": state})
@@ -20,7 +27,7 @@ func decode(payload: String) -> Dictionary:
 	if not document.has("schema_version"):
 		return {"ok": false, "error": "missing_schema"}
 	var version := int(document.get("schema_version", -1))
-	if version not in [1, 2, 3, 4, 5, 6, SCHEMA_VERSION]:
+	if version not in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, SCHEMA_VERSION]:
 		return {"ok": false, "error": "unsupported_schema"}
 	if not document.get("state") is Dictionary:
 		return {"ok": false, "error": "missing_state"}
@@ -58,6 +65,19 @@ func decode(payload: String) -> Dictionary:
 		legacy_player["mana"] = 60.0
 		legacy_player["maximum_mana"] = 60.0
 		legacy_player["mana_regeneration"] = 6.0
+	if version <= 7:
+		state["fiber"] = 0
+		state["emberberry"] = 0
+		state["survival"] = SurvivalPreparationScript.default_state()
+		state["journey"] = JourneyJournalScript.default_state()
+	if version <= 8:
+		state["expedition"] = ExpeditionCycleScript.default_state(DEFAULT_WORLD_SEED)
+		state["forage"] = _default_forage_state()
+	if version <= 9:
+		state["expedition_marks"] = 0
+		state["expedition_contract"] = ExpeditionContractScript.default_state()
+	if version <= 10:
+		state["island_story"] = IslandStoryQuestScript.default_state()
 	if not _is_valid_state(state):
 		return {"ok": false, "error": "invalid_state"}
 	var result := {"ok": true, "schema_version": SCHEMA_VERSION, "state": _normalize_state(state)}
@@ -102,7 +122,7 @@ func load_from_path(path: String) -> Dictionary:
 	return decode(file.get_as_text())
 
 func _is_valid_state(state: Dictionary) -> bool:
-	if not state.get("player") is Dictionary or not state.get("equipment") is Dictionary or not state.get("tidecatcher") is Dictionary or not state.get("islands") is Dictionary or not state.get("base") is Dictionary or not state.get("technologies") is Dictionary:
+	if not state.get("player") is Dictionary or not state.get("equipment") is Dictionary or not state.get("tidecatcher") is Dictionary or not state.get("islands") is Dictionary or not state.get("base") is Dictionary or not state.get("technologies") is Dictionary or not state.get("survival") is Dictionary or not state.get("journey") is Dictionary or not state.get("expedition") is Dictionary or not state.get("forage") is Dictionary or not state.get("expedition_contract") is Dictionary or not state.get("island_story") is Dictionary:
 		return false
 	var player := state.player as Dictionary
 	var equipment := state.equipment as Dictionary
@@ -110,12 +130,18 @@ func _is_valid_state(state: Dictionary) -> bool:
 	var islands := state.islands as Dictionary
 	var base := state.base as Dictionary
 	var technologies := state.technologies as Dictionary
+	var survival := state.survival as Dictionary
+	var journey := state.journey as Dictionary
+	var expedition := state.expedition as Dictionary
+	var forage := state.forage as Dictionary
+	var expedition_contract := state.expedition_contract as Dictionary
+	var island_story := state.island_story as Dictionary
 	if not player.get("position") is Dictionary or not equipment.get("items") is Array:
 		return false
 	if not islands.get("inventory") is Array or not islands.get("installed") is Dictionary or not islands.get("archipelago") is Dictionary:
 		return false
 	var position := player.position as Dictionary
-	var required_values: Array[Variant] = [player.get("health"), player.get("maximum_health"), player.get("mana"), player.get("maximum_mana"), player.get("mana_regeneration"), position.get("x"), position.get("y"), state.get("wood"), state.get("stone"), state.get("moonleaf"), state.get("plank"), equipment.get("scrap"), tidecatcher.get("stored_wood"), base.get("saved_unix")]
+	var required_values: Array[Variant] = [player.get("health"), player.get("maximum_health"), player.get("mana"), player.get("maximum_mana"), player.get("mana_regeneration"), position.get("x"), position.get("y"), state.get("wood"), state.get("stone"), state.get("moonleaf"), state.get("plank"), state.get("fiber"), state.get("emberberry"), state.get("expedition_marks"), equipment.get("scrap"), tidecatcher.get("stored_wood"), base.get("saved_unix")]
 	for value: Variant in required_values:
 		if not (value is int or value is float):
 			return false
@@ -123,6 +149,19 @@ func _is_valid_state(state: Dictionary) -> bool:
 		return false
 	if not technologies.get("learned") is Array or not TechnologyTreeScript.new().restore(technologies.learned as Array):
 		return false
+	if not SurvivalPreparationScript.new().restore(survival) or not JourneyJournalScript.new().restore(journey):
+		return false
+	if not ExpeditionCycleScript.new().restore(expedition) or forage.size() != FORAGE_REGROW_LIMITS.size():
+		return false
+	if int(state.get("expedition_marks", -1)) < 0 or not ExpeditionContractScript.new().restore(expedition_contract):
+		return false
+	if not IslandStoryQuestScript.new().restore(island_story):
+		return false
+	for forage_id: String in FORAGE_REGROW_LIMITS:
+		if not forage.get(forage_id) is Dictionary:
+			return false
+		if not RenewableForageStateScript.new().restore(forage[forage_id] as Dictionary, float(FORAGE_REGROW_LIMITS[forage_id])):
+			return false
 	if float(player.get("maximum_mana", 0.0)) <= 0.0 or float(player.get("mana", -1.0)) < 0.0 or float(player.get("mana", 0.0)) > float(player.get("maximum_mana", 0.0)) or float(player.get("mana_regeneration", -1.0)) < 0.0:
 		return false
 	for slot_value: Variant in (equipment.get("equipped_slots") as Dictionary):
@@ -209,6 +248,8 @@ func _normalize_state(state: Dictionary) -> Dictionary:
 		"stone": int(state.stone),
 		"moonleaf": int(state.moonleaf),
 		"plank": int(state.plank),
+		"fiber": int(state.fiber),
+		"emberberry": int(state.emberberry),
 		"equipment": {
 			"scrap": int(equipment.scrap),
 			"equipped_id": String(equipment.equipped_id),
@@ -229,7 +270,20 @@ func _normalize_state(state: Dictionary) -> Dictionary:
 			"saved_unix": int(base.saved_unix),
 		},
 		"technologies": {"learned": (state.technologies.learned as Array).duplicate()},
+		"survival": (state.survival as Dictionary).duplicate(true),
+		"journey": (state.journey as Dictionary).duplicate(true),
+		"expedition": (state.expedition as Dictionary).duplicate(true),
+		"forage": (state.forage as Dictionary).duplicate(true),
+		"expedition_marks": int(state.expedition_marks),
+		"expedition_contract": (state.expedition_contract as Dictionary).duplicate(true),
+		"island_story": (state.island_story as Dictionary).duplicate(true),
 	}
+
+static func _default_forage_state() -> Dictionary:
+	var result: Dictionary = {}
+	for forage_id: String in FORAGE_REGROW_LIMITS:
+		result[forage_id] = RenewableForageStateScript.default_state()
+	return result
 
 func _default_base_state() -> Dictionary:
 	return {"placement": BasePlacementModel.new().to_dictionary(), "storage": SharedStorage.new().to_dictionary(), "lumber_mill": LumberMillSimulation.new().to_dictionary(), "collector": CollectorSimulation.new().to_dictionary(), "crafted_kits": {"lumber_mill_kit": false, "collector_kit": false}, "saved_unix": 0}

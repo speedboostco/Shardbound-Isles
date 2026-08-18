@@ -29,6 +29,7 @@ const STRUCTURES_V3_ATLAS: Texture2D = preload("res://assets/original/emberwood/
 const VFX_V3_ATLAS: Texture2D = preload("res://assets/original/emberwood/emberwood_vfx_v3_atlas.png")
 const TERRAIN_V3_ATLAS: Texture2D = preload("res://assets/original/emberwood/emberwood_terrain_v3.png")
 const LIVING_WORLD_V1_ATLAS: Texture2D = preload("res://assets/original/emberwood/emberwood_living_world_v1_atlas.png")
+const FOREST_WARDEN_V1_ATLAS: Texture2D = preload("res://assets/original/emberwood/emberwood_forest_warden_v1_atlas.png")
 const HANDDRAWN_TERRAIN_ATLAS: Texture2D = PUNY_WORLD_ATLAS
 const HANDDRAWN_DECO_ATLAS: Texture2D = PUNY_WORLD_ATLAS
 const CELL_SIZE: int = 64
@@ -161,7 +162,7 @@ static func resource_texture(kind: String, frame: int = 0, depleted: bool = fals
 	return world_object_texture("mushroom" if depleted else "flower")
 
 static func resource_pickup_texture(kind: String) -> AtlasTexture:
-	var column := {"wood": 0, "stone": 1, "moonleaf": 2, "plank": 3}.get(kind, 0) as int
+	var column := {"wood": 0, "stone": 1, "moonleaf": 2, "plank": 3, "fiber": 0, "emberberry": 2}.get(kind, 0) as int
 	return _atlas_texture(RESOURCES_V3_ATLAS, Vector2i(column, 3))
 
 static func structure_texture(structure_id: String, active: bool = false) -> AtlasTexture:
@@ -185,6 +186,20 @@ static func vfx_texture(effect_id: String, frame: int) -> AtlasTexture:
 
 static func vfx_frame_count() -> int:
 	return 7
+
+static func forest_warden_texture(state_name: String, frame: int = 0) -> AtlasTexture:
+	var cells: Array[Vector2i]
+	match state_name:
+		"idle": cells = [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0)]
+		"move": cells = [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)]
+		"attack": cells = [Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2)]
+		"hit": cells = [Vector2i(0, 3), Vector2i(1, 3)]
+		"death": cells = [Vector2i(2, 3), Vector2i(3, 3)]
+		_: cells = [Vector2i.ZERO]
+	return _atlas_texture(FOREST_WARDEN_V1_ATLAS, cells[posmod(frame, cells.size())])
+
+static func forest_warden_frame_count(state_name: String) -> int:
+	return {"idle": 4, "move": 4, "attack": 4, "hit": 2, "death": 2}.get(state_name, 1) as int
 
 static func _animation_cells(actor_id: String, state_name: String, facing: String, elite: bool) -> Array[Vector2i]:
 	if actor_id.begins_with("hero") or actor_id in ["slime", "ranger", "boss"]:
@@ -302,4 +317,6 @@ static func validate_contract() -> Array[String]:
 		errors.append("Emberwood v3 terrain atlas must be 256x256")
 	if LIVING_WORLD_V1_ATLAS.get_width() != 256 or LIVING_WORLD_V1_ATLAS.get_height() != 256:
 		errors.append("Emberwood living-world atlas must be 256x256")
+	if FOREST_WARDEN_V1_ATLAS.get_width() != 256 or FOREST_WARDEN_V1_ATLAS.get_height() != 256:
+		errors.append("Forest Warden v1 atlas must be 256x256")
 	return errors

@@ -28,6 +28,12 @@ signal island_panel_closed
 signal island_install_requested(index: int, slot_id: String)
 signal island_remove_requested(slot_id: String)
 signal rift_requested
+signal contract_accept_requested
+signal contract_claim_requested
+signal contract_decline_requested
+signal contract_panel_closed
+signal island_story_action_requested(action_id: String)
+signal island_story_panel_closed
 
 @onready var health_label: Label = $Margin/VBox/Health
 @onready var health_bar: ProgressBar = $Margin/VBox/HealthBar
@@ -54,7 +60,8 @@ signal rift_requested
 @onready var affix_label: Label = $EquipmentPanel/Margin/VBox/TooltipScroll/Affix
 @onready var equipped_label: Label = $EquipmentPanel/Margin/VBox/Equipped
 @onready var scrap_label: Label = $EquipmentPanel/Margin/VBox/Scrap
-@onready var open_technology_button: Button = $EquipmentPanel/Margin/VBox/OpenTechnology
+@onready var open_technology_button: Button = $EquipmentPanel/Margin/VBox/ProgressionActions/OpenTechnology
+@onready var open_journey_button: Button = $EquipmentPanel/Margin/VBox/ProgressionActions/OpenJourney
 @onready var technology_page: MarginContainer = $EquipmentPanel/TechnologyPage
 @onready var technology_heading_label: Label = $EquipmentPanel/TechnologyPage/VBox/Heading
 @onready var technology_tree_view: Variant = $EquipmentPanel/TechnologyPage/VBox/TreeGraph
@@ -64,6 +71,13 @@ signal rift_requested
 @onready var technology_next_button: Button = $EquipmentPanel/TechnologyPage/VBox/Actions/Next
 @onready var technology_learn_button: Button = $EquipmentPanel/TechnologyPage/VBox/Actions/Learn
 @onready var technology_back_button: Button = $EquipmentPanel/TechnologyPage/VBox/Actions/Back
+@onready var journey_page: MarginContainer = $EquipmentPanel/JourneyPage
+@onready var journey_heading_label: Label = $EquipmentPanel/JourneyPage/VBox/Heading
+@onready var journey_details_label: Label = $EquipmentPanel/JourneyPage/VBox/Details
+@onready var journey_previous_button: Button = $EquipmentPanel/JourneyPage/VBox/Actions/Previous
+@onready var journey_count_label: Label = $EquipmentPanel/JourneyPage/VBox/Actions/Count
+@onready var journey_next_button: Button = $EquipmentPanel/JourneyPage/VBox/Actions/Next
+@onready var journey_back_button: Button = $EquipmentPanel/JourneyPage/VBox/Actions/Back
 @onready var equip_button: Button = $EquipmentPanel/Margin/VBox/Actions/Equip
 @onready var salvage_button: Button = $EquipmentPanel/Margin/VBox/Actions/Salvage
 @onready var favorite_button: Button = $EquipmentPanel/Margin/VBox/Actions/Favorite
@@ -108,6 +122,23 @@ signal rift_requested
 @onready var rift_label: Label = $RiftStatus
 @onready var interaction_prompt: Label = $InteractionPrompt
 @onready var objective_label: Label = $Objective
+@onready var expedition_status_label: Label = $ExpeditionStatus
+@onready var contract_status_label: Label = $ContractStatus
+@onready var island_story_status_label: Label = $IslandStoryStatus
+@onready var contract_panel: PanelContainer = $ContractPanel
+@onready var contract_title_label: Label = $ContractPanel/Margin/VBox/Title
+@onready var contract_details_label: Label = $ContractPanel/Margin/VBox/Details
+@onready var contract_reward_label: Label = $ContractPanel/Margin/VBox/Reward
+@onready var contract_action_button: Button = $ContractPanel/Margin/VBox/Actions/Action
+@onready var contract_close_button: Button = $ContractPanel/Margin/VBox/Actions/Close
+@onready var island_story_panel: PanelContainer = $IslandStoryPanel
+@onready var island_story_title_label: Label = $IslandStoryPanel/Margin/VBox/Title
+@onready var island_story_details_label: Label = $IslandStoryPanel/Margin/VBox/Details
+@onready var island_story_reward_label: Label = $IslandStoryPanel/Margin/VBox/Reward
+@onready var island_story_action_a: Button = $IslandStoryPanel/Margin/VBox/Actions/ActionA
+@onready var island_story_action_b: Button = $IslandStoryPanel/Margin/VBox/Actions/ActionB
+@onready var island_story_action_c: Button = $IslandStoryPanel/Margin/VBox/Actions/ActionC
+@onready var island_story_close_button: Button = $IslandStoryPanel/Margin/VBox/Close
 
 var _items: Array[Dictionary] = []
 var _equipped_id: String = ""
@@ -131,6 +162,9 @@ var _workbench_stone: int = 0
 var _workbench_moonleaf: int = 0
 var _workbench_scrap: int = 0
 var _workbench_plank: int = 0
+var _workbench_fiber: int = 0
+var _workbench_emberberry: int = 0
+var _ration_capacity: int = 0
 var _heart_crafted: bool = false
 var _whetstone_crafted: bool = false
 var _herbal_compass_crafted: bool = false
@@ -142,6 +176,8 @@ var _archipelago_data: Dictionary = {}
 var _selected_island_index: int = 0
 var _selected_island_slot_index: int = 0
 var _pending_island_action: String = ""
+var _journey_entries: Array[Dictionary] = []
+var _selected_journey_index: int = 0
 const ISLAND_SLOT_IDS: Array[String] = ["east", "north_east", "south_east"]
 
 func _ready() -> void:
@@ -152,10 +188,14 @@ func _ready() -> void:
 	favorite_button.pressed.connect(_toggle_selected_favorite)
 	unequip_button.pressed.connect(func() -> void: unequip_requested.emit())
 	open_technology_button.pressed.connect(open_technology_page)
+	open_journey_button.pressed.connect(open_journey_page)
 	technology_previous_button.pressed.connect(func() -> void: _select_relative_technology(-1))
 	technology_next_button.pressed.connect(func() -> void: _select_relative_technology(1))
 	technology_learn_button.pressed.connect(_request_selected_technology)
 	technology_back_button.pressed.connect(close_technology_page)
+	journey_previous_button.pressed.connect(func() -> void: _select_relative_journey(-1))
+	journey_next_button.pressed.connect(func() -> void: _select_relative_journey(1))
+	journey_back_button.pressed.connect(close_journey_page)
 	$EquipmentPanel/Margin/VBox/Close.pressed.connect(close_equipment_panel)
 	workbench_previous_button.pressed.connect(func() -> void: _select_relative_recipe(-1))
 	workbench_next_button.pressed.connect(func() -> void: _select_relative_recipe(1))
@@ -180,9 +220,28 @@ func _ready() -> void:
 	island_install_button.pressed.connect(_request_selected_island_install)
 	island_remove_button.pressed.connect(_request_selected_island_remove)
 	$IslandPanel/Margin/VBox/Close.pressed.connect(close_island_panel)
+	contract_action_button.pressed.connect(_on_contract_action_pressed)
+	contract_close_button.pressed.connect(_on_contract_close_pressed)
+	island_story_action_a.pressed.connect(func() -> void: island_story_action_requested.emit(String(island_story_action_a.get_meta("action_id", ""))))
+	island_story_action_b.pressed.connect(func() -> void: island_story_action_requested.emit(String(island_story_action_b.get_meta("action_id", ""))))
+	island_story_action_c.pressed.connect(func() -> void: island_story_action_requested.emit(String(island_story_action_c.get_meta("action_id", ""))))
+	island_story_close_button.pressed.connect(close_island_story_panel)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if technology_page.visible and event.is_action_pressed("ui_cancel"):
+	if island_story_panel.visible:
+		if event.is_action_pressed("ui_cancel"):
+			close_island_story_panel()
+			get_viewport().set_input_as_handled()
+		return
+	if contract_panel.visible:
+		if event.is_action_pressed("ui_cancel"):
+			close_contract_panel()
+			get_viewport().set_input_as_handled()
+		return
+	if journey_page.visible and event.is_action_pressed("ui_cancel"):
+		close_journey_page()
+		get_viewport().set_input_as_handled()
+	elif technology_page.visible and event.is_action_pressed("ui_cancel"):
 		close_technology_page()
 		get_viewport().set_input_as_handled()
 	elif equipment_panel.visible and not technology_page.visible and event.is_action_pressed("islands"):
@@ -200,23 +259,23 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("equipment"):
 		if equipment_panel.visible:
 			close_equipment_panel()
-		elif not workbench_panel.visible and not system_panel.visible and not island_panel.visible:
+		elif not workbench_panel.visible and not system_panel.visible and not island_panel.visible and not contract_panel.visible and not island_story_panel.visible:
 			equipment_panel_requested.emit()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("craft"):
 		if workbench_panel.visible:
 			close_workbench_panel()
-		elif not equipment_panel.visible and not system_panel.visible and not island_panel.visible:
+		elif not equipment_panel.visible and not system_panel.visible and not island_panel.visible and not contract_panel.visible and not island_story_panel.visible:
 			workbench_panel_requested.emit()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("islands"):
 		if island_panel.visible:
 			close_island_panel()
-		elif not equipment_panel.visible and not workbench_panel.visible and not system_panel.visible:
+		elif not equipment_panel.visible and not workbench_panel.visible and not system_panel.visible and not contract_panel.visible and not island_story_panel.visible:
 			island_panel_requested.emit()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("rift"):
-		if not equipment_panel.visible and not workbench_panel.visible and not system_panel.visible and not island_panel.visible:
+		if not equipment_panel.visible and not workbench_panel.visible and not system_panel.visible and not island_panel.visible and not contract_panel.visible and not island_story_panel.visible:
 			rift_requested.emit()
 		get_viewport().set_input_as_handled()
 	elif equipment_panel.visible and event.is_action_pressed("ui_cancel"):
@@ -276,6 +335,147 @@ func set_interaction_prompt(label: String) -> void:
 func set_objective(text_value: String) -> void:
 	objective_label.text = text_value
 
+func set_expedition_status(text_value: String) -> void:
+	expedition_status_label.text = text_value
+
+func set_contract_status(text_value: String) -> void:
+	contract_status_label.visible = not text_value.is_empty() and not contract_panel.visible and not island_story_panel.visible
+	contract_status_label.text = text_value
+
+func set_island_story_status(text_value: String) -> void:
+	island_story_status_label.visible = not text_value.is_empty() and not island_story_panel.visible
+	island_story_status_label.text = text_value
+
+func present_contract(definition: Dictionary, status: String, progress: int) -> void:
+	if definition.is_empty():
+		contract_title_label.text = "NO CONTRACT AVAILABLE"
+		contract_details_label.text = "Return when the expedition cycle changes."
+		contract_reward_label.text = ""
+		contract_action_button.visible = false
+		return
+	contract_title_label.text = "%s  •  %s %s" % [String(definition.title).to_upper(), String(definition.biome).to_upper(), String(definition.weather).to_upper()]
+	contract_details_label.text = "%s\n\nPROGRESS  %d / %d" % [String(definition.instruction), progress, int(definition.target)]
+	contract_reward_label.text = "REWARD  1 EXPEDITION MARK  •  SEEDED RARE GEAR  •  ISLAND SHARD"
+	contract_action_button.visible = status in ["offered", "completed"]
+	contract_action_button.text = "ACCEPT CONTRACT" if status == "offered" else "CLAIM LOOT"
+
+func open_contract_panel(definition: Dictionary, status: String, progress: int) -> void:
+	present_contract(definition, status, progress)
+	encounter_label.visible = false
+	rift_label.visible = false
+	interaction_prompt.visible = false
+	objective_label.visible = false
+	contract_status_label.visible = false
+	island_story_status_label.visible = false
+	contract_panel.visible = true
+	if contract_action_button.visible:
+		contract_action_button.grab_focus()
+	else:
+		contract_close_button.grab_focus()
+
+func close_contract_panel() -> void:
+	contract_panel.visible = false
+	objective_label.visible = true
+	contract_status_label.visible = not contract_status_label.text.is_empty()
+	island_story_status_label.visible = not island_story_status_label.text.is_empty()
+	contract_panel_closed.emit()
+
+func is_contract_panel_open() -> bool:
+	return contract_panel.visible
+
+func _on_contract_action_pressed() -> void:
+	if contract_action_button.text.begins_with("CLAIM"):
+		contract_claim_requested.emit()
+	else:
+		contract_accept_requested.emit()
+
+func _on_contract_close_pressed() -> void:
+	contract_decline_requested.emit()
+	close_contract_panel()
+
+func present_island_story(state: Dictionary, expedition_marks: int) -> void:
+	var definition := state.get("definition", {}) as Dictionary
+	var status := String(state.get("status", "locked"))
+	var stage := int(state.get("stage", 0))
+	var branch := String(state.get("branch", ""))
+	var progress := int(state.get("progress", 0))
+	var purchased := state.get("purchased_offer_ids", []) as Array
+	for button: Button in [island_story_action_a, island_story_action_b, island_story_action_c]:
+		button.visible = false
+		button.disabled = false
+		button.set_meta("action_id", "")
+	if definition.is_empty():
+		island_story_title_label.text = "NO INSTALLED ISLAND"
+		island_story_details_label.text = "Install an island shard to reveal Tala's story."
+		island_story_reward_label.text = ""
+		return
+	island_story_title_label.text = "%s  •  %s  LV.%d" % [String(definition.title).to_upper(), String(definition.biome).to_upper(), int(definition.level)]
+	match status:
+		"offered":
+			island_story_details_label.text = "The shard is repeating a broken memory. Survey two echoes before deciding what this island should become."
+			island_story_reward_label.text = "RESTORE  →  2 MARKS + HIGHER-LEVEL SHARD\nPURGE  →  2 MARKS + EPIC EQUIPMENT"
+			_configure_story_action(island_story_action_a, "accept", "BEGIN SURVEY")
+		"active":
+			if stage == 0:
+				island_story_details_label.text = "ATTUNE TWO %s SITES\n\nPROGRESS  %d / 2" % [String(definition.survey_event).replace("_", " ").to_upper(), progress]
+				island_story_reward_label.text = "Follow the floating shard sigils on the installed island."
+			elif stage == 1 and branch.is_empty():
+				island_story_details_label.text = "RESTORE binds the island safely and yields a stronger shard.\nPURGE converts its instability into immediate epic equipment."
+				island_story_reward_label.text = "THIS CHOICE CHANGES THE FINAL LOOT."
+				_configure_story_action(island_story_action_a, "restoration", "RESTORE ISLAND")
+				_configure_story_action(island_story_action_b, "purge", "PURGE CORRUPTION")
+			elif stage == 1:
+				var event_name := String(definition.restoration_event if branch == "restoration" else definition.purge_event).replace("_", " ").to_upper()
+				island_story_details_label.text = "%s TWO %s SITES\n\nPROGRESS  %d / 2" % ["RESTORE" if branch == "restoration" else "SEVER", event_name, progress]
+				island_story_reward_label.text = "The Warden will emerge when both sites are resolved."
+			else:
+				island_story_details_label.text = "DEFEAT %s\n\nPROGRESS  %d / 1" % [String(definition.warden_name).to_upper(), progress]
+				island_story_reward_label.text = "Its attacks are telegraphed; use the island's open combat pocket."
+		"completed":
+			island_story_details_label.text = "%s has fallen. Tala can now stabilize the result of your choice." % String(definition.warden_name)
+			island_story_reward_label.text = "CLAIM  2 EXPEDITION MARKS + %s" % ("HIGHER-LEVEL ISLAND SHARD" if branch == "restoration" else "EPIC EQUIPMENT")
+			_configure_story_action(island_story_action_a, "claim", "CLAIM STORY REWARD")
+		"claimed":
+			island_story_details_label.text = "TALA'S EXPEDITION MARK EXCHANGE\nMARKS AVAILABLE  %d" % expedition_marks
+			island_story_reward_label.text = "Purchased offers are permanent for this island story. Rewards appear as ordinary world loot."
+			_configure_story_action(island_story_action_a, "buy:wayfinder_cache", "RARE GEAR  •  1 MARK", "wayfinder_cache" in purchased)
+			_configure_story_action(island_story_action_b, "buy:focused_shard", "FOCUSED SHARD  •  2 MARKS", "focused_shard" in purchased)
+			_configure_story_action(island_story_action_c, "buy:field_supplies", "3 MOONLEAF  •  1 MARK", "field_supplies" in purchased)
+
+func _configure_story_action(button: Button, action_id: String, label: String, purchased: bool = false) -> void:
+	button.visible = true
+	button.disabled = purchased
+	button.text = "PURCHASED" if purchased else label
+	button.set_meta("action_id", action_id)
+
+func open_island_story_panel(state: Dictionary, expedition_marks: int) -> void:
+	present_island_story(state, expedition_marks)
+	encounter_label.visible = false
+	rift_label.visible = false
+	interaction_prompt.visible = false
+	objective_label.visible = false
+	contract_status_label.visible = false
+	island_story_status_label.visible = false
+	island_story_panel.visible = true
+	recover_island_story_focus()
+
+func recover_island_story_focus() -> void:
+	for button: Button in [island_story_action_a, island_story_action_b, island_story_action_c]:
+		if button.visible and not button.disabled:
+			button.grab_focus()
+			return
+	island_story_close_button.grab_focus()
+
+func close_island_story_panel() -> void:
+	island_story_panel.visible = false
+	objective_label.visible = true
+	contract_status_label.visible = not contract_status_label.text.is_empty()
+	island_story_status_label.visible = not island_story_status_label.text.is_empty()
+	island_story_panel_closed.emit()
+
+func is_island_story_panel_open() -> bool:
+	return island_story_panel.visible
+
 func get_interaction_prompt() -> String:
 	return interaction_prompt.text if interaction_prompt.visible else ""
 
@@ -292,12 +492,55 @@ func refresh_inventory_stats(stats: Dictionary) -> void:
 func _render_stats_summary() -> void:
 	if not is_instance_valid(stats_summary_label):
 		return
-	stats_summary_label.text = "RESOURCES  WOOD %d  •  STONE %d  •  MOONLEAF %d  •  PLANK %d  •  SCRAP %d\nVITALS  HEALTH %d/%d  •  MANA %.0f/%.0f  •  REGEN %.1f/s\nCOMBAT  ATTACK %d  •  SPEED %.2fx  •  CRIT %.0f%%\nUTILITY  GATHER %.2f  •  PICKUP %.0f  •  PRODUCTION %.2fx" % [
+	stats_summary_label.text = "MATERIALS  WOOD %d  •  STONE %d  •  MOONLEAF %d  •  PLANK %d  •  SCRAP %d\nSURVIVAL  FIBER %d  •  BERRIES %d  •  RATIONS %d/3  •  PREPARED %d  •  MARKS %d\nVITALS  HEALTH %d/%d  •  MANA %.0f/%.0f  •  REGEN %.1f/s\nCOMBAT  ATTACK %d  •  SPEED %.2fx  •  CRIT %.0f%%\nUTILITY  GATHER %.2f  •  PICKUP %.0f  •  PRODUCTION %.2fx" % [
 		int(_inventory_stats.get("wood", 0)), int(_inventory_stats.get("stone", 0)), int(_inventory_stats.get("moonleaf", 0)), int(_inventory_stats.get("plank", 0)), int(_inventory_stats.get("scrap", _displayed_scrap)),
+		int(_inventory_stats.get("fiber", 0)), int(_inventory_stats.get("emberberry", 0)), int(_inventory_stats.get("rations", 0)), int(_inventory_stats.get("prepared_harvests", 0)), int(_inventory_stats.get("expedition_marks", 0)),
 		int(_inventory_stats.get("health", 0)), int(_inventory_stats.get("maximum_health", 0)), float(_inventory_stats.get("mana", 0.0)), float(_inventory_stats.get("maximum_mana", 0.0)), float(_inventory_stats.get("mana_regeneration", 0.0)),
 		int(_inventory_stats.get("attack_damage", _displayed_attack_damage)), float(_inventory_stats.get("attack_speed", _displayed_attack_speed)), float(_inventory_stats.get("critical_chance", 0.0)) * 100.0,
 		float(_inventory_stats.get("gathering_power", 1.0)), float(_inventory_stats.get("pickup_radius", 0.0)), float(_inventory_stats.get("production_speed", 1.0)),
 	]
+
+func refresh_journey(entries: Array[Dictionary]) -> void:
+	var selected_id := ""
+	if not _journey_entries.is_empty() and _selected_journey_index < _journey_entries.size():
+		selected_id = String(_journey_entries[_selected_journey_index].get("id", ""))
+	_journey_entries.clear()
+	for value: Dictionary in entries:
+		_journey_entries.append(value.duplicate(true))
+	if not selected_id.is_empty():
+		for index: int in _journey_entries.size():
+			if String(_journey_entries[index].id) == selected_id:
+				_selected_journey_index = index
+				break
+	_selected_journey_index = clampi(_selected_journey_index, 0, maxi(0, _journey_entries.size() - 1))
+	_render_selected_journey()
+
+func _select_relative_journey(offset: int) -> void:
+	if _journey_entries.is_empty():
+		return
+	_selected_journey_index = posmod(_selected_journey_index + offset, _journey_entries.size())
+	_render_selected_journey()
+
+func _render_selected_journey() -> void:
+	if _journey_entries.is_empty():
+		journey_heading_label.text = "JOURNEY JOURNAL — NO ACTIVE ROUTE"
+		journey_details_label.text = "Explore the archipelago to reveal new milestones."
+		journey_count_label.text = "0 / 0"
+		journey_previous_button.disabled = true
+		journey_next_button.disabled = true
+		return
+	var selected := _journey_entries[_selected_journey_index]
+	var completed_count := _journey_entries.filter(func(value: Dictionary) -> bool: return bool(value.completed)).size()
+	journey_heading_label.text = "FIRST-HOUR JOURNEY  •  %d / %d COMPLETE" % [completed_count, _journey_entries.size()]
+	var reward_parts: Array[String] = []
+	for reward_value: Variant in (selected.reward as Dictionary):
+		reward_parts.append("%d %s" % [int(selected.reward[reward_value]), String(reward_value).replace("_", " ").to_upper()])
+	journey_details_label.text = "%s  •  %s\n%s\nPROGRESS  %d / %d\nREWARD  %s" % [
+		String(selected.name).to_upper(), "COMPLETE" if bool(selected.completed) else "ACTIVE", String(selected.description), int(selected.progress), int(selected.target), " • ".join(reward_parts),
+	]
+	journey_count_label.text = "%d / %d" % [_selected_journey_index + 1, _journey_entries.size()]
+	journey_previous_button.disabled = _journey_entries.size() <= 1
+	journey_next_button.disabled = _journey_entries.size() <= 1
 
 func refresh_technologies(entries: Array[Dictionary], learned_ids: Array[String], phase_name: String, resources: Dictionary) -> void:
 	var selected_id := ""
@@ -591,9 +834,11 @@ func open_equipment_panel() -> void:
 	encounter_label.visible = false
 	rift_label.visible = false
 	interaction_prompt.visible = false
+	objective_label.visible = false
 	equipment_panel.visible = true
 	inventory_page.visible = true
 	technology_page.visible = false
+	journey_page.visible = false
 	if not equip_button.disabled:
 		equip_button.grab_focus()
 	elif not unequip_button.disabled:
@@ -605,7 +850,9 @@ func close_equipment_panel() -> void:
 	_pending_salvage_id = ""
 	inventory_page.visible = true
 	technology_page.visible = false
+	journey_page.visible = false
 	equipment_panel.visible = false
+	objective_label.visible = true
 	encounter_label.visible = not encounter_label.text.is_empty()
 	rift_label.visible = not rift_label.text.is_empty()
 	equipment_panel_closed.emit()
@@ -617,6 +864,7 @@ func open_technology_page() -> void:
 	if not equipment_panel.visible:
 		return
 	inventory_page.visible = false
+	journey_page.visible = false
 	technology_page.visible = true
 	_render_selected_technology()
 	_recover_equipment_focus()
@@ -628,6 +876,23 @@ func close_technology_page() -> void:
 
 func is_technology_page_open() -> bool:
 	return equipment_panel.visible and technology_page.visible
+
+func open_journey_page() -> void:
+	if not equipment_panel.visible:
+		return
+	inventory_page.visible = false
+	technology_page.visible = false
+	journey_page.visible = true
+	_render_selected_journey()
+	journey_back_button.grab_focus()
+
+func close_journey_page() -> void:
+	journey_page.visible = false
+	inventory_page.visible = true
+	open_journey_button.grab_focus()
+
+func is_journey_page_open() -> bool:
+	return equipment_panel.visible and journey_page.visible
 
 func has_valid_action_focus() -> bool:
 	return get_viewport().gui_get_focus_owner() != null
@@ -658,12 +923,15 @@ func get_displayed_scrap() -> int:
 func is_salvage_confirmation_armed() -> bool:
 	return not _pending_salvage_id.is_empty()
 
-func refresh_workbench(wood: int, stone: int, moonleaf: int, scrap: int, heart_crafted: bool, whetstone_crafted: bool, herbal_compass_crafted: bool, tidecatcher_built: bool, feedback: String = "", plank: int = 0, building_states: Dictionary = {}, forest_unlocked: bool = false, additional_unlocks: Dictionary = {}) -> void:
+func refresh_workbench(wood: int, stone: int, moonleaf: int, scrap: int, heart_crafted: bool, whetstone_crafted: bool, herbal_compass_crafted: bool, tidecatcher_built: bool, feedback: String = "", plank: int = 0, building_states: Dictionary = {}, forest_unlocked: bool = false, additional_unlocks: Dictionary = {}, survival_resources: Dictionary = {}) -> void:
 	_workbench_wood = wood
 	_workbench_stone = stone
 	_workbench_moonleaf = moonleaf
 	_workbench_scrap = scrap
 	_workbench_plank = plank
+	_workbench_fiber = int(survival_resources.get("fiber", 0))
+	_workbench_emberberry = int(survival_resources.get("emberberry", 0))
+	_ration_capacity = int(survival_resources.get("ration_capacity", 0))
 	_heart_crafted = heart_crafted
 	_whetstone_crafted = whetstone_crafted
 	_herbal_compass_crafted = herbal_compass_crafted
@@ -695,13 +963,14 @@ func _render_selected_recipe(feedback: String = "") -> void:
 	workbench_count_label.text = "%d / %d" % [_selected_recipe_index + 1, recipes.size()]
 	workbench_recipe_label.text = String(recipe.name).to_upper()
 	workbench_effect_label.text = String(recipe.effect_text)
-	var resources := {"wood": _workbench_wood, "stone": _workbench_stone, "moonleaf": _workbench_moonleaf, "scrap": _workbench_scrap, "plank": _workbench_plank}
+	var resources := {"wood": _workbench_wood, "stone": _workbench_stone, "moonleaf": _workbench_moonleaf, "scrap": _workbench_scrap, "plank": _workbench_plank, "fiber": _workbench_fiber, "emberberry": _workbench_emberberry}
 	var cost_parts: Array[String] = []
 	for resource_value: Variant in recipe.inputs:
 		var resource_id := String(resource_value)
 		cost_parts.append("%d / %d %s" % [int(resources.get(resource_id, 0)), int(recipe.inputs[resource_value]), resource_id.to_upper()])
 	recipe_cost_label.text = "COST  %s" % "    •    ".join(cost_parts)
-	var result := CraftingService.new().evaluate(String(recipe.id), resources, _workbench_unlocks, _workbench_crafted)
+	var output_capacity := _ration_capacity if String(recipe.id) == "trail_ration" else 1
+	var result := CraftingService.new().evaluate(String(recipe.id), resources, _workbench_unlocks, _workbench_crafted, output_capacity)
 	craft_button.text = "CRAFT %s" % String(recipe.name).to_upper()
 	craft_button.disabled = not bool(result.get("success", false))
 	if not feedback.is_empty():
@@ -750,6 +1019,7 @@ func open_workbench_panel() -> void:
 	encounter_label.visible = false
 	rift_label.visible = false
 	interaction_prompt.visible = false
+	objective_label.visible = false
 	if not craft_button.disabled:
 		craft_button.grab_focus()
 	elif not tidecatcher_build_button.disabled:
@@ -759,6 +1029,7 @@ func open_workbench_panel() -> void:
 
 func close_workbench_panel() -> void:
 	workbench_panel.visible = false
+	objective_label.visible = true
 	workbench_panel_closed.emit()
 
 func is_workbench_panel_open() -> bool:
@@ -851,12 +1122,14 @@ func open_system_menu() -> void:
 	encounter_label.visible = false
 	rift_label.visible = false
 	interaction_prompt.visible = false
+	objective_label.visible = false
 	island_panel.visible = false
 	system_panel.visible = true
 	save_button.grab_focus()
 
 func close_system_menu() -> void:
 	system_panel.visible = false
+	objective_label.visible = true
 	system_menu_closed.emit()
 
 func is_system_menu_open() -> bool:
@@ -1007,6 +1280,7 @@ func open_island_panel() -> void:
 	encounter_label.visible = false
 	rift_label.visible = false
 	interaction_prompt.visible = false
+	objective_label.visible = false
 	island_panel.visible = true
 	if not island_install_button.disabled:
 		island_install_button.grab_focus()
@@ -1017,6 +1291,7 @@ func open_island_panel() -> void:
 
 func close_island_panel() -> void:
 	island_panel.visible = false
+	objective_label.visible = true
 	island_panel_closed.emit()
 
 func is_island_panel_open() -> bool:

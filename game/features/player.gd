@@ -42,6 +42,7 @@ var gathering_power: float = 1.0
 var critical_chance: float = 0.05
 var critical_damage: float = 1.5
 var production_speed: float = 1.0
+var expedition_damage_reduction: int = 0
 var facing: Vector2 = Vector2.RIGHT
 var input_enabled: bool = true
 var _attack_cooldown: float = 0.0
@@ -175,11 +176,15 @@ func _default_attack_profile(base_type: String) -> Dictionary:
 	return (definition.get("attack_profile", {"style": "slash", "range": 78.0, "minimum_dot": 0.2, "maximum_targets": 1, "splash_radius": 0.0}) as Dictionary).duplicate(true)
 
 func take_damage(amount: int) -> bool:
-	var applied: bool = health_component.damage(amount)
+	var resolved_amount := maxi(1, amount - expedition_damage_reduction) if amount > 0 else amount
+	var applied: bool = health_component.damage(resolved_amount)
 	if applied:
 		_hit_flash_remaining = VISUAL_HIT_DURATION
 		queue_redraw()
 	return applied
+
+func set_expedition_protection(damage_reduction: int) -> void:
+	expedition_damage_reduction = clampi(damage_reduction, 0, 1)
 
 func add_maximum_health(amount: int) -> void:
 	if amount <= 0:

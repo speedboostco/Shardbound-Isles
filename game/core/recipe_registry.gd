@@ -1,8 +1,8 @@
 class_name RecipeRegistry
 extends RefCounted
 
-const KNOWN_RESOURCES: Array[String] = ["wood", "stone", "moonleaf", "scrap", "plank"]
-const KNOWN_OUTPUTS: Array[String] = ["reinforced_heart", "runed_whetstone", "herbal_compass", "lumber_mill_kit", "collector_kit", "mana_vessel", "arcane_conduit", "ranger_fletching", "harvest_charm", "wayfinder_boots", "precision_quiver", "foresters_toolkit", "surveyors_lens", "duelist_grip", "reinforced_axe", "precision_gearbox", "shard_prism", "ley_capacitor"]
+const KNOWN_RESOURCES: Array[String] = ["wood", "stone", "moonleaf", "scrap", "plank", "fiber", "emberberry"]
+const KNOWN_OUTPUTS: Array[String] = ["reinforced_heart", "runed_whetstone", "herbal_compass", "lumber_mill_kit", "collector_kit", "mana_vessel", "arcane_conduit", "ranger_fletching", "harvest_charm", "wayfinder_boots", "precision_quiver", "foresters_toolkit", "surveyors_lens", "duelist_grip", "reinforced_axe", "precision_gearbox", "shard_prism", "ley_capacitor", "trail_ration"]
 const KNOWN_STATIONS: Array[String] = ["workbench"]
 const KNOWN_UNLOCKS: Array[String] = ["always", "reinforced_heart", "forest_island", "fieldcraft", "combat_training", "mana_channeling", "arcane_mastery", "ranger_instinct", "efficient_harvest", "island_cartography", "weapon_mastery", "master_foraging", "island_industry", "shard_attunement", "ley_resonance"]
 
@@ -25,6 +25,7 @@ const DEFINITIONS: Array[Dictionary] = [
 	{"id": "precision_gearbox", "name": "Precision Gearbox", "inputs": {"scrap": 8, "plank": 3}, "output": {"id": "precision_gearbox", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["island_industry"], "unique": true, "effect_text": "Permanently gain +20% production speed"},
 	{"id": "shard_prism", "name": "Shard Prism", "inputs": {"moonleaf": 6, "scrap": 6}, "output": {"id": "shard_prism", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["shard_attunement"], "unique": true, "effect_text": "Permanently gain +5% critical chance"},
 	{"id": "ley_capacitor", "name": "Ley Capacitor", "inputs": {"moonleaf": 8, "plank": 3}, "output": {"id": "ley_capacitor", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["ley_resonance"], "unique": true, "effect_text": "Permanently gain +20 maximum mana"},
+	{"id": "trail_ration", "name": "Trail Ration", "inputs": {"fiber": 2, "emberberry": 2}, "output": {"id": "trail_ration", "amount": 1, "kind": "consumable"}, "station": "workbench", "unlock_requirements": ["always"], "unique": false, "effect_text": "Rest at the field camp: recover health and mana, then gain +1 yield for 6 harvests"},
 ]
 
 static func all() -> Array[Dictionary]:

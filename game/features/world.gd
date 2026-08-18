@@ -10,6 +10,15 @@ const WorldObstacleScript := preload("res://game/features/world_obstacle.gd")
 const WeaponCastVisualScript := preload("res://game/features/weapon_cast_visual.gd")
 const TechnologyTreeScript := preload("res://game/core/technology_tree.gd")
 const WorldResidentScript := preload("res://game/features/world_resident.gd")
+const SurvivalPreparationScript := preload("res://game/core/survival_preparation.gd")
+const JourneyJournalScript := preload("res://game/core/journey_journal.gd")
+const ExpeditionCycleScript := preload("res://game/core/expedition_cycle.gd")
+const ExpeditionContractScript := preload("res://game/core/expedition_contract.gd")
+const ExpeditionEventScript := preload("res://game/features/expedition_event.gd")
+const WeatherPresentationScript := preload("res://game/features/weather_presentation.gd")
+const IslandStoryQuestScript := preload("res://game/core/island_story_quest.gd")
+const IslandStoryEventScript := preload("res://game/features/island_story_event.gd")
+const IslandStoryWardenScript := preload("res://game/features/island_story_warden.gd")
 const EQUIPMENT_SEED: int = 424242
 const DEFAULT_SAVE_PATH: String = "user://shardbound-save.json"
 const ISLAND_SHARD_SEED: int = 9001
@@ -31,33 +40,6 @@ const LIVING_WORLD_LAYOUT: Array[Dictionary] = [
 	{"id": "whispering_shrine_south", "type": "whispering_shrine", "position": Vector2(120, 360)},
 	{"id": "firefly_east", "type": "firefly_hollow", "position": Vector2(610, -195)},
 	{"id": "firefly_south_east", "type": "firefly_hollow", "position": Vector2(565, 205)},
-]
-const HANDDRAWN_DECO_LAYOUT: Array[Dictionary] = [
-	{"position": Vector2(-770, -440), "frame": 6}, {"position": Vector2(-610, -315), "frame": 4},
-	{"position": Vector2(-430, -220), "frame": 0}, {"position": Vector2(-260, -315), "frame": 5},
-	{"position": Vector2(205, -355), "frame": 7}, {"position": Vector2(410, -250), "frame": 2},
-	{"position": Vector2(690, -390), "frame": 4}, {"position": Vector2(755, -145), "frame": 1},
-	{"position": Vector2(-735, 135), "frame": 3}, {"position": Vector2(-560, 330), "frame": 6},
-	{"position": Vector2(-365, 205), "frame": 1}, {"position": Vector2(-185, 415), "frame": 5},
-	{"position": Vector2(235, 260), "frame": 0}, {"position": Vector2(395, 425), "frame": 7},
-	{"position": Vector2(590, 300), "frame": 4}, {"position": Vector2(760, 465), "frame": 2},
-	{"position": Vector2(-835, -120), "frame": 2}, {"position": Vector2(-655, -405), "frame": 7},
-	{"position": Vector2(-510, -455), "frame": 3}, {"position": Vector2(-335, -435), "frame": 0},
-	{"position": Vector2(-105, -485), "frame": 6}, {"position": Vector2(125, -455), "frame": 1},
-	{"position": Vector2(350, -475), "frame": 5}, {"position": Vector2(570, -465), "frame": 3},
-	{"position": Vector2(-825, 385), "frame": 7}, {"position": Vector2(-665, 470), "frame": 0},
-	{"position": Vector2(-475, 485), "frame": 4}, {"position": Vector2(-295, 505), "frame": 2},
-	{"position": Vector2(105, 505), "frame": 5}, {"position": Vector2(300, 485), "frame": 1},
-	{"position": Vector2(500, 500), "frame": 6}, {"position": Vector2(835, 120), "frame": 0},
-	{"position": Vector2(-585, -245), "frame": 0}, {"position": Vector2(-475, -155), "frame": 5},
-	{"position": Vector2(-365, -345), "frame": 1}, {"position": Vector2(-245, -205), "frame": 6},
-	{"position": Vector2(-125, -325), "frame": 2}, {"position": Vector2(135, -310), "frame": 7},
-	{"position": Vector2(255, -220), "frame": 3}, {"position": Vector2(385, -335), "frame": 4},
-	{"position": Vector2(515, -235), "frame": 1}, {"position": Vector2(625, -125), "frame": 6},
-	{"position": Vector2(-595, 185), "frame": 5}, {"position": Vector2(-455, 305), "frame": 0},
-	{"position": Vector2(-315, 175), "frame": 7}, {"position": Vector2(-155, 285), "frame": 2},
-	{"position": Vector2(155, 215), "frame": 4}, {"position": Vector2(325, 335), "frame": 1},
-	{"position": Vector2(475, 185), "frame": 6}, {"position": Vector2(615, 295), "frame": 3},
 ]
 const WORLD_OBSTACLE_LAYOUT: Array[Dictionary] = [
 	{"position": Vector2(-825, -500), "asset": "forest_tree", "radius": 20.0},
@@ -93,10 +75,15 @@ const WORLD_OBSTACLE_LAYOUT: Array[Dictionary] = [
 @onready var player: PlayerCharacter = $Player
 @onready var tree: ResourceNode = $Tree
 @onready var stone_node: ResourceNode = $StoneNode
+@onready var fiber_patch_west: ResourceNode = $FiberPatchWest
+@onready var fiber_patch_south: ResourceNode = $FiberPatchSouth
+@onready var emberberry_bush_north: ResourceNode = $EmberberryBushNorth
+@onready var emberberry_bush_east: ResourceNode = $EmberberryBushEast
 @onready var enemy: ChaserEnemy = $Enemy
 @onready var second_slime: ChaserEnemy = $SecondSlime
 @onready var camera: CameraRig = $Player/Camera2D
 @onready var workbench: Workbench = $Workbench
+@onready var field_camp: Variant = $FieldCamp
 @onready var tidecatcher: Tidecatcher = $Tidecatcher
 @onready var base_buildings: Node2D = $BaseBuildings
 @onready var island_slot: IslandSlot = $IslandSlot
@@ -107,6 +94,8 @@ const WORLD_OBSTACLE_LAYOUT: Array[Dictionary] = [
 @onready var boss: AbyssalWarden = $Boss
 @onready var rift_portal: RiftPortal = $RiftPortal
 @onready var hud: GameHud = $HUD
+@onready var expedition_light: CanvasModulate = $ExpeditionLight
+@onready var starting_island_terrain: StartingIslandTerrain = $StartingIslandTerrain
 
 var resource_inventory: Variant = ResourceInventoryScript.new()
 var wood: int:
@@ -126,6 +115,12 @@ var equipment: Array[Dictionary] = equipment_inventory.items
 var enemies_defeated: int = 0
 var crafting_service := CraftingService.new()
 var technology_tree: Variant = TechnologyTreeScript.new()
+var survival: Variant = SurvivalPreparationScript.new()
+var journey: Variant = JourneyJournalScript.new()
+var expedition: Variant = ExpeditionCycleScript.new(SaveService.DEFAULT_WORLD_SEED)
+var expedition_contract: Variant = ExpeditionContractScript.new()
+var expedition_marks: int = 0
+var island_story: Variant = IslandStoryQuestScript.new()
 var reinforced_heart_crafted: bool = false
 var runed_whetstone_crafted: bool = false
 var herbal_compass_crafted: bool = false
@@ -159,10 +154,16 @@ var _building_nodes: Dictionary = {}
 var _placement_visual: BaseBuildingVisual
 var _placement_socket_index: int = 0
 var _automation_timer: Timer
+var _expedition_timer: Timer
+var _weather_presentation: Variant
+var _expedition_events: Dictionary = {}
 var _living_world_props: Dictionary = {}
 var _living_world_guardians: Dictionary = {}
 var _world_obstacles: Array[WorldObstacle] = []
 var _world_residents: Array[Node2D] = []
+var _island_story_resident: Node2D
+var _island_story_events: Dictionary = {}
+var _island_story_warden: Node2D
 var _active_weapon_instance_id: String = ""
 var _resolve_player_projectiles_immediately: bool = false
 const PLACEMENT_SOCKET_IDS: Array[String] = ["west", "north", "east", "south"]
@@ -195,6 +196,10 @@ func _ready() -> void:
 	equipment_inventory.equipment_changed.connect(_on_equipment_changed)
 	tree.depleted.connect(_on_resource_depleted)
 	stone_node.depleted.connect(_on_resource_depleted)
+	for forage_node: ResourceNode in [fiber_patch_west, fiber_patch_south, emberberry_bush_north, emberberry_bush_east]:
+		forage_node.depleted.connect(_on_resource_depleted)
+	field_camp.configure(player, func() -> int: return survival.rations)
+	field_camp.rest_requested.connect(rest_at_field_camp)
 	enemy.target = player
 	enemy.defeated.connect(_on_enemy_defeated)
 	second_slime.target = player
@@ -241,6 +246,12 @@ func _ready() -> void:
 	hud.island_install_requested.connect(install_selected_shard)
 	hud.island_remove_requested.connect(remove_installed_shard)
 	hud.rift_requested.connect(handle_rift_action)
+	hud.contract_accept_requested.connect(accept_expedition_contract)
+	hud.contract_claim_requested.connect(claim_expedition_contract)
+	hud.contract_decline_requested.connect(decline_expedition_contract)
+	hud.contract_panel_closed.connect(_on_contract_panel_closed)
+	hud.island_story_action_requested.connect(_on_island_story_action_requested)
+	hud.island_story_panel_closed.connect(_on_island_story_panel_closed)
 	workbench.interacted.connect(try_open_workbench)
 	rift_portal.interacted.connect(handle_rift_action)
 	rift_portal.availability_changed.connect(_refresh_interaction_target)
@@ -251,6 +262,13 @@ func _ready() -> void:
 	_automation_timer.autostart = true
 	_automation_timer.timeout.connect(_on_automation_tick)
 	add_child(_automation_timer)
+	_expedition_timer = Timer.new()
+	_expedition_timer.wait_time = 1.0
+	_expedition_timer.autostart = true
+	_expedition_timer.timeout.connect(func() -> void: advance_expedition(1.0))
+	add_child(_expedition_timer)
+	_weather_presentation = WeatherPresentationScript.new()
+	add_child(_weather_presentation)
 	last_simulation_unix = int(Time.get_unix_time_from_system())
 	_refresh_equipment_ui()
 	_refresh_workbench_ui()
@@ -259,7 +277,9 @@ func _ready() -> void:
 	_spawn_world_obstacles()
 	_spawn_living_world_props()
 	_spawn_world_residents()
+	_sync_island_story()
 	_sync_combat_phase(false)
+	_apply_expedition_effects()
 	_refresh_interaction_target()
 
 func _process(delta: float) -> void:
@@ -297,16 +317,372 @@ func _spawn_world_residents() -> void:
 		{"id": "orin", "name": "ORIN", "role": "ARCANIST", "position": Vector2(165, -145), "actor": "boss", "messages": ["A scepter spends mana; watch the violet range sigil before casting.", "Moonleaf unlocks deeper channeling and faster recovery.", "Power is useful only when its cost changes your decisions."]},
 	]
 	for definition: Dictionary in definitions:
+		var resident_id := String(definition.id)
 		var resident: Variant = WorldResidentScript.new()
 		resident.name = String(definition.id).to_pascal_case()
 		resident.position = definition.position as Vector2
 		resident.configure(String(definition.id), String(definition.name), String(definition.role), definition.messages as Array, String(definition.actor))
-		resident.spoken.connect(_on_resident_spoken)
+		resident.spoken.connect(func(resident_name: String, message: String) -> void: _on_resident_spoken(resident_id, resident_name, message))
 		add_child(resident)
 		_world_residents.append(resident)
 
-func _on_resident_spoken(resident_name: String, message: String) -> void:
+func _on_resident_spoken(resident_id: String, resident_name: String, message: String) -> void:
+	if resident_id == "tala":
+		open_island_story()
+		return
+	if resident_id == "mira":
+		open_expedition_contract()
+		return
 	hud.set_encounter_feedback("%s — %s" % [resident_name, message])
+
+func _story_installation() -> Dictionary:
+	if not island_story.definition.is_empty():
+		var saved_slot_id := String(island_story.definition.slot_id)
+		var saved_installed := archipelago.slot(saved_slot_id).get("installed_island", {}) as Dictionary
+		if not saved_installed.is_empty() and String((saved_installed.definition as Dictionary).shard_id) == String(island_story.definition.island_id):
+			return {"slot_id": saved_slot_id, "definition": (saved_installed.definition as Dictionary).duplicate(true)}
+	for slot_id: String in archipelago.slot_ids():
+		var installed := archipelago.slot(slot_id).get("installed_island", {}) as Dictionary
+		if not installed.is_empty():
+			return {"slot_id": slot_id, "definition": (installed.definition as Dictionary).duplicate(true)}
+	return {}
+
+func _sync_island_story() -> void:
+	var installation := _story_installation()
+	_clear_island_story_events()
+	_clear_island_story_warden()
+	if installation.is_empty():
+		_clear_island_story_resident()
+		_refresh_island_story_ui()
+		return
+	var slot_id := String(installation.slot_id)
+	island_story.bind_island(slot_id, installation.definition as Dictionary)
+	_spawn_island_story_resident(slot_id)
+	if island_story.status == "active":
+		if island_story.stage in [IslandStoryQuestScript.SURVEY_STAGE, IslandStoryQuestScript.BRANCH_STAGE] and not island_story.current_objective_kind().is_empty():
+			_spawn_island_story_events(slot_id)
+		elif island_story.stage == IslandStoryQuestScript.WARDEN_STAGE:
+			_spawn_island_story_warden(slot_id)
+	_refresh_island_story_ui()
+
+func _spawn_island_story_resident(slot_id: String) -> void:
+	var target_position := (island_slots[slot_id] as IslandSlot).global_position + Vector2(-18, -36)
+	if is_instance_valid(_island_story_resident):
+		_island_story_resident.global_position = target_position
+		return
+	var resident: Variant = WorldResidentScript.new()
+	resident.name = "Tala"
+	resident.position = target_position
+	resident.configure("tala", "TALA", "SHARD WARDEN", ["Every island remembers what shaped it.", "Restoration preserves possibility. Purging converts risk into immediate power."], "ranger")
+	resident.spoken.connect(func(resident_name: String, message: String) -> void: _on_resident_spoken("tala", resident_name, message))
+	add_child(resident)
+	_island_story_resident = resident
+	_world_residents.append(resident)
+
+func _clear_island_story_resident() -> void:
+	if not is_instance_valid(_island_story_resident):
+		_island_story_resident = null
+		return
+	_world_residents.erase(_island_story_resident)
+	_island_story_resident.remove_from_group("interactable")
+	_island_story_resident.queue_free()
+	_island_story_resident = null
+
+func _spawn_island_story_events(slot_id: String) -> void:
+	var objective_kind: String = String(island_story.current_objective_kind())
+	var event_type: String = String(island_story.current_event_type())
+	if objective_kind.is_empty() or event_type.is_empty():
+		return
+	var slot_origin := (island_slots[slot_id] as IslandSlot).global_position
+	var offsets: Array[Vector2] = [Vector2(-72, 45), Vector2(70, -40)]
+	for index: int in offsets.size():
+		var branch_id: String = String(island_story.branch) if not String(island_story.branch).is_empty() else "survey"
+		var stable_id := "%s:stage_%d:%s:%d" % [String(island_story.definition.quest_id), island_story.stage, branch_id, index]
+		if stable_id in island_story.claimed_event_ids:
+			continue
+		var event: Variant = IslandStoryEventScript.new()
+		event.name = "TalaStoryEvent%d" % index
+		event.configure(stable_id, event_type, objective_kind, String(island_story.definition.biome))
+		event.global_position = slot_origin + offsets[index]
+		event.activated.connect(_on_island_story_event_activated)
+		add_child(event)
+		_island_story_events[stable_id] = event
+
+func _clear_island_story_events() -> void:
+	for event_value: Variant in _island_story_events.values():
+		var event := event_value as Node
+		if is_instance_valid(event):
+			event.remove_from_group("interactable")
+			event.queue_free()
+	_island_story_events.clear()
+
+func _on_island_story_event_activated(event_id: String, objective_kind: String) -> void:
+	_island_story_events.erase(event_id)
+	var result: Dictionary = island_story.record(objective_kind, 1, event_id)
+	if not bool(result.accepted):
+		return
+	_spawn_gameplay_vfx(player.global_position, "reward")
+	if bool(result.stage_advanced):
+		if island_story.stage == IslandStoryQuestScript.BRANCH_STAGE:
+			hud.set_encounter_feedback("ISLAND SURVEYED - RETURN TO TALA AND CHOOSE ITS FATE")
+		else:
+			hud.set_encounter_feedback("THE %s HAS AWAKENED" % String(island_story.definition.warden_name).to_upper())
+	_sync_island_story()
+	_refresh_interaction_target()
+
+func _spawn_island_story_warden(slot_id: String) -> void:
+	if is_instance_valid(_island_story_warden):
+		return
+	var warden: Variant = IslandStoryWardenScript.new()
+	warden.name = "IslandStoryWarden"
+	warden.configure(String(island_story.definition.quest_id), String(island_story.definition.biome), String(island_story.definition.warden_name), int((island_story.definition.reward_seeds as Dictionary).equipment) ^ 7001)
+	warden.target = player
+	warden.global_position = (island_slots[slot_id] as IslandSlot).global_position + Vector2(0, 76)
+	warden.volley_requested.connect(_on_enemy_volley_requested)
+	warden.phase_changed.connect(_on_island_story_warden_phase_changed)
+	warden.cue_requested.connect(_on_island_story_warden_cue_requested)
+	warden.defeated.connect(_on_island_story_warden_defeated)
+	add_child(warden)
+	_island_story_warden = warden
+	var materialized := (island_slots[slot_id] as IslandSlot).materialized
+	if is_instance_valid(materialized):
+		materialized.set_story_climax_active(true)
+	if String(island_story.definition.biome) == "forest":
+		hud.set_encounter_feedback("TALA — GLOWING ROOTS MARK THE DANGER LANE. STEP SIDEWAYS.")
+
+func _clear_island_story_warden() -> void:
+	if is_instance_valid(_island_story_warden):
+		_island_story_warden.remove_from_group("attackable")
+		_island_story_warden.queue_free()
+		_clear_enemy_projectiles()
+	_island_story_warden = null
+
+func _on_island_story_warden_defeated(position_value: Vector2, _loot_seed: int) -> void:
+	_clear_enemy_projectiles()
+	var story_slot_id := String(island_story.definition.get("slot_id", ""))
+	if island_slots.has(story_slot_id):
+		var materialized := (island_slots[story_slot_id] as IslandSlot).materialized
+		if is_instance_valid(materialized):
+			materialized.set_story_climax_active(false)
+	var token := "%s:warden" % String(island_story.definition.quest_id)
+	var result: Dictionary = island_story.record("warden_defeated", 1, token)
+	_island_story_warden = null
+	if not bool(result.completed_now):
+		return
+	_spawn_gameplay_vfx(position_value, "death")
+	var outcome := "ITS MEMORY IS QUIET" if island_story.branch == "restoration" else "ITS CORRUPTION IS READY TO HARVEST"
+	hud.set_encounter_feedback("TALA — %s. RETURN TO ME." % outcome)
+	_sync_island_story()
+
+func _on_island_story_warden_phase_changed(new_phase: int) -> void:
+	if new_phase != 2:
+		return
+	hud.set_encounter_feedback("TALA — ITS CORE IS EXPOSED. ROOTS NOW ERUPT MORE OFTEN.")
+	_spawn_gameplay_vfx(_island_story_warden.global_position if is_instance_valid(_island_story_warden) else player.global_position, "legendary")
+
+func _on_island_story_warden_cue_requested(cue_id: String, position_value: Vector2) -> void:
+	if cue_id == "root_eruption_impact":
+		_spawn_gameplay_vfx(position_value + Vector2(0, 36), "gather")
+
+func open_island_story() -> void:
+	if not is_instance_valid(_island_story_resident):
+		return
+	hud.open_island_story_panel(island_story.to_dictionary(), expedition_marks)
+	player.input_enabled = false
+	_set_combat_processing(false)
+
+func _on_island_story_action_requested(action_id: String) -> void:
+	match action_id:
+		"accept":
+			if island_story.accept():
+				hud.close_island_story_panel()
+				_sync_island_story()
+				hud.set_encounter_feedback("TALA'S STORY - SURVEY THE INSTALLED ISLAND")
+		"restoration", "purge":
+			if island_story.choose_branch(action_id):
+				hud.close_island_story_panel()
+				_sync_island_story()
+				hud.set_encounter_feedback("%s PATH CHOSEN - RESOLVE TWO ISLAND SITES" % action_id.to_upper())
+		"claim":
+			_claim_island_story_reward()
+		_:
+			if action_id.begins_with("buy:"):
+				_purchase_island_story_offer(action_id.trim_prefix("buy:"))
+
+func _claim_island_story_reward() -> bool:
+	var result: Dictionary = island_story.claim()
+	if not bool(result.success):
+		return false
+	var reward := result.reward as Dictionary
+	expedition_marks += int(reward.expedition_marks)
+	var origin := _resident_position("tala") + Vector2(0, 38)
+	if String(reward.kind) == "island_shard":
+		_spawn_pickup(origin, "island_shard", IslandShardGenerator.generate(int(reward.seed), int(reward.level)))
+	else:
+		_spawn_pickup(origin, "equipment", LootGenerator.generate(int(reward.seed), "island_story", int(reward.level), "", "epic"))
+	_spawn_gameplay_vfx(origin, "reward")
+	hud.close_island_story_panel()
+	_sync_island_story()
+	_refresh_equipment_ui()
+	hud.set_encounter_feedback("ISLAND STORY COMPLETE - +2 MARKS - TALA'S EXCHANGE UNLOCKED")
+	return true
+
+func _purchase_island_story_offer(offer_id: String) -> bool:
+	if not island_story.vendor_unlocked() or island_story.offer_purchased(offer_id):
+		hud.set_encounter_feedback("TALA'S EXCHANGE - OFFER ALREADY PURCHASED")
+		return false
+	var plan: Dictionary = IslandStoryQuestScript.plan_purchase(offer_id, expedition_marks)
+	if not bool(plan.success):
+		hud.set_encounter_feedback("TALA'S EXCHANGE - NOT ENOUGH EXPEDITION MARKS")
+		return false
+	if not island_story.mark_offer_purchased(offer_id):
+		return false
+	expedition_marks -= int(plan.cost)
+	var offer := plan.reward as Dictionary
+	var origin := _resident_position("tala") + Vector2(0, 38)
+	match String(offer.kind):
+		"equipment":
+			var equipment_seed := int((island_story.definition.reward_seeds as Dictionary).equipment) ^ 41011
+			_spawn_pickup(origin, "equipment", LootGenerator.generate(equipment_seed, "tala_exchange", int(island_story.definition.level), "", "rare"))
+		"island_shard":
+			var shard_seed := int((island_story.definition.reward_seeds as Dictionary).island_shard) ^ 81013
+			_spawn_pickup(origin, "island_shard", IslandShardGenerator.generate(shard_seed, int(island_story.definition.level) + 1))
+		"resource":
+			_spawn_pickup(origin, String(offer.resource_id), int(offer.amount))
+	_spawn_gameplay_vfx(origin, "pickup")
+	_refresh_equipment_ui()
+	hud.present_island_story(island_story.to_dictionary(), expedition_marks)
+	hud.recover_island_story_focus()
+	hud.set_encounter_feedback("TALA'S EXCHANGE - %s PURCHASED" % String(offer.name).to_upper())
+	return true
+
+func _on_island_story_panel_closed() -> void:
+	_restore_gameplay_if_no_modal()
+	_refresh_island_story_ui()
+
+func _refresh_island_story_ui() -> void:
+	if not is_instance_valid(hud):
+		return
+	hud.set_island_story_status(island_story.objective_text() if not _story_installation().is_empty() else "")
+	if hud.is_island_story_panel_open():
+		hud.present_island_story(island_story.to_dictionary(), expedition_marks)
+
+func active_island_story_event_count() -> int:
+	return _island_story_events.size()
+
+func has_island_story_warden() -> bool:
+	return is_instance_valid(_island_story_warden) and not _island_story_warden.is_queued_for_deletion()
+
+func open_expedition_contract() -> void:
+	if expedition_contract.status in ["none", "claimed"]:
+		expedition_contract.ensure_offer(expedition.world_seed, expedition.day_index(), current_biome(), expedition.weather(current_biome()))
+	hud.open_contract_panel(expedition_contract.definition, expedition_contract.status, expedition_contract.progress)
+	player.input_enabled = false
+	_set_combat_processing(false)
+
+func accept_expedition_contract() -> bool:
+	if not expedition_contract.accept():
+		return false
+	hud.close_contract_panel()
+	_sync_expedition_events()
+	_refresh_contract_ui()
+	hud.set_encounter_feedback("CONTRACT ACCEPTED — %s" % String(expedition_contract.definition.title).to_upper())
+	return true
+
+func decline_expedition_contract() -> bool:
+	var declined: bool = bool(expedition_contract.decline())
+	if declined:
+		_clear_expedition_events()
+		_refresh_contract_ui()
+	return declined
+
+func claim_expedition_contract() -> bool:
+	var result: Dictionary = expedition_contract.claim()
+	if not bool(result.success):
+		return false
+	var reward := result.reward as Dictionary
+	expedition_marks += int(reward.expedition_marks)
+	var origin := _resident_position("mira") + Vector2(0, 42)
+	var equipment_item := LootGenerator.generate(int(reward.equipment_seed), "expedition_contract", int(reward.shard_level), "", "rare")
+	_spawn_pickup(origin + Vector2(-34, 0), "equipment", equipment_item)
+	_spawn_pickup(origin + Vector2(34, 0), "island_shard", IslandShardGenerator.generate(int(reward.shard_seed), int(reward.shard_level)))
+	_spawn_gameplay_vfx(origin, "reward")
+	hud.close_contract_panel()
+	_clear_expedition_events()
+	_refresh_contract_ui()
+	hud.set_encounter_feedback("CONTRACT COMPLETE — RARE GEAR, ISLAND SHARD, +1 EXPEDITION MARK")
+	return true
+
+func _on_contract_panel_closed() -> void:
+	_restore_gameplay_if_no_modal()
+	_refresh_contract_ui()
+
+func _resident_position(resident_id: String) -> Vector2:
+	for resident: Node2D in _world_residents:
+		if is_instance_valid(resident) and String(resident.get("stable_id")) == resident_id:
+			return resident.global_position
+	return Vector2.ZERO
+
+func _record_contract_progress(objective_kind: String, amount: int, event_id: String = "") -> Dictionary:
+	if expedition_contract.status == "active" and String(expedition_contract.definition.get("weather", "")) != expedition.weather(current_biome()):
+		return {"accepted": false, "completed_now": false, "progress": expedition_contract.progress}
+	var result: Dictionary = expedition_contract.record(objective_kind, amount, event_id)
+	if bool(result.get("completed_now", false)):
+		_clear_expedition_events()
+		hud.set_encounter_feedback("CONTRACT COMPLETE — RETURN TO MIRA FOR LOOT")
+	_refresh_contract_ui()
+	return result
+
+func _refresh_contract_ui() -> void:
+	if not is_instance_valid(hud):
+		return
+	var status_text := ""
+	if expedition_contract.status == "active":
+		status_text = "CONTRACT  %s  %d/%d" % [String(expedition_contract.definition.title).to_upper(), expedition_contract.progress, int(expedition_contract.definition.target)]
+	elif expedition_contract.status == "completed":
+		status_text = "CONTRACT COMPLETE  •  RETURN TO MIRA"
+	hud.set_contract_status(status_text)
+	if hud.is_contract_panel_open():
+		hud.present_contract(expedition_contract.definition, expedition_contract.status, expedition_contract.progress)
+
+func _sync_expedition_events() -> void:
+	_clear_expedition_events()
+	if expedition_contract.status != "active" or expedition_contract.definition.is_empty():
+		return
+	if String(expedition_contract.definition.weather) != expedition.weather(current_biome()):
+		return
+	var event_type := String(expedition_contract.definition.event_type)
+	var positions: Array[Vector2] = [Vector2(-430, -95), Vector2(410, 190), Vector2(-120, 365)]
+	for index: int in positions.size():
+		var stable_id := "%s_event_%d" % [String(expedition_contract.definition.contract_id), index]
+		if stable_id in expedition_contract.claimed_event_ids:
+			continue
+		var event: Variant = ExpeditionEventScript.new()
+		event.name = stable_id.to_pascal_case()
+		event.configure(stable_id, event_type)
+		event.position = positions[index]
+		event.activated.connect(_on_expedition_event_activated)
+		add_child(event)
+		_expedition_events[stable_id] = event
+
+func _clear_expedition_events() -> void:
+	for event_value: Variant in _expedition_events.values():
+		var event := event_value as Node
+		if is_instance_valid(event):
+			event.queue_free()
+	_expedition_events.clear()
+
+func _on_expedition_event_activated(event_id: String, _event_type: String, reward_kind: String, amount: int) -> void:
+	_expedition_events.erase(event_id)
+	var progress_result: Dictionary = _record_contract_progress("weather_event", 1, event_id)
+	if not bool(progress_result.get("accepted", false)):
+		return
+	_spawn_pickup(player.global_position + Vector2(0, 28), reward_kind, amount)
+	_spawn_gameplay_vfx(player.global_position, "reward")
+	_refresh_interaction_target()
+
+func active_expedition_event_count() -> int:
+	return _expedition_events.size()
 
 func world_resident_count() -> int:
 	return _world_residents.size()
@@ -315,10 +691,10 @@ func world_obstacle_count() -> int:
 	return _world_obstacles.size()
 
 func non_colliding_detail_count() -> int:
-	return HANDDRAWN_DECO_LAYOUT.size()
+	return starting_island_terrain.detail_cluster_count()
 
 func terrain_micro_biome_count() -> int:
-	return 4
+	return starting_island_terrain.micro_biome_count()
 
 func living_world_prop_count() -> int:
 	return _living_world_props.size()
@@ -336,7 +712,7 @@ func active_living_world_guardian_count() -> int:
 func _on_living_world_effect_requested(source: LivingWorldProp, effect_id: String, amount: int) -> void:
 	match effect_id:
 		"resource_reward":
-			_spawn_pickup(source.global_position + Vector2(0, 24), "moonleaf", amount)
+			_spawn_pickup(source.global_position + Vector2(0, 18), "moonleaf", amount)
 			_spawn_gameplay_vfx(source.global_position, "reward")
 			hud.set_encounter_feedback("MOONLEAF THICKET — LUMINOUS HERBS READY")
 		"heal":
@@ -560,7 +936,7 @@ func _trigger_legendary_pulse(origin: Vector2, primary_target: Node2D) -> void:
 	var candidates: Array[Dictionary] = []
 	var targets_by_id: Dictionary = {}
 	for candidate: Node in get_tree().get_nodes_in_group("attackable"):
-		if not (candidate is ChaserEnemy or candidate is RangedEnemy or candidate is AbyssalWarden):
+		if not (candidate is ChaserEnemy or candidate is RangedEnemy or candidate is AbyssalWarden or candidate is IslandStoryWarden):
 			continue
 		var enemy_node := candidate as Node2D
 		var candidate_id := str(enemy_node.get_instance_id())
@@ -578,7 +954,20 @@ func _trigger_legendary_pulse(origin: Vector2, primary_target: Node2D) -> void:
 func _on_resource_depleted(drop_position: Vector2, resource_id: String, amount: int) -> void:
 	legendary_event_bus.emit_resource_destroyed({"position": drop_position, "resource_id": resource_id, "amount": amount})
 	_spawn_gameplay_vfx(drop_position, "resource_break")
-	_spawn_pickup(drop_position, resource_id, amount)
+	var resolved_amount: int = survival.resolve_gather_yield(amount)
+	var cycle_effects: Dictionary = expedition.effects(current_biome())
+	resolved_amount += int(cycle_effects.manual_yield_bonus)
+	if resource_id in ["fiber", "emberberry"]:
+		resolved_amount += int(cycle_effects.forage_yield_bonus)
+	elif resource_id == "wood":
+		resolved_amount += int(cycle_effects.wood_yield_bonus)
+	_spawn_pickup(drop_position, resource_id, resolved_amount)
+	var event_token := "%s:%d:%d:%s" % [resource_id, roundi(drop_position.x), roundi(drop_position.y), String(expedition_contract.definition.get("contract_id", "none"))]
+	if resource_id in ["fiber", "emberberry"]:
+		_record_contract_progress("forage", 1, event_token)
+	elif resource_id == "wood":
+		_record_contract_progress("gather_wood", amount, event_token)
+	_refresh_progression_ui()
 
 func _on_enemy_defeated(drop_position: Vector2) -> void:
 	_emit_enemy_killed(enemy, drop_position)
@@ -623,7 +1012,7 @@ func _on_boss_volley_requested(origin: Vector2, directions: Array[Vector2], dama
 		spawn_enemy_projectile(origin, direction, modified_damage)
 
 func _on_boss_phase_changed(_phase: int, base_speed: float) -> void:
-	var multiplier := float(installed_shard.get("enemy_speed_multiplier", 1.0))
+	var multiplier := float(installed_shard.get("enemy_speed_multiplier", 1.0)) * float(expedition.effects(current_biome()).enemy_speed_multiplier)
 	boss.move_speed = base_speed * multiplier
 	hud.set_encounter_feedback("MAELSTROM PHASE — RADIAL VOLLEYS")
 
@@ -704,13 +1093,21 @@ func _spawn_pickup(drop_position: Vector2, kind: String, payload: Variant) -> Wo
 	return pickup
 
 func _on_pickup_collected(kind: String, payload: Variant) -> bool:
-	if kind in ["wood", "stone", "moonleaf", "plank"]:
+	if kind in ["wood", "stone", "moonleaf", "plank", "fiber", "emberberry"]:
 		var amount := int(payload)
 		if kind == "stone" and resource_inventory.amount("smelting_charge") > 0:
 			resource_inventory.remove("smelting_charge", 1)
 			amount += 1
 			hud.set_encounter_feedback("BURNING SMELTER — CHARGE REFINED +1 STONE")
-		return resource_inventory.add(kind, amount)
+		var added: bool = bool(resource_inventory.add(kind, amount))
+		if added:
+			if kind == "wood":
+				_record_journey("gather_wood", amount)
+			elif kind == "stone":
+				_record_journey("gather_stone", amount)
+			elif kind in ["fiber", "emberberry"]:
+				_record_journey("forage_supplies", amount)
+		return added
 	elif kind == "equipment":
 		if not payload is Dictionary:
 			return false
@@ -722,6 +1119,7 @@ func _on_pickup_collected(kind: String, payload: Variant) -> bool:
 		if not equipment_inventory.collect(item):
 			return false
 		hud.set_loot(item)
+		_record_journey("discover_loot")
 		return true
 	elif kind == "island_shard":
 		if not payload is Dictionary:
@@ -729,6 +1127,7 @@ func _on_pickup_collected(kind: String, payload: Variant) -> bool:
 		var shard := payload as Dictionary
 		if not _has_shard(String(shard.get("id", ""))):
 			island_shards.append(shard.duplicate(true))
+			_record_journey("recover_shard")
 			_refresh_island_ui()
 			return true
 		return false
@@ -774,6 +1173,10 @@ func learn_technology(technology_id: String) -> bool:
 	moonleaf = int(after.get("moonleaf", moonleaf))
 	plank = int(after.get("plank", plank))
 	_apply_technology_effects()
+	if technology_id == "fieldcraft":
+		_record_journey("learn_fieldcraft")
+	elif technology_id == "combat_training":
+		_record_journey("awaken_combat")
 	if not combat_was_unlocked and is_combat_unlocked():
 		_sync_combat_phase(true)
 	else:
@@ -783,7 +1186,7 @@ func learn_technology(technology_id: String) -> bool:
 
 func _apply_technology_effects() -> void:
 	var maximum_mana := (80.0 if technology_tree.is_learned("mana_channeling") else 60.0) + (10.0 if bool(crafted_building_kits.get("mana_vessel", false)) else 0.0) + (20.0 if bool(crafted_building_kits.get("ley_capacitor", false)) else 0.0)
-	var regeneration := (9.0 if technology_tree.is_learned("arcane_mastery") else 6.0) + (2.0 if technology_tree.is_learned("ley_resonance") else 0.0) + (2.0 if bool(crafted_building_kits.get("arcane_conduit", false)) else 0.0)
+	var regeneration := (9.0 if technology_tree.is_learned("arcane_mastery") else 6.0) + (2.0 if technology_tree.is_learned("ley_resonance") else 0.0) + (2.0 if bool(crafted_building_kits.get("arcane_conduit", false)) else 0.0) + float(expedition.effects(current_biome()).mana_regeneration_bonus)
 	player.mana_pool.regeneration_per_second = regeneration
 	if not is_equal_approx(player.mana_pool.maximum, maximum_mana):
 		player.mana_pool.set_maximum(maximum_mana, true)
@@ -798,7 +1201,7 @@ func _authored_opening_enemies() -> Array[Node2D]:
 
 func _sync_combat_phase(show_feedback: bool) -> void:
 	var unlocked := is_combat_unlocked()
-	var gameplay_active := unlocked and not hud.is_equipment_panel_open() and not hud.is_workbench_panel_open() and not hud.is_system_menu_open() and not hud.is_island_panel_open()
+	var gameplay_active := unlocked and not hud.is_equipment_panel_open() and not hud.is_workbench_panel_open() and not hud.is_system_menu_open() and not hud.is_island_panel_open() and not hud.is_contract_panel_open()
 	for combatant: Node2D in _authored_opening_enemies():
 		combatant.visible = unlocked
 		combatant.set_physics_process(gameplay_active)
@@ -818,6 +1221,8 @@ func _refresh_progression_ui() -> void:
 	hud.set_mana(player.mana_pool.current, player.mana_pool.maximum)
 	hud.refresh_inventory_stats({
 		"wood": wood, "stone": stone, "moonleaf": moonleaf, "plank": plank, "scrap": equipment_inventory.scrap,
+		"fiber": resource_inventory.amount("fiber"), "emberberry": resource_inventory.amount("emberberry"), "rations": survival.rations, "prepared_harvests": survival.prepared_harvests,
+		"expedition_marks": expedition_marks,
 		"health": player.health, "maximum_health": player.maximum_health,
 		"mana": player.mana_pool.current, "maximum_mana": player.mana_pool.maximum, "mana_regeneration": player.mana_pool.regeneration_per_second,
 		"attack_damage": player.attack_damage, "attack_speed": player.attack_speed, "critical_chance": player.critical_chance,
@@ -825,7 +1230,119 @@ func _refresh_progression_ui() -> void:
 	})
 	var phase_name := "combat awakened" if is_combat_unlocked() else "exploration phase"
 	hud.refresh_technologies(technology_tree.all_definitions(), technology_tree.learned, phase_name, _progression_resources())
-	hud.set_objective("EXPLORE • GATHER • LEARN\n[Y] INVENTORY + TECH   [A] USE   [X] HARVEST" if not is_combat_unlocked() else "BUILD • FIGHT • EXPAND\n[L] MOVE   [X] ATTACK   [A] USE   [Y] INVENTORY   [RB] ISLANDS")
+	hud.refresh_journey(journey.entries())
+	var next_step: Dictionary = journey.next_entry()
+	var journey_text := "JOURNEY COMPLETE — EXPAND FREELY" if next_step.is_empty() else "JOURNEY %d/%d — %s  %d/%d" % [journey.completed.size(), journey.entries().size(), String(next_step.name).to_upper(), int(next_step.progress), int(next_step.target)]
+	hud.set_objective("%s\n[Y] INVENTORY + JOURNEY   [A] USE   [X] HARVEST" % journey_text)
+	hud.set_expedition_status(expedition.status_text(current_biome()))
+
+func current_biome() -> String:
+	return String(installed_shard.get("biome", "Forest")) if not installed_shard.is_empty() else "Forest"
+
+func advance_expedition(delta: float) -> Dictionary:
+	var result: Dictionary = expedition.advance(delta)
+	if bool(result.phase_changed) or bool(result.day_changed) or bool(result.shelter_expired):
+		_apply_expedition_effects()
+	elif bool(result.advanced) and is_instance_valid(hud):
+		hud.set_expedition_status(expedition.status_text(current_biome()))
+	if bool(result.day_changed):
+		_sync_expedition_events()
+	return result
+
+func _apply_expedition_effects() -> void:
+	if not is_instance_valid(player):
+		return
+	var effects: Dictionary = expedition.effects(current_biome())
+	player.set_expedition_protection(int(effects.damage_reduction))
+	_apply_technology_effects()
+	_apply_island_modifiers()
+	if is_instance_valid(expedition_light):
+		expedition_light.color = _expedition_light_color()
+	if is_instance_valid(_weather_presentation):
+		_weather_presentation.configure(expedition.weather(current_biome()), expedition.world_seed + expedition.day_index() * 104729)
+	if is_instance_valid(hud):
+		hud.set_expedition_status(expedition.status_text(current_biome()))
+	_refresh_contract_ui()
+
+func _expedition_light_color() -> Color:
+	var phase_color := {
+		"dawn": Color("e7c9b5"), "day": Color.WHITE,
+		"dusk": Color("c99daf"), "night": Color("7389b5"),
+	}.get(expedition.phase(), Color.WHITE) as Color
+	var weather_id: String = String(expedition.weather(current_biome()))
+	if weather_id == "fog":
+		return phase_color.lerp(Color("b9c9c5"), 0.22)
+	if weather_id == "rain":
+		return phase_color.lerp(Color("819db5"), 0.16)
+	return phase_color
+
+func forage_node_count() -> int:
+	var count := 0
+	for node: ResourceNode in [fiber_patch_west, fiber_patch_south, emberberry_bush_north, emberberry_bush_east]:
+		if is_instance_valid(node):
+			count += 1
+	return count
+
+func _forage_nodes() -> Dictionary:
+	return {
+		"fiber_west": fiber_patch_west,
+		"fiber_south": fiber_patch_south,
+		"emberberry_north": emberberry_bush_north,
+		"emberberry_east": emberberry_bush_east,
+	}
+
+func _forage_state() -> Dictionary:
+	var result: Dictionary = {}
+	for forage_id: String in _forage_nodes():
+		var forage_node := _forage_nodes()[forage_id] as ResourceNode
+		result[forage_id] = forage_node.runtime_state()
+	return result
+
+func _restore_forage_state(state: Dictionary) -> bool:
+	for forage_id: String in _forage_nodes():
+		if not state.get(forage_id) is Dictionary:
+			return false
+		var forage_node := _forage_nodes()[forage_id] as ResourceNode
+		if not forage_node.restore_runtime_state(state[forage_id] as Dictionary):
+			return false
+	return true
+
+func rest_at_field_camp() -> bool:
+	var result: Dictionary = survival.consume_for_rest()
+	if not bool(result.get("success", false)):
+		hud.set_encounter_feedback("FIELD CAMP — CRAFT A TRAIL RATION FIRST")
+		return false
+	player.health_component.heal(int(result.health))
+	player.mana_pool.replenish(float(result.mana))
+	expedition.rest_at_shelter()
+	_apply_expedition_effects()
+	_record_journey("rest_at_camp")
+	_spawn_gameplay_vfx(field_camp.global_position, "reward")
+	hud.set_encounter_feedback("SHELTERED EXPEDITION — +1 YIELD FOR %d HARVESTS, +2 MANA/S, -1 DAMAGE" % survival.prepared_harvests)
+	_refresh_progression_ui()
+	_refresh_interaction_target()
+	return true
+
+func _record_journey(milestone_id: String, amount: int = 1, absolute: bool = false) -> void:
+	var result: Dictionary = journey.record(milestone_id, amount, absolute)
+	if not bool(result.get("completed_now", false)):
+		_refresh_progression_ui()
+		return
+	_apply_journey_reward(result.reward as Dictionary)
+	var completed_entry: Dictionary = result.entry as Dictionary
+	hud.set_encounter_feedback("JOURNEY COMPLETE — %s" % String(completed_entry.name).to_upper())
+	_refresh_progression_ui()
+
+func _apply_journey_reward(reward: Dictionary) -> void:
+	for reward_value: Variant in reward:
+		var reward_id := String(reward_value)
+		var amount := int(reward[reward_value])
+		if reward_id == "scrap":
+			equipment_inventory.scrap += amount
+		elif reward_id == "rations":
+			survival.add_ration(amount)
+		else:
+			resource_inventory.add(reward_id, amount)
 
 func _on_player_moved(_position_value: Vector2) -> void:
 	_refresh_interaction_target()
@@ -990,7 +1507,9 @@ func _on_workbench_panel_closed() -> void:
 	_restore_gameplay_if_no_modal()
 
 func _on_craft_requested(recipe_id: String) -> void:
-	if recipe_id in ["lumber_mill_kit", "collector_kit"]:
+	if recipe_id == "trail_ration":
+		craft_trail_ration()
+	elif recipe_id in ["lumber_mill_kit", "collector_kit"]:
 		craft_building_kit(recipe_id)
 	elif recipe_id == CraftingService.WHETSTONE_RECIPE_ID:
 		craft_runed_whetstone()
@@ -1000,6 +1519,19 @@ func _on_craft_requested(recipe_id: String) -> void:
 		craft_reinforced_heart()
 	else:
 		craft_progression_upgrade(recipe_id)
+
+func craft_trail_ration() -> bool:
+	var result := crafting_service.evaluate("trail_ration", _crafting_resources(), _technology_unlocks(), _crafted_recipe_state(), survival.ration_capacity())
+	if not bool(result.get("success", false)):
+		_refresh_workbench_ui(_crafting_failure_text(result))
+		return false
+	_apply_crafting_resources(result.resources_after as Dictionary)
+	if not survival.add_ration():
+		return false
+	_record_journey("craft_ration")
+	refresh_all_ui("CRAFTED — TRAIL RATIONS %d/%d" % [survival.rations, SurvivalPreparationScript.MAX_RATIONS])
+	_refresh_interaction_target()
+	return true
 
 func craft_progression_upgrade(recipe_id: String) -> bool:
 	var result := crafting_service.evaluate(recipe_id, _crafting_resources(), _technology_unlocks(), _crafted_recipe_state())
@@ -1104,6 +1636,7 @@ func confirm_building_placement() -> bool:
 	_placement_visual = null
 	hud.close_placement()
 	_materialize_base_buildings()
+	_record_journey("establish_base")
 	_refresh_base_ui("%s ONLINE" % String((result.building as Dictionary).building_id).replace("_", " ").to_upper())
 	_restore_gameplay_if_no_modal()
 	return true
@@ -1243,13 +1776,15 @@ func _refresh_upgrade_ui(feedback: String = "") -> void:
 	hud.refresh_upgrade_preview(equipment_inventory.equipped_item("weapon"), equipment_inventory.scrap, moonleaf, feedback)
 
 func _crafting_resources() -> Dictionary:
-	return {"wood": wood, "stone": stone, "moonleaf": moonleaf, "scrap": equipment_inventory.scrap, "plank": plank}
+	return {"wood": wood, "stone": stone, "moonleaf": moonleaf, "scrap": equipment_inventory.scrap, "plank": plank, "fiber": resource_inventory.amount("fiber"), "emberberry": resource_inventory.amount("emberberry")}
 
 func _apply_crafting_resources(resources: Dictionary) -> void:
 	wood = int(resources.get("wood", wood))
 	stone = int(resources.get("stone", stone))
 	moonleaf = int(resources.get("moonleaf", moonleaf))
 	plank = int(resources.get("plank", plank))
+	resource_inventory.set_amount("fiber", maxi(0, int(resources.get("fiber", resource_inventory.amount("fiber")))))
+	resource_inventory.set_amount("emberberry", maxi(0, int(resources.get("emberberry", resource_inventory.amount("emberberry")))))
 	equipment_inventory.scrap = int(resources.get("scrap", equipment_inventory.scrap))
 
 func _crafted_recipe_state() -> Dictionary:
@@ -1302,9 +1837,10 @@ func refresh_all_ui(crafting_feedback: String = "") -> void:
 	_refresh_upgrade_ui()
 	_refresh_base_ui()
 	_refresh_island_ui()
+	_refresh_island_story_ui()
 
 func _refresh_workbench_ui(feedback: String = "") -> void:
-	hud.refresh_workbench(wood, stone, moonleaf, equipment_inventory.scrap, reinforced_heart_crafted, runed_whetstone_crafted, herbal_compass_crafted, tidecatcher_built, feedback, plank, _crafted_recipe_state(), _has_forest_island(), _technology_unlocks())
+	hud.refresh_workbench(wood, stone, moonleaf, equipment_inventory.scrap, reinforced_heart_crafted, runed_whetstone_crafted, herbal_compass_crafted, tidecatcher_built, feedback, plank, _crafted_recipe_state(), _has_forest_island(), _technology_unlocks(), {"fiber": resource_inventory.amount("fiber"), "emberberry": resource_inventory.amount("emberberry"), "ration_capacity": survival.ration_capacity()})
 
 func _refresh_base_ui(feedback: String = "") -> void:
 	var active := not base_placement.buildings.is_empty()
@@ -1316,7 +1852,7 @@ func _refresh_base_ui(feedback: String = "") -> void:
 	hud.set_base_status(active or not feedback.is_empty(), flow)
 
 func _restore_gameplay_if_no_modal() -> void:
-	if hud.is_equipment_panel_open() or hud.is_workbench_panel_open() or hud.is_system_menu_open() or hud.is_island_panel_open() or hud.is_placement_panel_open():
+	if hud.is_equipment_panel_open() or hud.is_workbench_panel_open() or hud.is_system_menu_open() or hud.is_island_panel_open() or hud.is_placement_panel_open() or hud.is_contract_panel_open() or hud.is_island_story_panel_open():
 		return
 	player.input_enabled = true
 	_set_combat_processing(true)
@@ -1389,6 +1925,8 @@ func snapshot_state() -> Dictionary:
 		"stone": stone,
 		"moonleaf": moonleaf,
 		"plank": plank,
+		"fiber": resource_inventory.amount("fiber"),
+		"emberberry": resource_inventory.amount("emberberry"),
 		"equipment": {
 			"scrap": equipment_inventory.scrap,
 			"equipped_id": equipment_inventory.equipped_id,
@@ -1402,6 +1940,13 @@ func snapshot_state() -> Dictionary:
 		"islands": {"inventory": saved_shards, "installed": installed_shard.duplicate(true), "archipelago": archipelago.to_dictionary()},
 		"base": {"placement": base_placement.to_dictionary(), "storage": shared_storage.to_dictionary(), "lumber_mill": lumber_mill_simulation.to_dictionary(), "collector": collector_simulation.to_dictionary(), "crafted_kits": crafted_building_kits.duplicate(true), "saved_unix": int(Time.get_unix_time_from_system())},
 		"technologies": {"learned": technology_tree.learned.duplicate()},
+		"survival": survival.to_dictionary(),
+		"journey": journey.to_dictionary(),
+		"expedition": expedition.to_dictionary(),
+		"forage": _forage_state(),
+		"expedition_marks": expedition_marks,
+		"expedition_contract": expedition_contract.to_dictionary(),
+		"island_story": island_story.to_dictionary(),
 	}
 
 func _apply_state(state: Dictionary) -> void:
@@ -1419,6 +1964,8 @@ func _apply_state(state: Dictionary) -> void:
 	stone = maxi(0, int(state.stone))
 	moonleaf = maxi(0, int(state.moonleaf))
 	plank = maxi(0, int(state.plank))
+	resource_inventory.set_amount("fiber", maxi(0, int(state.fiber)))
+	resource_inventory.set_amount("emberberry", maxi(0, int(state.emberberry)))
 	equipment_inventory.items.clear()
 	for item_value: Variant in equipment_state.items:
 		equipment_inventory.items.append((item_value as Dictionary).duplicate(true))
@@ -1430,6 +1977,13 @@ func _apply_state(state: Dictionary) -> void:
 	runed_whetstone_crafted = bool(state.runed_whetstone_crafted)
 	herbal_compass_crafted = bool(state.herbal_compass_crafted)
 	technology_tree.restore(technology_state.learned as Array)
+	survival.restore(state.survival as Dictionary)
+	journey.restore(state.journey as Dictionary)
+	expedition.restore(state.expedition as Dictionary)
+	_restore_forage_state(state.forage as Dictionary)
+	expedition_marks = maxi(0, int(state.expedition_marks))
+	expedition_contract.restore(state.expedition_contract as Dictionary)
+	island_story.restore(state.island_story as Dictionary)
 	_apply_technology_effects()
 	player.mana_pool.restore(float(player_state.mana), float(player_state.maximum_mana), float(player_state.mana_regeneration))
 	_sync_player_equipment()
@@ -1455,8 +2009,10 @@ func _apply_state(state: Dictionary) -> void:
 	simulate_offline(int(Time.get_unix_time_from_system()))
 	_sync_archipelago_compatibility()
 	_rebuild_materialized_islands()
+	_sync_island_story()
 	_materialize_base_buildings()
 	_apply_island_modifiers()
+	_sync_expedition_events()
 	_sync_combat_phase(false)
 	player.health_changed.emit(player.health, player.maximum_health)
 	refresh_all_ui()
@@ -1499,11 +2055,13 @@ func install_selected_shard(index: int, slot_id: String = "east") -> bool:
 		island_shards.append((prior.definition as Dictionary).duplicate(true))
 	_sync_archipelago_compatibility()
 	_rebuild_materialized_islands()
+	_sync_island_story()
 	var materialization := IslandMaterializationVfx.new()
 	materialization.global_position = target_slot.global_position
 	add_child(materialization)
 	logger.debug(GameLoggerScript.WORLD, "island shard installed", {"id": String(shard.get("id", "")), "seed": int(shard.get("seed", 0)), "slot": slot_id})
 	_apply_island_modifiers()
+	_record_journey("install_island")
 	_refresh_equipment_ui()
 	_refresh_island_ui()
 	return true
@@ -1521,6 +2079,7 @@ func remove_installed_shard(slot_id: String = "east") -> bool:
 	target_slot.clear_materialized()
 	_sync_archipelago_compatibility()
 	_rebuild_materialized_islands()
+	_sync_island_story()
 	_apply_island_modifiers()
 	_refresh_equipment_ui()
 	_refresh_island_ui()
@@ -1528,7 +2087,7 @@ func remove_installed_shard(slot_id: String = "east") -> bool:
 
 func _apply_island_modifiers() -> void:
 	var yield_bonus := int(installed_shard.get("tree_yield_bonus", 0))
-	var speed_multiplier := float(installed_shard.get("enemy_speed_multiplier", 1.0))
+	var speed_multiplier := float(installed_shard.get("enemy_speed_multiplier", 1.0)) * float(expedition.effects(current_biome()).enemy_speed_multiplier)
 	_sync_player_equipment()
 	if is_instance_valid(tree):
 		tree.wood_yield = BASE_TREE_YIELD + yield_bonus
@@ -1562,7 +2121,7 @@ func _rebuild_materialized_islands() -> void:
 		(island_slots[slot_id] as IslandSlot).clear_materialized()
 	for slot_id: String in archipelago.slot_ids():
 		_materialize_slot(slot_id)
-	if hud != null and (hud.is_island_panel_open() or hud.is_equipment_panel_open() or hud.is_workbench_panel_open() or hud.is_system_menu_open()):
+	if hud != null and (hud.is_island_panel_open() or hud.is_equipment_panel_open() or hud.is_workbench_panel_open() or hud.is_system_menu_open() or hud.is_contract_panel_open() or hud.is_island_story_panel_open()):
 		_set_combat_processing(false)
 
 func _materialize_slot(slot_id: String) -> bool:
@@ -1655,7 +2214,7 @@ func _has_shard(shard_id: String) -> bool:
 
 func _set_combat_processing(enabled: bool) -> void:
 	for combatant: Node in get_tree().get_nodes_in_group("attackable"):
-		if combatant is ChaserEnemy or combatant is RangedEnemy or combatant is AbyssalWarden:
+		if combatant is ChaserEnemy or combatant is RangedEnemy or combatant is AbyssalWarden or combatant is IslandStoryWarden:
 			combatant.set_physics_process(enabled)
 	for descendant: Node in find_children("*", "", true, false):
 		if descendant is EnemyProjectile:
@@ -1700,7 +2259,7 @@ func _spawn_rift_wave() -> void:
 			var chaser := ChaserEnemy.new()
 			chaser.position = spawn_position
 			chaser.target = player
-			chaser.move_speed = BASE_ENEMY_SPEED * float(installed_shard.get("enemy_speed_multiplier", 1.0))
+			chaser.move_speed = BASE_ENEMY_SPEED * float(installed_shard.get("enemy_speed_multiplier", 1.0)) * float(expedition.effects(current_biome()).enemy_speed_multiplier)
 			add_child(chaser)
 			chaser.defeated.connect(_on_rift_chaser_defeated.bind(chaser))
 			rift_enemies.append(chaser)
@@ -1709,7 +2268,7 @@ func _spawn_rift_wave() -> void:
 			ranged.position = spawn_position
 			ranged.target = player
 			ranged.elite = kind == "elite"
-			ranged.move_speed = (BASE_ELITE_SPEED if ranged.elite else BASE_RANGED_SPEED) * float(installed_shard.get("enemy_speed_multiplier", 1.0))
+			ranged.move_speed = (BASE_ELITE_SPEED if ranged.elite else BASE_RANGED_SPEED) * float(installed_shard.get("enemy_speed_multiplier", 1.0)) * float(expedition.effects(current_biome()).enemy_speed_multiplier)
 			add_child(ranged)
 			ranged.volley_requested.connect(_on_enemy_volley_requested)
 			ranged.defeated.connect(_on_rift_ranged_defeated.bind(ranged))
@@ -1862,81 +2421,5 @@ func _find_pickup(kind: String) -> WorldPickup:
 			return child as WorldPickup
 	return null
 
-func _draw() -> void:
-	draw_rect(Rect2(-1024.0, -704.0, 2048.0, 1408.0), Color("193d4a"))
-	for water_y: int in range(-672, 704, 96):
-		var offset := 34.0 if posmod(water_y / 96, 2) == 0 else 0.0
-		for water_x: int in range(-992, 992, 128):
-			draw_line(Vector2(water_x + offset, water_y), Vector2(water_x + offset + 38.0, water_y), Color(0.35, 0.71, 0.72, 0.24), 3.0)
-	for x: int in range(-896, 896, 64):
-		for y: int in range(-576, 576, 64):
-			var asset_id := handdrawn_terrain_id(Vector2i(x, y))
-			draw_texture_rect_region(VisualAssetLibrary.HANDDRAWN_TERRAIN_ATLAS, Rect2(x, y, 64, 64), VisualAssetLibrary.handdrawn_terrain_region(asset_id))
-	draw_rect(Rect2(-896.0, -576.0, 1792.0, 1152.0), Color(0.03, 0.13, 0.10, 0.16))
-	_draw_terrain_micro_biomes()
-	for placement: Dictionary in HANDDRAWN_DECO_LAYOUT:
-		var position_value := placement.position as Vector2
-		draw_texture_rect(VisualAssetLibrary.handdrawn_deco_texture(int(placement.frame)), Rect2(position_value - Vector2(32, 32), Vector2(64, 64)), false)
-
-func _draw_terrain_micro_biomes() -> void:
-	var grove := PackedVector2Array([Vector2(-875, -520), Vector2(-425, -520), Vector2(-385, -390), Vector2(-470, -250), Vector2(-710, -220), Vector2(-875, -315)])
-	var moonleaf_meadow := PackedVector2Array([Vector2(-835, 120), Vector2(-560, 70), Vector2(-390, 185), Vector2(-430, 470), Vector2(-760, 520), Vector2(-875, 360)])
-	var stone_rise := PackedVector2Array([Vector2(315, -525), Vector2(835, -525), Vector2(875, -305), Vector2(735, -135), Vector2(470, -190), Vector2(355, -345)])
-	var sunlit_lowland := PackedVector2Array([Vector2(315, 170), Vector2(585, 105), Vector2(855, 225), Vector2(860, 520), Vector2(405, 520), Vector2(265, 365)])
-	var zones: Array[Dictionary] = [
-		{"points": grove, "fill": Color(0.08, 0.24, 0.13, 0.28), "edge": Color(0.32, 0.57, 0.30, 0.42)},
-		{"points": moonleaf_meadow, "fill": Color(0.18, 0.13, 0.28, 0.24), "edge": Color(0.55, 0.42, 0.72, 0.38)},
-		{"points": stone_rise, "fill": Color(0.26, 0.27, 0.22, 0.25), "edge": Color(0.64, 0.62, 0.46, 0.42)},
-		{"points": sunlit_lowland, "fill": Color(0.33, 0.25, 0.08, 0.18), "edge": Color(0.84, 0.66, 0.28, 0.36)},
-	]
-	for zone: Dictionary in zones:
-		var points := zone.points as PackedVector2Array
-		draw_colored_polygon(points, zone.fill as Color)
-		var outline := points.duplicate()
-		outline.append(points[0])
-		draw_polyline(outline, Color(zone.edge, 0.2), 2.0)
-	for index: int in 28:
-		var x := -790.0 + float(posmod(index * 173, 1580))
-		var y := -490.0 + float(posmod(index * 257, 980))
-		var point := Vector2(x, y)
-		draw_colored_polygon(PackedVector2Array([point + Vector2(0, -3), point + Vector2(4, 0), point + Vector2(0, 3), point + Vector2(-4, 0)]), Color(0.64, 0.78, 0.43, 0.26))
-	for edge_y: int in range(-470, 500, 96):
-		draw_line(Vector2(-902, edge_y), Vector2(-884, edge_y + 10), Color(0.72, 0.84, 0.55, 0.42), 3.0)
-		draw_line(Vector2(902, edge_y + 24), Vector2(884, edge_y + 34), Color(0.72, 0.84, 0.55, 0.42), 3.0)
-
-func handdrawn_terrain_id(tile_position: Vector2i) -> String:
-	var x := tile_position.x
-	var y := tile_position.y
-	var main_path := absf(float(y)) < 64.0 and x >= -640 and x <= 704
-	var north_path := absf(float(x)) < 64.0 and y >= -448 and y <= 128
-	if main_path and north_path:
-		return "path_cross"
-	if main_path:
-		return "path_horizontal"
-	if north_path:
-		return "path_vertical"
-	if x == -896 and y == -576:
-		return "grass_top_left"
-	if x == 832 and y == -576:
-		return "grass_top_right"
-	if x == -896 and y == 512:
-		return "grass_bottom_left"
-	if x == 832 and y == 512:
-		return "grass_bottom_right"
-	if y == -576:
-		return "grass_top"
-	if y == 512:
-		return "grass_bottom"
-	if x == -896:
-		return "grass_left"
-	if x == 832:
-		return "grass_right"
-	var variation := posmod((x / 64) * 3 + (y / 64) * 5, 11)
-	if variation == 0:
-		return "grass_b"
-	if variation == 1:
-		return "grass_c"
-	return "grass"
-
 func uses_plus_terrain_markers() -> bool:
-	return false
+	return starting_island_terrain.uses_plus_terrain_markers()

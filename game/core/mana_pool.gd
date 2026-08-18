@@ -30,6 +30,13 @@ func regenerate(delta: float) -> bool:
 	changed.emit(current, maximum)
 	return true
 
+func replenish(amount: float) -> bool:
+	if amount <= 0.0 or current >= maximum:
+		return false
+	current = minf(maximum, current + amount)
+	changed.emit(current, maximum)
+	return true
+
 func set_maximum(value: float, refill_bonus: bool = true) -> bool:
 	if value <= 0.0:
 		return false

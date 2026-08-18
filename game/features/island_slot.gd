@@ -78,8 +78,16 @@ func _refresh_pedestal() -> void:
 	_visual_installed = installed
 
 func _draw() -> void:
-	var pulse := 2.0 + PresentationMotion.wave(_visual_time, 0.45, float(abs(slot_id.hash()) % 100) / 100.0) * 2.0
-	draw_set_transform(Vector2(0, 18), 0.0, Vector2(1.0, 0.32))
-	draw_circle(Vector2.ZERO, 48.0 + pulse, Color(0.18, 0.52, 0.46, 0.12 if installed else 0.18))
-	draw_arc(Vector2.ZERO, 52.0 + pulse, 0.0, TAU, 40, Color("72e1a5") if installed else Color("5d999c"), 3.0)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	var pulse := PresentationMotion.wave(_visual_time, 0.45, float(abs(slot_id.hash()) % 100) / 100.0) * 2.0
+	var shadow := PackedVector2Array([Vector2(-31, 15), Vector2(-18, 8), Vector2(19, 8), Vector2(33, 15), Vector2(18, 22), Vector2(-19, 22)])
+	draw_colored_polygon(shadow, Color(0.04, 0.12, 0.12, 0.26))
+	if installed:
+		return
+	var color := Color("5d999c")
+	var extent := 39.0 + pulse
+	for direction: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
+		var corner := Vector2(direction.x * extent, direction.y * 19.0 + 16.0)
+		draw_polyline(PackedVector2Array([corner - Vector2(direction.x * 11.0, 0), corner, corner - Vector2(0, direction.y * 7.0)]), color, 2.0)
+
+func uses_circular_zone_overlay() -> bool:
+	return false

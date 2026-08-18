@@ -49,6 +49,14 @@ Emberwood v3 is the active production presentation. It keeps the 64px semantic-c
 
 `forest_tiles.png` is the 128x64 runtime terrain derivative: seamless 64px grass and dirt cells using the registered Emberwood palette. It removes source-cell isolation padding so gameplay terrain has no grid seams. Deterministic scene decoration adds non-colliding leaf or stone accents to roughly 10-15% of grass cells rather than stamping a prop into every tile.
 
+## v4 starting-island plate
+
+`emberwood_starting_island_v4.png` is the active 1792x1152 full-map ground plate beneath the starting-island scene. It composes four readable ground regions, path hierarchy, wet lowland, ancient-root traces, rocky rise, and shoreline into one original image while leaving every solid or interactive object in its existing scene node. The runtime image is globally quantized to 128 opaque colors and upscaled with nearest-neighbor filtering. `StartingIslandTerrain` owns its approximate shoreline collision; the plate itself never defines collisions or rewards. Source, full prompt, deterministic post-processing, numeric checks, and 1280x800 review are recorded in `evidence/2026-08-18-island-story-starting-terrain.md`.
+
+## Forest Warden v1
+
+`emberwood_forest_warden_v1_atlas.png` is the Forest installed-island climax atlas. Its exact 4x4 grid provides four idle, four walk, four root-staff attack, two hit, and two death frames. The runtime sheet is rebuilt from `source/emberwood_forest_warden_v1_master_alpha.png` by `tools/forest_warden_asset_builder.gd`, which normalizes the source grid to 64px cells, applies the registered sixteen-color Emberwood palette, and enforces binary alpha. `VisualAssetLibrary.forest_warden_texture` is the only runtime coordinate owner. Full prompt, provenance, mechanic mapping, and captures are recorded in `evidence/2026-08-18-forest-warden-encounter.md`.
+
 ## Generation provenance
 
 - Tool: OpenAI built-in image generation (imagegen skill), 2026-08-10.

@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource path="res://game/features/world.gd" type="Script" id="1"]
 [ext_resource path="res://game/features/player.gd" type="Script" id="2"]
@@ -13,6 +13,8 @@
 [ext_resource path="res://game/features/rift_portal.gd" type="Script" id="11"]
 [ext_resource path="res://game/features/camera_rig.gd" type="Script" id="12"]
 [ext_resource path="res://game/core/resource_node_definition.gd" type="Script" id="13"]
+[ext_resource path="res://game/features/field_camp.gd" type="Script" id="14"]
+[ext_resource path="res://game/features/starting_island_terrain.gd" type="Script" id="15"]
 
 [sub_resource type="Resource" id="TreeDefinition"]
 script = ExtResource("13")
@@ -30,8 +32,32 @@ maximum_health = 3
 drop_amount = 2
 visual_kind = "stone"
 
+[sub_resource type="Resource" id="FiberDefinition"]
+script = ExtResource("13")
+resource_id = "fiber"
+display_name = "Toughgrass Fiber"
+maximum_health = 1
+drop_amount = 1
+visual_kind = "herb"
+regrow_seconds = 45.0
+
+[sub_resource type="Resource" id="EmberberryDefinition"]
+script = ExtResource("13")
+resource_id = "emberberry"
+display_name = "Emberberry Bush"
+maximum_health = 1
+drop_amount = 1
+visual_kind = "herb"
+regrow_seconds = 60.0
+
 [node name="FirstPlayableWorld" type="Node2D"]
 script = ExtResource("1")
+
+[node name="ExpeditionLight" type="CanvasModulate" parent="."]
+color = Color(0.91, 0.79, 0.71, 1)
+
+[node name="StartingIslandTerrain" type="StaticBody2D" parent="."]
+script = ExtResource("15")
 
 [node name="Player" type="CharacterBody2D" parent="."]
 script = ExtResource("2")
@@ -53,6 +79,26 @@ position = Vector2(390, -80)
 script = ExtResource("3")
 definition = SubResource("StoneDefinition")
 
+[node name="FiberPatchWest" type="StaticBody2D" parent="."]
+position = Vector2(-205, -15)
+script = ExtResource("3")
+definition = SubResource("FiberDefinition")
+
+[node name="FiberPatchSouth" type="StaticBody2D" parent="."]
+position = Vector2(105, 145)
+script = ExtResource("3")
+definition = SubResource("FiberDefinition")
+
+[node name="EmberberryBushNorth" type="StaticBody2D" parent="."]
+position = Vector2(255, -70)
+script = ExtResource("3")
+definition = SubResource("EmberberryDefinition")
+
+[node name="EmberberryBushEast" type="StaticBody2D" parent="."]
+position = Vector2(315, 115)
+script = ExtResource("3")
+definition = SubResource("EmberberryDefinition")
+
 [node name="Enemy" type="CharacterBody2D" parent="."]
 position = Vector2(-270, 80)
 script = ExtResource("4")
@@ -64,6 +110,10 @@ script = ExtResource("4")
 [node name="Workbench" type="StaticBody2D" parent="."]
 position = Vector2(0, -190)
 script = ExtResource("6")
+
+[node name="FieldCamp" type="StaticBody2D" parent="."]
+position = Vector2(-115, -235)
+script = ExtResource("14")
 
 [node name="Tidecatcher" type="StaticBody2D" parent="."]
 position = Vector2(220, -185)

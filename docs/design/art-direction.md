@@ -21,7 +21,9 @@ This document is the single source of truth for in-game visual implementation. M
 
 ## Controlled palette
 
-The production family is built around ink `#172331`, pine `#214e46`, moss `#4d7a4a`, leaf `#76a85b`, cream `#e8d8a8`, gold `#e5a84b`, ember `#e9674c`, tide cyan `#4db7b3`, and eight registered ramp/accent colors. Every active Puny actor, terrain, and ordinary-object cell uses at most 16 opaque colors and binary alpha. Runtime validation enforces the same ceiling on the hero and enemies; there is no higher-color protagonist exception.
+The production family is built around ink `#172331`, pine `#214e46`, moss `#4d7a4a`, leaf `#76a85b`, cream `#e8d8a8`, gold `#e5a84b`, ember `#e9674c`, tide cyan `#4db7b3`, and eight registered ramp/accent colors. Every active Puny actor, tiled terrain, and ordinary-object cell uses at most 16 opaque colors and binary alpha. The full-map Emberwood v4 terrain plate is the sole 128-color opaque exception because its job is composed ground variation rather than semantic atlas animation. Runtime validation enforces both ceilings explicitly; there is no higher-color protagonist exception.
+
+The Forest Warden is the first bespoke installed-island boss family: a readable antler crown, root staff, mint rune core, bark armor, and teal cloth distinguish it from the ordinary Ranger at silhouette level. Its sixteen 64px cells use the normal sixteen-color/binary-alpha contract. Attack frames may extend downward as roots but must not include circular auras around an actor. Island installation similarly uses rising shard diamonds rather than expanding rings, and installed-island/event markers never draw giant circular zones.
 
 Rarity and VFX may add semantic colors, but meaning must also use shape, label, or intensity: Rare uses a pointed ring, Epic a double diamond, and Legendary a tall beam plus crown/flower emblem. Destructive UI uses the word `DESTROY` plus a warning border; color alone is insufficient.
 

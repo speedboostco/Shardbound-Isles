@@ -23,6 +23,8 @@ const RUNTIME_RASTERS: Array[String] = [
 	"res://assets/original/emberwood/emberwood_vfx_v3_atlas.png",
 	"res://assets/original/emberwood/emberwood_terrain_v3.png",
 	"res://assets/original/emberwood/emberwood_living_world_v1_atlas.png",
+	"res://assets/original/emberwood/emberwood_starting_island_v4.png",
+	"res://assets/original/emberwood/emberwood_forest_warden_v1_atlas.png",
 	"res://assets/third_party/pixel_frog/tiny_swords_cc0/tilemap_flat.png",
 	"res://assets/third_party/pixel_frog/tiny_swords_cc0/terrain_deco_atlas.png",
 	"res://assets/third_party/shade/puny_cc0/puny_hero.png",
@@ -52,8 +54,9 @@ static func validate_repository() -> Array[String]:
 		var is_production_hero := path.contains("/hormelz/knight_cc0/")
 		var is_puny_actor := path.contains("/shade/puny_cc0/puny_") and path.get_file() in ["puny_hero.png", "puny_orc.png", "puny_archer.png", "puny_mage.png"]
 		var is_puny_world := path.contains("/shade/puny_cc0/") and not is_puny_actor
+		var is_starting_island := path.ends_with("emberwood_starting_island_v4.png")
 		var cell_size := 32 if is_puny_actor else (16 if is_puny_world else (128 if is_production_hero else 64))
-		var maximum_colors := 128 if is_production_hero else 16
+		var maximum_colors := 128 if is_production_hero or is_starting_island else 16
 		errors.append_array(validate_metadata(path.get_file(), image.get_width(), image.get_height(), image.detect_alpha(), import_options, cell_size))
 		errors.append_array(validate_pixel_content(path.get_file(), image, cell_size, maximum_colors))
 	if int(ProjectSettings.get_setting("rendering/textures/canvas_textures/default_texture_filter", -1)) != 0:

@@ -16,6 +16,7 @@ var player_target: Node2D
 var force_configuration_failure: bool = false
 var resources_by_id: Dictionary = {}
 var event_marker: IslandEventMarker
+var story_climax_active: bool = false
 
 func configure(slot_id_value: String, installed: Dictionary, effect_values: Dictionary, indicator_values: Array[String], player: Node2D) -> bool:
 	if force_configuration_failure or slot_id_value.is_empty() or not installed.get("definition") is Dictionary or not installed.get("runtime") is Dictionary:
@@ -50,6 +51,23 @@ func active_enemy_count() -> int:
 		if child is ChaserEnemy or child is RangedEnemy:
 			count += 1
 	return count
+
+func set_story_climax_active(active: bool) -> void:
+	story_climax_active = active
+	for child: Node in get_children():
+		if child is ChaserEnemy or child is RangedEnemy:
+			(child as Node2D).visible = not active
+			child.set_physics_process(not active)
+			if active:
+				child.remove_from_group("attackable")
+			else:
+				child.add_to_group("attackable")
+	if is_instance_valid(event_marker):
+		event_marker.visible = not active
+		if active:
+			event_marker.remove_from_group("interactable")
+		elif not event_marker.claimed:
+			event_marker.add_to_group("interactable")
 
 func resource_node(instance_id: String) -> ResourceNode:
 	return resources_by_id.get(instance_id) as ResourceNode
@@ -136,13 +154,13 @@ func _on_resource_depleted(instance_id: String, position_value: Vector2, resourc
 		modifier_triggered.emit(slot_id, "volatile_ore", position_value)
 
 func _draw() -> void:
-	var biome_colors := {"forest": Color("356e4c"), "swamp": Color("52663a"), "volcano": Color("713f36"), "frozen": Color("386d88"), "graveyard": Color("545168"), "settlement": Color("806d4a")}
-	var color: Color = biome_colors.get(String(definition.get("biome", "forest")), Color("356e4c"))
-	draw_circle(Vector2.ZERO, 108.0, color)
-	draw_arc(Vector2.ZERO, 110.0, 0.0, TAU, 48, color.lightened(0.35), 5.0)
-	if "NIGHT" in indicators:
-		draw_circle(Vector2.ZERO, 103.0, Color(0.08, 0.07, 0.2, 0.44))
-	var angle_step := TAU / maxf(1.0, float(indicators.size()))
+	# Installed islands are communicated by their materialized objects and pedestal,
+	# never by a giant circular selection zone. Modifier state uses compact glyphs.
+	var marker_origin := Vector2(-float(maxi(0, indicators.size() - 1)) * 8.0, -76)
 	for index: int in indicators.size():
-		var marker := Vector2.RIGHT.rotated(index * angle_step) * 94.0
-		draw_circle(marker, 7.0, Color("ffd166"))
+		var marker := marker_origin + Vector2(index * 16.0, 0)
+		var diamond := PackedVector2Array([marker + Vector2(0, -5), marker + Vector2(4, 0), marker + Vector2(0, 5), marker + Vector2(-4, 0)])
+		draw_colored_polygon(diamond, Color("ffd166"))
+
+func uses_circular_zone_overlay() -> bool:
+	return false

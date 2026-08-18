@@ -75,8 +75,9 @@ func _ensure_visual_sprite() -> void:
 	_visual_sprite = Sprite2D.new()
 	_visual_sprite.name = "EmberwoodSprite"
 	_visual_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	if kind in ["wood", "stone", "moonleaf", "plank"]:
+	if kind in ["wood", "stone", "moonleaf", "plank", "fiber", "emberberry"]:
 		_visual_sprite.texture = VisualAssetLibrary.resource_pickup_texture(kind)
+		_visual_sprite.modulate = Color("9ad8a5") if kind == "fiber" else (Color("ff8f70") if kind == "emberberry" else Color.WHITE)
 		scale_value = 0.7
 	elif kind in ["equipment", "island_shard", "scrap"]:
 		var icon_id := kind

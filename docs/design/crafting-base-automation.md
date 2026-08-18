@@ -8,7 +8,11 @@ M4 turns manually gathered resources into a compact, optional labor-saving base.
 
 `RecipeRegistry` owns authored inputs, outputs, station IDs, unlock requirements, uniqueness, display names, and effects. `CraftingService.evaluate` returns an immutable transaction plan: all requirements and output capacity are checked before it describes any deduction. Unknown resource, output, station, and unlock IDs fail validation.
 
-The controller workbench browses eighteen registry entries. Reinforced Heart, Runed Whetstone, and Herbal Compass are the first three useful permanent objects. Lumber Mill Kit and Collector Kit enter placement after a successful atomic craft. Technology paths add mana, ranger, foraging, traversal, damage, shard, and production recipes; each authored unlock names a concrete effect before purchase. Missing resources and locked requirements are shown explicitly.
+The controller workbench browses nineteen registry entries. Reinforced Heart, Runed Whetstone, and Herbal Compass are the first three useful permanent objects. Lumber Mill Kit and Collector Kit enter placement after a successful atomic craft. Technology paths add mana, ranger, foraging, traversal, damage, shard, and production recipes; each authored unlock names a concrete effect before purchase. Missing resources and locked requirements are shown explicitly.
+
+Trail Ration is the one repeatable survival recipe. It consumes two gathered Fiber and two Emberberries, respects a three-ration capacity, and is used only at the field camp. Rest restores four health and 24 mana up to their normal maxima, then grants +1 yield to the next six manual resource depletions. It has no ticking hunger/thirst counterpart.
+
+The same rest also grants 90 seconds of Shelter: +2 mana regeneration per second and one point of incoming-damage reduction. Shelter is a preparation bonus, not a requirement; expiry never damages the player or blocks exploration. Toughgrass and Emberberry sources regrow after their authored 45/60-second delays, allowing the ration loop to renew without spawning duplicate pickups.
 
 ## Placement
 

@@ -1,6 +1,8 @@
 extends RefCounted
 
 const SaveScript := preload("res://game/core/save_service.gd")
+const ContractScript := preload("res://game/core/expedition_contract.gd")
+const IslandStoryScript := preload("res://game/core/island_story_quest.gd")
 
 func run(support: TestSupport) -> void:
 	var service: Variant = SaveScript.new()
@@ -8,7 +10,7 @@ func run(support: TestSupport) -> void:
 	var encoded: String = service.encode(state)
 	var decoded: Dictionary = service.decode(encoded)
 	support.expect(decoded.get("ok") == true, "valid save payload must decode")
-	support.expect(decoded.get("schema_version") == 7, "save payload must declare schema version seven")
+	support.expect(decoded.get("schema_version") == 11, "save payload must declare schema version eleven")
 	support.expect(decoded.state.player == state.player and decoded.state.equipment == state.equipment and decoded.state.islands.archipelago.slots.east.installed_island.definition.shard_id == state.islands.archipelago.slots.east.installed_island.definition.shard_id, "save encode/decode must round trip authoritative scoped state")
 	support.expect(service.decode("{broken").get("error") == "malformed_json", "malformed JSON must be rejected")
 	support.expect(service.decode('{"schema_version":99,"state":{}}').get("error") == "unsupported_schema", "unsupported schema must be rejected")
@@ -60,6 +62,8 @@ func _sample_state() -> Dictionary:
 		"stone": 2,
 		"moonleaf": 3,
 		"plank": 2,
+		"fiber": 2,
+		"emberberry": 3,
 		"equipment": {"scrap": 2, "equipped_id": "starter_ranged_424242", "equipped_slots": {"weapon": "starter_ranged_424242"}, "items": [EquipmentGenerator.generate(424242)]},
 		"reinforced_heart_crafted": true,
 		"runed_whetstone_crafted": true,
@@ -68,4 +72,11 @@ func _sample_state() -> Dictionary:
 		"islands": {"inventory": [IslandShardGenerator.generate(9002)], "installed": installed, "archipelago": archipelago.to_dictionary()},
 		"base": {"placement": BasePlacementModel.new().to_dictionary(), "storage": SharedStorage.new().to_dictionary(), "lumber_mill": LumberMillSimulation.new().to_dictionary(), "collector": CollectorSimulation.new().to_dictionary(), "crafted_kits": {"lumber_mill_kit": false, "collector_kit": false}, "saved_unix": 1000},
 		"technologies": {"learned": ["fieldcraft", "combat_training", "mana_channeling", "arcane_mastery"]},
+		"survival": {"rations": 1, "prepared_harvests": 4},
+		"journey": {"progress": {"gather_wood": 3}, "completed": ["gather_wood"], "rewarded": ["gather_wood"]},
+		"expedition": {"world_seed": 73000, "elapsed_seconds": 190.0, "shelter_remaining": 42.0},
+		"forage": {"fiber_west": {"available": false, "regrow_remaining": 12.0}, "fiber_south": {"available": true, "regrow_remaining": 0.0}, "emberberry_north": {"available": true, "regrow_remaining": 0.0}, "emberberry_east": {"available": false, "regrow_remaining": 20.0}},
+		"expedition_marks": 2,
+		"expedition_contract": ContractScript.default_state(),
+		"island_story": IslandStoryScript.default_state(),
 	}

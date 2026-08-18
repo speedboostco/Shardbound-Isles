@@ -18,6 +18,8 @@ Correct the remaining detached-sprite appearance and extend the current vertical
 - The technology graph contains twelve validated nodes arranged across four tiers and four disciplines.
 - Five new late technologies have real direct effects and each names one new recipe unlock.
 - The workbench contains eighteen validated recipes total.
+
+This count records the completed 0021 scope; plan 0022 subsequently adds the nineteenth repeatable survival recipe.
 - Duelist Grip, Reinforced Axe, Precision Gearbox, Shard Prism, and Ley Capacitor have distinct, persisted gameplay effects.
 - Production-speed progression affects both live and offline mill simulation through the existing bounded automation path.
 - Inventory statistics expose production speed; the visual tree remains readable and controller-first at 1280x800.

@@ -48,4 +48,9 @@ func interact(player: Node2D) -> bool:
 
 func _draw() -> void:
 	if not claimed:
-		draw_arc(Vector2(0, 5), 38.0, 0.0, TAU, 28, Color(0.62, 0.9, 0.75, 0.22), 2.0)
+		var center := Vector2(0, 5)
+		var diamond := PackedVector2Array([center + Vector2(0, -20), center + Vector2(16, 0), center + Vector2(0, 20), center + Vector2(-16, 0), center + Vector2(0, -20)])
+		draw_polyline(diamond, Color(0.62, 0.9, 0.75, 0.56), 2.0)
+
+func uses_circular_zone_overlay() -> bool:
+	return false

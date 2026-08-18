@@ -292,10 +292,11 @@ func refresh_inventory_stats(stats: Dictionary) -> void:
 func _render_stats_summary() -> void:
 	if not is_instance_valid(stats_summary_label):
 		return
-	stats_summary_label.text = "RESOURCES  WOOD %d  •  STONE %d  •  MOONLEAF %d  •  PLANK %d  •  SCRAP %d\nVITALS  HEALTH %d/%d  •  MANA %.0f/%.0f  •  REGEN %.1f/s\nCOMBAT  ATTACK %d  •  SPEED %.2fx  •  CRIT %.0f%%  •  GATHER %.1f  •  PICKUP %.0f" % [
+	stats_summary_label.text = "RESOURCES  WOOD %d  •  STONE %d  •  MOONLEAF %d  •  PLANK %d  •  SCRAP %d\nVITALS  HEALTH %d/%d  •  MANA %.0f/%.0f  •  REGEN %.1f/s\nCOMBAT  ATTACK %d  •  SPEED %.2fx  •  CRIT %.0f%%\nUTILITY  GATHER %.2f  •  PICKUP %.0f  •  PRODUCTION %.2fx" % [
 		int(_inventory_stats.get("wood", 0)), int(_inventory_stats.get("stone", 0)), int(_inventory_stats.get("moonleaf", 0)), int(_inventory_stats.get("plank", 0)), int(_inventory_stats.get("scrap", _displayed_scrap)),
 		int(_inventory_stats.get("health", 0)), int(_inventory_stats.get("maximum_health", 0)), float(_inventory_stats.get("mana", 0.0)), float(_inventory_stats.get("maximum_mana", 0.0)), float(_inventory_stats.get("mana_regeneration", 0.0)),
-		int(_inventory_stats.get("attack_damage", _displayed_attack_damage)), float(_inventory_stats.get("attack_speed", _displayed_attack_speed)), float(_inventory_stats.get("critical_chance", 0.0)) * 100.0, float(_inventory_stats.get("gathering_power", 1.0)), float(_inventory_stats.get("pickup_radius", 0.0)),
+		int(_inventory_stats.get("attack_damage", _displayed_attack_damage)), float(_inventory_stats.get("attack_speed", _displayed_attack_speed)), float(_inventory_stats.get("critical_chance", 0.0)) * 100.0,
+		float(_inventory_stats.get("gathering_power", 1.0)), float(_inventory_stats.get("pickup_radius", 0.0)), float(_inventory_stats.get("production_speed", 1.0)),
 	]
 
 func refresh_technologies(entries: Array[Dictionary], learned_ids: Array[String], phase_name: String, resources: Dictionary) -> void:
@@ -347,8 +348,8 @@ func _render_selected_technology() -> void:
 		var recipe := RecipeRegistry.get_definition(String(recipe_value))
 		recipe_parts.append(String(recipe.get("name", recipe_value)).to_upper())
 	var state := _technology_state(entry)
-	technology_details_label.text = "%s  •  %s\n%s\nREQUIRES  %s   •   COST  %s\nUNLOCKS RECIPES  %s" % [
-		String(entry.get("name", "Technology")).to_upper(), state.to_upper(), String(entry.get("effect", "")),
+	technology_details_label.text = "%s  •  TIER %d  •  %s\n%s\nREQUIRES  %s   •   COST  %s\nUNLOCKS RECIPES  %s" % [
+		String(entry.get("name", "Technology")).to_upper(), int(entry.get("column", 0)) + 1, state.to_upper(), String(entry.get("effect", "")),
 		"ROOT DISCIPLINE" if prerequisite_parts.is_empty() else " + ".join(prerequisite_parts), " + ".join(cost_parts),
 		"NO RECIPE" if recipe_parts.is_empty() else " • ".join(recipe_parts),
 	]

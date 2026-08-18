@@ -2,9 +2,9 @@ class_name RecipeRegistry
 extends RefCounted
 
 const KNOWN_RESOURCES: Array[String] = ["wood", "stone", "moonleaf", "scrap", "plank"]
-const KNOWN_OUTPUTS: Array[String] = ["reinforced_heart", "runed_whetstone", "herbal_compass", "lumber_mill_kit", "collector_kit", "mana_vessel", "arcane_conduit", "ranger_fletching", "harvest_charm", "wayfinder_boots", "precision_quiver", "foresters_toolkit", "surveyors_lens"]
+const KNOWN_OUTPUTS: Array[String] = ["reinforced_heart", "runed_whetstone", "herbal_compass", "lumber_mill_kit", "collector_kit", "mana_vessel", "arcane_conduit", "ranger_fletching", "harvest_charm", "wayfinder_boots", "precision_quiver", "foresters_toolkit", "surveyors_lens", "duelist_grip", "reinforced_axe", "precision_gearbox", "shard_prism", "ley_capacitor"]
 const KNOWN_STATIONS: Array[String] = ["workbench"]
-const KNOWN_UNLOCKS: Array[String] = ["always", "reinforced_heart", "forest_island", "fieldcraft", "combat_training", "mana_channeling", "arcane_mastery", "ranger_instinct", "efficient_harvest", "island_cartography"]
+const KNOWN_UNLOCKS: Array[String] = ["always", "reinforced_heart", "forest_island", "fieldcraft", "combat_training", "mana_channeling", "arcane_mastery", "ranger_instinct", "efficient_harvest", "island_cartography", "weapon_mastery", "master_foraging", "island_industry", "shard_attunement", "ley_resonance"]
 
 const DEFINITIONS: Array[Dictionary] = [
 	{"id": "reinforced_heart", "name": "Reinforced Heart", "inputs": {"wood": 3, "scrap": 2}, "output": {"id": "reinforced_heart", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["always"], "unique": true, "effect_text": "Permanently gain +2 maximum health"},
@@ -20,6 +20,11 @@ const DEFINITIONS: Array[Dictionary] = [
 	{"id": "precision_quiver", "name": "Precision Quiver", "inputs": {"wood": 4, "moonleaf": 3}, "output": {"id": "precision_quiver", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["ranger_instinct"], "unique": true, "effect_text": "Permanently gain +8% attack speed"},
 	{"id": "foresters_toolkit", "name": "Forester's Toolkit", "inputs": {"wood": 5, "stone": 2}, "output": {"id": "foresters_toolkit", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["efficient_harvest"], "unique": true, "effect_text": "Permanently gain +0.35 gathering power"},
 	{"id": "surveyors_lens", "name": "Surveyor's Lens", "inputs": {"moonleaf": 3, "plank": 2}, "output": {"id": "surveyors_lens", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["island_cartography"], "unique": true, "effect_text": "Permanently gain +30 pickup radius"},
+	{"id": "duelist_grip", "name": "Duelist Grip", "inputs": {"scrap": 5, "plank": 2}, "output": {"id": "duelist_grip", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["weapon_mastery"], "unique": true, "effect_text": "Permanently gain +1 reliable base attack damage"},
+	{"id": "reinforced_axe", "name": "Reinforced Axe", "inputs": {"stone": 6, "plank": 2}, "output": {"id": "reinforced_axe", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["master_foraging"], "unique": true, "effect_text": "Permanently gain +0.4 gathering power"},
+	{"id": "precision_gearbox", "name": "Precision Gearbox", "inputs": {"scrap": 8, "plank": 3}, "output": {"id": "precision_gearbox", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["island_industry"], "unique": true, "effect_text": "Permanently gain +20% production speed"},
+	{"id": "shard_prism", "name": "Shard Prism", "inputs": {"moonleaf": 6, "scrap": 6}, "output": {"id": "shard_prism", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["shard_attunement"], "unique": true, "effect_text": "Permanently gain +5% critical chance"},
+	{"id": "ley_capacitor", "name": "Ley Capacitor", "inputs": {"moonleaf": 8, "plank": 3}, "output": {"id": "ley_capacitor", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["ley_resonance"], "unique": true, "effect_text": "Permanently gain +20 maximum mana"},
 ]
 
 static func all() -> Array[Dictionary]:

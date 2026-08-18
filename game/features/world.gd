@@ -782,8 +782,8 @@ func learn_technology(technology_id: String) -> bool:
 	return true
 
 func _apply_technology_effects() -> void:
-	var maximum_mana := (80.0 if technology_tree.is_learned("mana_channeling") else 60.0) + (10.0 if bool(crafted_building_kits.get("mana_vessel", false)) else 0.0)
-	var regeneration := (9.0 if technology_tree.is_learned("arcane_mastery") else 6.0) + (2.0 if bool(crafted_building_kits.get("arcane_conduit", false)) else 0.0)
+	var maximum_mana := (80.0 if technology_tree.is_learned("mana_channeling") else 60.0) + (10.0 if bool(crafted_building_kits.get("mana_vessel", false)) else 0.0) + (20.0 if bool(crafted_building_kits.get("ley_capacitor", false)) else 0.0)
+	var regeneration := (9.0 if technology_tree.is_learned("arcane_mastery") else 6.0) + (2.0 if technology_tree.is_learned("ley_resonance") else 0.0) + (2.0 if bool(crafted_building_kits.get("arcane_conduit", false)) else 0.0)
 	player.mana_pool.regeneration_per_second = regeneration
 	if not is_equal_approx(player.mana_pool.maximum, maximum_mana):
 		player.mana_pool.set_maximum(maximum_mana, true)
@@ -821,7 +821,7 @@ func _refresh_progression_ui() -> void:
 		"health": player.health, "maximum_health": player.maximum_health,
 		"mana": player.mana_pool.current, "maximum_mana": player.mana_pool.maximum, "mana_regeneration": player.mana_pool.regeneration_per_second,
 		"attack_damage": player.attack_damage, "attack_speed": player.attack_speed, "critical_chance": player.critical_chance,
-		"gathering_power": player.gathering_power, "pickup_radius": player.pickup_radius,
+		"gathering_power": player.gathering_power, "pickup_radius": player.pickup_radius, "production_speed": player.production_speed,
 	})
 	var phase_name := "combat awakened" if is_combat_unlocked() else "exploration phase"
 	hud.refresh_technologies(technology_tree.all_definitions(), technology_tree.learned, phase_name, _progression_resources())
@@ -908,26 +908,40 @@ func _sync_player_equipment() -> void:
 	if weapon_instance_id != _active_weapon_instance_id:
 		_clear_player_weapon_effects()
 		_active_weapon_instance_id = weapon_instance_id
-	var upgrade_bonus := CraftingService.WHETSTONE_ATTACK_BONUS if runed_whetstone_crafted else 0
+	var upgrade_bonus := (CraftingService.WHETSTONE_ATTACK_BONUS if runed_whetstone_crafted else 0) + (1 if bool(crafted_building_kits.get("duelist_grip", false)) else 0)
 	var base_stats := StatBlock.default_base_stats()
 	base_stats.max_health = 10.0 + (2.0 if reinforced_heart_crafted else 0.0)
 	base_stats.pickup_radius = float(base_stats.pickup_radius) + (CraftingService.HERBAL_COMPASS_PICKUP_RADIUS_BONUS if herbal_compass_crafted else 0.0)
 	if technology_tree.is_learned("ranger_instinct"):
 		base_stats.critical_chance = float(base_stats.critical_chance) + 0.05
+	if technology_tree.is_learned("weapon_mastery"):
+		base_stats.critical_damage = float(base_stats.critical_damage) + 0.25
 	if bool(crafted_building_kits.get("ranger_fletching", false)):
 		base_stats.critical_chance = float(base_stats.critical_chance) + 0.03
 	if bool(crafted_building_kits.get("precision_quiver", false)):
 		base_stats.attack_speed = float(base_stats.attack_speed) + 0.08
+	if bool(crafted_building_kits.get("shard_prism", false)):
+		base_stats.critical_chance = float(base_stats.critical_chance) + 0.05
 	if technology_tree.is_learned("efficient_harvest"):
 		base_stats.gathering_power = float(base_stats.gathering_power) + 0.5
+	if technology_tree.is_learned("master_foraging"):
+		base_stats.gathering_power = float(base_stats.gathering_power) + 0.25
 	if bool(crafted_building_kits.get("harvest_charm", false)):
 		base_stats.gathering_power = float(base_stats.gathering_power) + 0.25
 	if bool(crafted_building_kits.get("foresters_toolkit", false)):
 		base_stats.gathering_power = float(base_stats.gathering_power) + 0.35
+	if bool(crafted_building_kits.get("reinforced_axe", false)):
+		base_stats.gathering_power = float(base_stats.gathering_power) + 0.4
 	if bool(crafted_building_kits.get("wayfinder_boots", false)):
 		base_stats.movement_speed = float(base_stats.movement_speed) + 15.0
 	if bool(crafted_building_kits.get("surveyors_lens", false)):
 		base_stats.pickup_radius = float(base_stats.pickup_radius) + 30.0
+	if technology_tree.is_learned("shard_attunement"):
+		base_stats.pickup_radius = float(base_stats.pickup_radius) + 20.0
+	if technology_tree.is_learned("island_industry"):
+		base_stats.production_speed = float(base_stats.production_speed) + 0.1
+	if bool(crafted_building_kits.get("precision_gearbox", false)):
+		base_stats.production_speed = float(base_stats.production_speed) + 0.2
 	var derived := equipment_inventory.derived_stats(base_stats)
 	var desired_maximum := maxi(1, roundi(float(derived.max_health)))
 	if player.maximum_health != desired_maximum:
@@ -1159,9 +1173,12 @@ func advance_base_automation(delta_seconds: float) -> Dictionary:
 		collector_simulation.flush_to(shared_storage)
 	var result := {"elapsed": 0.0, "cycles": 0, "planks_routed": 0, "blocked": false}
 	if has_base_building("lumber_mill"):
-		result = OfflineAutomation.simulate_mill(lumber_mill_simulation, shared_storage, delta_seconds)
+		result = OfflineAutomation.simulate_mill(lumber_mill_simulation, shared_storage, effective_automation_elapsed(delta_seconds))
 	_refresh_base_ui()
 	return result
+
+func effective_automation_elapsed(delta_seconds: float) -> float:
+	return maxf(0.0, delta_seconds) * maxf(0.1, player.production_speed)
 
 func collect_automation_batch() -> Dictionary:
 	if not has_base_building("collector"):

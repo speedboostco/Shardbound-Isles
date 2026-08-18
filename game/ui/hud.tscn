@@ -192,10 +192,10 @@ text = "EQUIPMENT — LB/RB SCROLL DETAILS"
 horizontal_alignment = 1
 
 [node name="StatsSummary" type="Label" parent="EquipmentPanel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 50)
+custom_minimum_size = Vector2(0, 64)
 theme_override_colors/font_color = Color(0.68, 0.88, 0.9, 1)
 theme_override_font_sizes/font_size = 13
-text = "RESOURCES  WOOD 0  •  STONE 0  •  MOONLEAF 0  •  PLANK 0  •  SCRAP 0\nVITALS  HEALTH 10/10  •  MANA 60/60  •  REGEN 6.0/s\nCOMBAT  ATTACK 1  •  SPEED 1.00x  •  CRIT 5%  •  GATHER 1.0"
+text = "RESOURCES  WOOD 0  •  STONE 0  •  MOONLEAF 0  •  PLANK 0  •  SCRAP 0\nVITALS  HEALTH 10/10  •  MANA 60/60  •  REGEN 6.0/s\nCOMBAT  ATTACK 1  •  SPEED 1.00x  •  CRIT 5%\nUTILITY  GATHER 1.00  •  PICKUP 135  •  PRODUCTION 1.00x"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -286,12 +286,6 @@ text = "EQUIPPED  Unarmed"
 theme_override_font_sizes/font_size = 14
 text = "SALVAGE SCRAP  0"
 
-[node name="OpenTechnology" type="Button" parent="EquipmentPanel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 42)
-focus_neighbor_top = NodePath("../Actions/Equip")
-focus_neighbor_bottom = NodePath("../Close")
-text = "OPEN TECHNOLOGY TREE"
-
 [node name="Actions" type="HBoxContainer" parent="EquipmentPanel/Margin/VBox"]
 alignment = 1
 theme_override_constants/separation = 14
@@ -323,6 +317,12 @@ focus_neighbor_top = NodePath("../../Selection/Next")
 focus_neighbor_bottom = NodePath("../../OpenTechnology")
 disabled = true
 text = "UNEQUIP"
+
+[node name="OpenTechnology" type="Button" parent="EquipmentPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 42)
+focus_neighbor_top = NodePath("../Actions/Equip")
+focus_neighbor_bottom = NodePath("../Close")
+text = "OPEN TECHNOLOGY TREE"
 
 [node name="Close" type="Button" parent="EquipmentPanel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 36)
@@ -377,7 +377,7 @@ text = "< PREVIOUS"
 
 [node name="Count" type="Label" parent="EquipmentPanel/TechnologyPage/VBox/Actions"]
 custom_minimum_size = Vector2(72, 42)
-text = "1 / 7"
+text = "1 / 12"
 horizontal_alignment = 1
 vertical_alignment = 1
 

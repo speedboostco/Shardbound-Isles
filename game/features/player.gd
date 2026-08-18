@@ -41,6 +41,7 @@ var pickup_radius: float = 135.0
 var gathering_power: float = 1.0
 var critical_chance: float = 0.05
 var critical_damage: float = 1.5
+var production_speed: float = 1.0
 var facing: Vector2 = Vector2.RIGHT
 var input_enabled: bool = true
 var _attack_cooldown: float = 0.0
@@ -164,6 +165,7 @@ func set_derived_stats(stats: Dictionary) -> void:
 	gathering_power = maxf(0.1, float(stats.get("gathering_power", gathering_power)))
 	critical_chance = clampf(float(stats.get("critical_chance", critical_chance)), 0.0, 1.0)
 	critical_damage = maxf(1.0, float(stats.get("critical_damage", critical_damage)))
+	production_speed = maxf(0.1, float(stats.get("production_speed", production_speed)))
 
 func _default_attack_profile(base_type: String) -> Dictionary:
 	if base_type == "magic":

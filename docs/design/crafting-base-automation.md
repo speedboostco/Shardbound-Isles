@@ -8,7 +8,7 @@ M4 turns manually gathered resources into a compact, optional labor-saving base.
 
 `RecipeRegistry` owns authored inputs, outputs, station IDs, unlock requirements, uniqueness, display names, and effects. `CraftingService.evaluate` returns an immutable transaction plan: all requirements and output capacity are checked before it describes any deduction. Unknown resource, output, station, and unlock IDs fail validation.
 
-The controller workbench browses five registry entries. Reinforced Heart, Runed Whetstone, and Herbal Compass are the first three useful permanent objects. Lumber Mill Kit and Collector Kit enter placement after a successful atomic craft. Missing resources and locked requirements are shown explicitly.
+The controller workbench browses eighteen registry entries. Reinforced Heart, Runed Whetstone, and Herbal Compass are the first three useful permanent objects. Lumber Mill Kit and Collector Kit enter placement after a successful atomic craft. Technology paths add mana, ranger, foraging, traversal, damage, shard, and production recipes; each authored unlock names a concrete effect before purchase. Missing resources and locked requirements are shown explicitly.
 
 ## Placement
 
@@ -24,7 +24,7 @@ Shared storage holds 24 total units. Every add reports accepted and remainder qu
 
 The workbench exposes focused `Deposit All Wood` and `Collect Planks` actions, making the first mill usable before a collector exists. Buttons show current quantities and disable when no transfer can occur.
 
-Live automation runs on a 0.5-second timer, not per-building or per-target frame callbacks. Offscreen/offline work uses the same deterministic batch rules, clamps negative elapsed time to zero, caps catch-up at four hours, and is always bounded again by input/output/storage capacity.
+Live automation runs on a 0.5-second timer, not per-building or per-target frame callbacks. Offscreen/offline work uses the same deterministic batch rules, clamps negative elapsed time to zero, caps catch-up at four hours, and is always bounded again by input/output/storage capacity. Island Industry and Precision Gearbox multiply the shared effective elapsed-time input, so the production upgrade behaves identically online and offline without bypassing capacity limits.
 
 ## Item upgrades
 

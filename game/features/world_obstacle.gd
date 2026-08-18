@@ -42,4 +42,4 @@ func _ensure_collision() -> void:
 	add_child(collision)
 
 func _draw() -> void:
-	ContactShadowScript.paint(self, "obstacle", collision_radius * 0.68, maxf(12.0, collision_radius * 0.62))
+	ContactShadowScript.paint(self, "obstacle", collision_radius * 0.68, clampf(collision_radius * 0.35, 5.0, 9.0))

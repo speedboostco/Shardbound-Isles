@@ -1,0 +1,696 @@
+SHARDBOUND ISLES — TASKS 46–60
+Visual Polish + Item/Inventory Art + World-Is-Loot Foundation
+
+============================================================
+WHAT TO DO NEXT
+============================================================
+
+Immediate priority:
+
+1. Animation polish
+2. Remove player circle / replace with cleaner feedback
+3. Item icons + inventory visuals
+4. Then continue with “world is loot” tasks
+
+The goal is to stop evaluating game feel on programmer placeholders before deeper world-generation systems are added.
+
+
+============================================================
+TASK-046 — MAIN CHARACTER ANIMATION OVERHAUL
+============================================================
+
+Outcome:
+Replace placeholder or stiff main-character animations with a proper animation set that feels responsive and readable.
+
+Motivation:
+The player character is the thing the player watches 90% of the time. Bad animation poisons the whole experience.
+
+In scope:
+- Create/implement improved animation set for main character
+- Idle animation
+- Walk/run animation
+- Basic attack animation
+- Hit reaction animation
+- Death animation
+- Transition timing tuning
+
+Out of scope:
+- New combat mechanics
+- Skill-specific advanced animations
+- Full cinematic animation blending
+
+Dependencies:
+- Existing player controller
+- Existing sprite/import pipeline
+
+Acceptance criteria:
+1. Character has distinct idle, move, attack, hit, and death animations.
+2. Animation states transition correctly without visual popping.
+3. Attack animation timing matches actual attack hit timing.
+4. Movement animation reflects movement direction.
+5. Animation remains readable at Steam Deck resolution.
+
+Required tests:
+- Integration: movement state transitions
+- Integration: attack animation triggers once per attack
+- Visual/controller: verify readability at 1280x800
+
+Definition of done:
+- Animations integrated
+- No broken transitions
+- Validation passed
+- Visual evidence captured
+
+
+============================================================
+TASK-047 — ENEMY ANIMATION PASS (CORE ENEMIES)
+============================================================
+
+Outcome:
+Improve animation quality for current enemies so combat feels alive and readable.
+
+Motivation:
+Enemies without readable motion feel cheap and unfair.
+
+In scope:
+- Idle animation for slime and current enemy set
+- Movement animation
+- Attack animation
+- Hit animation
+- Death animation
+- Elite visual differentiation if applicable
+
+Out of scope:
+- New enemy AI behaviors
+- Boss animation set
+
+Dependencies:
+- Existing enemy system
+- TASK-046 preferred but not mandatory
+
+Acceptance criteria:
+1. Each core enemy has idle, move, attack, hit, and death.
+2. Attack animation clearly signals danger.
+3. Hit reaction gives visible feedback.
+4. Death animation clearly communicates defeat.
+5. Animation timing does not break gameplay logic.
+
+Required tests:
+- Integration: enemy state-to-animation binding
+- Visual check: telegraph clarity
+- Performance smoke: multiple animated enemies on screen
+
+
+============================================================
+TASK-048 — RESOURCE AND WORLD OBJECT ANIMATION PASS
+============================================================
+
+Outcome:
+Resources and world objects feel alive and responsive rather than static.
+
+Motivation:
+Forager-like games depend heavily on satisfying harvesting feedback.
+
+In scope:
+- Tree idle sway
+- Rock subtle idle variation (optional minimal motion)
+- Hit reaction for trees and rocks
+- Resource break animation
+- Pickup bounce/attract animation
+- Workbench idle animation
+- First production building animation
+
+Out of scope:
+- Full biome ambient animation pass
+- Advanced weather visuals
+
+Dependencies:
+- Existing resource nodes
+- Existing building placement
+
+Acceptance criteria:
+1. Trees and rocks react visually to hits.
+2. Destroyed resources have a clear destruction animation or effect.
+3. Dropped resources/items have visual pickup readability.
+4. Animated world objects remain readable and not noisy.
+5. Animation does not create gameplay ambiguity.
+
+Required tests:
+- Integration: resource state changes
+- Visual test: harvesting feedback
+- Performance check with many resource nodes
+
+
+============================================================
+TASK-049 — REMOVE CIRCLE AROUND MAIN CHARACTER
+============================================================
+
+Outcome:
+Remove the circle around the main character and replace it with cleaner visual feedback only where necessary.
+
+Motivation:
+The circle looks cheap, distracts from the art, and makes the game feel prototype-grade.
+
+In scope:
+- Remove persistent circle under/around player
+- Audit why the circle exists
+- Replace necessary function with cleaner alternatives:
+  - subtle shadow
+  - interaction highlight on target object
+  - optional short-lived attack or ability indicators
+- Ensure targeting/interaction clarity remains good
+
+Out of scope:
+- Full VFX redesign
+- New targeting system mechanics
+
+Dependencies:
+- Existing player scene
+- Existing interaction system
+
+Acceptance criteria:
+1. No persistent circle remains around the player in normal gameplay.
+2. If the circle previously communicated interaction or selection, that feedback is replaced cleanly.
+3. Readability does not regress.
+4. The scene looks cleaner in screenshots and motion.
+5. No logic depends on the visual circle node remaining active.
+
+Required tests:
+- Integration: interaction targeting still works
+- Visual/controller: player readability during movement and combat
+- Regression: no orphaned references to removed node/effect
+
+
+============================================================
+TASK-050 — ITEM ICON AND INVENTORY ART FRAMEWORK
+============================================================
+
+Outcome:
+Create a consistent framework for item textures/icons and inventory presentation.
+
+Motivation:
+Loot without proper visual identity kills excitement. Inventory with empty programmer squares kills retention.
+
+In scope:
+- Define item icon size and style rules
+- Define inventory slot size and style
+- Define atlas/import pipeline for icons
+- Add support for icon references in item definitions
+- Create placeholder-safe fallback icon system
+- Document visual rules in Art Bible
+
+Out of scope:
+- All final item icons
+- Full UI redesign beyond inventory/equipment basics
+
+Dependencies:
+- Existing item data definitions
+- Existing UI framework
+
+Acceptance criteria:
+1. Items can reference icons through data, not hard-coded UI logic.
+2. Inventory slots display icons consistently.
+3. Missing icons fall back safely to a default placeholder.
+4. Art rules for icons are documented.
+5. Import pipeline supports clean pixel rendering.
+
+Required tests:
+- Integration: item definition → icon display
+- UI test: fallback icon behavior
+- Validation: missing icon detection
+
+
+============================================================
+TASK-051 — FIRST ITEM TEXTURE SET
+============================================================
+
+Outcome:
+Create or integrate actual textures/icons for first-pass items.
+
+Motivation:
+Loot needs visible identity. A sword must look like a sword, not a rectangle of sadness.
+
+In scope:
+- Create or assign icon textures for:
+  - sword
+  - bow
+  - wand
+  - helmet
+  - armor/body
+  - boots
+  - ring
+  - amulet
+  - wood
+  - stone
+  - basic crafting materials
+  - salvage materials
+- Ensure style consistency
+
+Out of scope:
+- Full 100+ item icon library
+- Ultra-polished marketing art icons
+
+Dependencies:
+- TASK-050
+
+Acceptance criteria:
+1. All currently implemented core items/resources have readable icons.
+2. Icons are visually distinct and readable at inventory size.
+3. Equipment categories are recognizable at a glance.
+4. Pixel art or style remains consistent across the set.
+5. No stretched, blurry, or mismatched assets appear.
+
+Required tests:
+- Visual test: readability at Steam Deck resolution
+- UI inventory test
+- Asset validation test for dimensions/import settings
+
+
+============================================================
+TASK-052 — INVENTORY AND EQUIPMENT SCREEN VISUAL PASS
+============================================================
+
+Outcome:
+Upgrade inventory/equipment screen from functional prototype to visually readable game UI.
+
+Motivation:
+If loot management feels ugly, the whole Diablo-layer falls flat.
+
+In scope:
+- Improve inventory panel visuals
+- Improve equipment slot visuals
+- Slot highlights/focus states
+- Tooltip panel visual cleanup
+- Better spacing/alignment
+- Controller focus visibility
+- Hover-less controller-friendly comparison layout
+
+Out of scope:
+- Final skins/theme for all menus
+- Advanced sorting/filtering
+
+Dependencies:
+- TASK-050
+- Existing inventory/equipment functionality
+
+Acceptance criteria:
+1. Inventory screen looks clean and readable.
+2. Focus state is always visible for controller navigation.
+3. Item comparison is easy to understand without a mouse.
+4. Slot contents are readable at 1280x800.
+5. UI no longer feels like debug tooling.
+
+Required tests:
+- Controller navigation test
+- Visual test at Steam Deck resolution
+- Regression test for equip/unequip flows
+
+
+============================================================
+TASK-053 — ANIMATION STATE MACHINE CLEANUP
+============================================================
+
+Outcome:
+Introduce a cleaner and more maintainable animation-state workflow for player and enemies.
+
+Motivation:
+If animation logic becomes spaghetti now, later abilities and weapons will become a nightmare.
+
+In scope:
+- Audit current animation triggers
+- Normalize animation state naming
+- Centralize or structure state transitions
+- Avoid duplicated transition logic
+- Document animation-state conventions
+
+Out of scope:
+- Full combat system refactor
+- Complex animation blending framework
+
+Dependencies:
+- TASK-046
+- TASK-047
+
+Acceptance criteria:
+1. Animation states follow a consistent structure.
+2. Player and enemy animation transitions are easier to reason about.
+3. Duplicate animation trigger logic is reduced.
+4. New animation states can be added without hacks.
+5. Documentation reflects the implementation.
+
+Required tests:
+- Integration: state transitions
+- Regression: no broken animation playback
+- Review diff for reduced duplication
+
+
+============================================================
+TASK-054 — ARCHIPELAGO DATA MODEL FOUNDATION
+============================================================
+
+Outcome:
+Implement the core runtime/data model for the island world layout.
+
+Motivation:
+This is the beginning of the game’s real differentiator: the world itself as loot.
+
+In scope:
+- World slots
+- Stable slot coordinates/IDs
+- Installed island reference
+- Neighbor lookup
+- Serialization-safe world state model
+- Deterministic world seed support
+
+Out of scope:
+- Full island gameplay content
+- Visual island placement mode
+
+Dependencies:
+- Existing save framework or current persistence design
+
+Acceptance criteria:
+1. World layout can represent multiple island slots.
+2. Slots have stable IDs or coordinates.
+3. Neighbor relationships are deterministic.
+4. World data is serializable and load-safe.
+5. Model is separated from visual scene references.
+
+Required tests:
+- Unit: slot creation / neighbor resolution
+- Unit: serialization roundtrip
+- Deterministic seed test
+
+
+============================================================
+TASK-055 — ISLAND SHARD DEFINITION SYSTEM
+============================================================
+
+Outcome:
+Create the data definition for island shards as loot items.
+
+Motivation:
+Island shards must exist as actual loot entities, not just level buttons.
+
+In scope:
+- Shard definition schema
+- Shard rarity
+- Biome/type
+- Level
+- Size
+- Positive modifiers
+- Negative modifiers
+- Reward tags
+- Encounter tags
+- Seed storage
+
+Out of scope:
+- Final generator balance
+- Full UI and placement mode
+
+Dependencies:
+- TASK-054
+- Existing item/data-definition patterns
+
+Acceptance criteria:
+1. Shard definitions are data-driven.
+2. Shards can be stored independently from installed islands.
+3. Definitions can represent both reward and risk.
+4. Invalid definitions can be detected by validation.
+5. Documentation for shard fields exists.
+
+Required tests:
+- Unit: schema validation
+- Unit: serialization
+- Validation script: missing/invalid fields
+
+
+============================================================
+TASK-056 — DETERMINISTIC ISLAND SHARD GENERATOR
+============================================================
+
+Outcome:
+Generate island shards deterministically from seed + rules.
+
+Motivation:
+The world-as-loot system lives or dies on replayable, safe, deterministic generation.
+
+In scope:
+- Generator pipeline
+- Biome selection rules
+- Modifier pool selection
+- Risk/reward pairing
+- Reward tagging
+- Seeded generation
+- Duplicate/conflict prevention
+
+Out of scope:
+- Full biome content implementation
+- Visual island rendering
+
+Dependencies:
+- TASK-055
+- Deterministic RNG foundation
+
+Acceptance criteria:
+1. Same seed produces the same shard result.
+2. Generator respects validity rules.
+3. Positive/negative modifier pairs are coherent.
+4. Generation does not produce impossible or broken shards.
+5. Large batch generation succeeds without crashes.
+
+Required tests:
+- Unit: deterministic generation
+- Unit: conflict prevention
+- Simulation: batch generation over many seeds
+
+
+============================================================
+TASK-057 — SHARD INVENTORY AND TOOLTIP UI
+============================================================
+
+Outcome:
+Island shards can exist in the player inventory and be inspected like valuable loot.
+
+Motivation:
+If shard loot is hidden or unclear, the flagship mechanic loses all drama.
+
+In scope:
+- Inventory support for shards
+- Shard icon or visual card
+- Tooltip/inspection panel
+- Display biome, level, modifiers, risk, rewards
+- Controller-accessible inspection flow
+
+Out of scope:
+- Actual island placement into world
+- Final premium UI polish
+
+Dependencies:
+- TASK-055
+- TASK-052 preferred
+
+Acceptance criteria:
+1. Shards appear in inventory or a shard-specific inventory section.
+2. Player can inspect shard details via controller.
+3. Risk and reward are understandable before placement.
+4. Tooltip is visually readable and not cluttered.
+5. Shard data remains stable after save/load.
+
+Required tests:
+- UI/controller navigation
+- Integration: save/load shard inventory
+- Visual test at 1280x800
+
+
+============================================================
+TASK-058 — ISLAND PLACEMENT MODE
+============================================================
+
+Outcome:
+Player can select a shard and choose a valid neighboring slot for installation.
+
+Motivation:
+This is the first truly special interaction in the game.
+
+In scope:
+- Enter placement mode
+- Highlight available world slots
+- Preview selected slot
+- Confirm/cancel interaction
+- Slot validity checks
+- Prevent illegal placement
+
+Out of scope:
+- Full island content generation inside the slot
+- Advanced adjacency synergies
+
+Dependencies:
+- TASK-054
+- TASK-057
+
+Acceptance criteria:
+1. Player can enter placement mode from inventory.
+2. Valid slots are clearly shown.
+3. Invalid slots cannot be selected.
+4. Placement can be confirmed or canceled with controller only.
+5. The flow feels readable and not clumsy.
+
+Required tests:
+- Integration: placement input flow
+- Integration: valid/invalid slot logic
+- Visual/controller test
+
+
+============================================================
+TASK-059 — ISLAND MATERIALIZATION AND SCENE SPAWN
+============================================================
+
+Outcome:
+Placed shards actually materialize into installed islands in the world.
+
+Motivation:
+This is the visual payoff of the game’s core hook.
+
+In scope:
+- Convert installed shard into active island content
+- Spawn island scene/content in proper slot
+- Preserve world state model
+- Basic materialization VFX or transition
+- Save/load persistence of installed island
+
+Out of scope:
+- Full biome variety
+- Complex adjacency logic
+
+Dependencies:
+- TASK-058
+
+Acceptance criteria:
+1. Installed shard creates a visible island in the selected slot.
+2. Island content loads consistently.
+3. Save/load restores installed islands correctly.
+4. Placement consumes the shard only after successful installation.
+5. Materialization has at least minimal visual payoff.
+
+Required tests:
+- Integration: place → save → load
+- Integration: failed placement safety
+- Visual test: materialization effect
+
+
+============================================================
+TASK-060 — FIRST “WORLD IS LOOT” GAMEPLAY LOOP SCENARIO
+============================================================
+
+Outcome:
+Create the first complete automated and manual gameplay loop proving the game’s signature mechanic.
+
+Motivation:
+This is the milestone that proves the project is becoming its own game instead of “Forager with more stats”.
+
+In scope:
+- Deterministic scenario:
+  - gather resources
+  - kill enemies
+  - obtain shard
+  - inspect shard
+  - enter placement mode
+  - install shard
+  - access new island
+  - gain new reward/opportunity
+- Logging/evidence capture
+- Manual test checklist
+
+Out of scope:
+- Large content variety
+- Endgame systems
+
+Dependencies:
+- TASK-054 through TASK-059
+
+Acceptance criteria:
+1. Player can obtain a shard as a reward.
+2. Player can inspect it and understand its purpose.
+3. Player can install it into the world.
+4. The world visibly changes after installation.
+5. The new island creates a new gameplay opportunity or reward.
+6. The loop is reproducible with a fixed seed.
+7. Evidence is captured for review.
+
+Required tests:
+- Simulation test for the full shard loop
+- Save/load regression
+- Controller-only manual validation
+- Visual evidence capture
+
+
+============================================================
+RECOMMENDED EXECUTION ORDER
+============================================================
+
+Visual cleanup first:
+
+46. Main Character Animation Overhaul
+47. Enemy Animation Pass
+48. Resource and World Object Animation Pass
+49. Remove Circle Around Main Character
+50. Item Icon and Inventory Art Framework
+51. First Item Texture Set
+52. Inventory and Equipment Screen Visual Pass
+53. Animation State Machine Cleanup
+
+Then the core differentiator:
+
+54. Archipelago Data Model Foundation
+55. Island Shard Definition System
+56. Deterministic Island Shard Generator
+57. Shard Inventory and Tooltip UI
+58. Island Placement Mode
+59. Island Materialization and Scene Spawn
+60. First “World Is Loot” Gameplay Loop Scenario
+
+
+============================================================
+MILESTONE CHECKPOINT AFTER TASK 60
+============================================================
+
+Ask:
+
+- Does the character feel good to control?
+- Do hits, drops and pickups feel satisfying?
+- Does the inventory look like a real game now?
+- Is installing an island genuinely exciting?
+
+If installing an island is not a strong dopamine moment, do not add more content yet.
+
+Improve:
+
+- visual payoff
+- sound
+- animation
+- pacing
+- risk/reward clarity
+- world transformation
+
+before expanding the content set.
+
+
+============================================================
+CORE PRINCIPLE
+============================================================
+
+Do not let the project become technically impressive but visually cheap or emotionally flat.
+
+The player should feel:
+
+“one more item,
+one more island,
+ten more minutes.”
+
+The signature feature must be obvious in motion:
+
+A player finds an island shard,
+inspects its risks and rewards,
+places it into the world,
+and watches a new island materialize as part of their custom archipelago.

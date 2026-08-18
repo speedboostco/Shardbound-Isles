@@ -2,6 +2,7 @@ class_name RiftRules
 extends RefCounted
 
 const TOTAL_WAVES: int = 3
+const WAVE_RESPITE_SECONDS: float = 2.75
 
 static func wave(index: int) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
@@ -9,16 +10,13 @@ static func wave(index: int) -> Array[Dictionary]:
 		1:
 			result.assign([
 				{"kind": "chaser", "position": Vector2(-220, -120)},
-				{"kind": "chaser", "position": Vector2(220, 120)},
 			])
 		2:
 			result.assign([
-				{"kind": "chaser", "position": Vector2(-250, 135)},
 				{"kind": "ranged", "position": Vector2(240, -145)},
 			])
 		3:
 			result.assign([
-				{"kind": "ranged", "position": Vector2(-250, -150)},
 				{"kind": "elite", "position": Vector2(250, 150)},
 			])
 	return result

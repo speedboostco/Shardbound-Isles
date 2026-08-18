@@ -67,8 +67,8 @@ func _draw() -> void:
 	draw_rect(Rect2(0, 0, 1280, 800), Color("172331"))
 	for x: int in range(0, 1280, 64):
 		for y: int in range(0, 420, 64):
-			var asset_id := "dirt" if y in [128, 192] else "grass"
-			draw_texture_rect_region(VisualAssetLibrary.FOREST_TILES, Rect2(x, y, 64, 64), VisualAssetLibrary.terrain_region(asset_id))
+			var asset_id := "path_horizontal" if y in [128, 192] else "grass"
+			draw_texture_rect_region(VisualAssetLibrary.TERRAIN_V3_ATLAS, Rect2(x, y, 64, 64), VisualAssetLibrary.terrain_region(asset_id))
 	draw_rect(Rect2(28, 28, 1224, 70), Color(0.03, 0.08, 0.08, 0.95))
 	draw_string(ThemeDB.fallback_font, Vector2(52, 75), "PIXEL-PERFECT ART VALIDATION  •  1280 × 800  •  NEAREST / NO MIPMAPS", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("e8d8a8"))
 	draw_string(ThemeDB.fallback_font, Vector2(52, 400), "HERO  •  ENEMY TELL  •  FOREST RANGER  •  RESOURCES  •  LOOT", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("e8d8a8"))

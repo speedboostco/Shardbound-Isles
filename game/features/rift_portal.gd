@@ -6,14 +6,24 @@ signal availability_changed
 
 @export var interaction_radius: float = 95.0
 var unlocked: bool = false
+var _visual_sprite: Sprite2D
 
 func _ready() -> void:
 	add_to_group("interactable")
+	_visual_sprite = Sprite2D.new()
+	_visual_sprite.name = "EmberwoodSprite"
+	_visual_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_visual_sprite.scale = Vector2.ONE * 1.55
+	_visual_sprite.position = Vector2(0, -10)
+	_visual_sprite.z_index = 1
+	add_child(_visual_sprite)
+	_refresh_visual()
 
 func unlock() -> bool:
 	if unlocked:
 		return false
 	unlocked = true
+	_refresh_visual()
 	queue_redraw()
 	availability_changed.emit()
 	return true
@@ -37,11 +47,10 @@ func interact(player: Node2D) -> bool:
 	return true
 
 func _draw() -> void:
-	var outer := Color("b57bff") if unlocked else Color(0.35, 0.4, 0.48, 0.35)
-	draw_arc(Vector2.ZERO, 48.0, 0.0, TAU, 40, outer, 7.0)
-	draw_arc(Vector2.ZERO, 31.0, 0.0, TAU, 32, outer.darkened(0.2), 6.0)
 	if unlocked:
-		draw_circle(Vector2.ZERO, 20.0, Color(0.45, 0.2, 0.7, 0.72))
 		draw_arc(Vector2.ZERO, interaction_radius, 0.0, TAU, 40, Color(0.7, 0.48, 1.0, 0.2), 2.0)
-	else:
-		draw_line(Vector2(-18, -18), Vector2(18, 18), outer, 5.0)
+
+func _refresh_visual() -> void:
+	if is_instance_valid(_visual_sprite):
+		_visual_sprite.texture = VisualAssetLibrary.structure_texture("rift_portal", unlocked)
+		_visual_sprite.modulate = Color.WHITE if unlocked else Color(0.62, 0.68, 0.72, 0.8)

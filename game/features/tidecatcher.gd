@@ -1,5 +1,5 @@
 class_name Tidecatcher
-extends Node2D
+extends StaticBody2D
 
 signal storage_changed(stored: int, capacity: int)
 signal wood_collected(amount: int)
@@ -8,8 +8,25 @@ signal wood_collected(amount: int)
 var active: bool = false
 var target: Node2D
 var production := WoodProduction.new()
+var _visual_sprite: Sprite2D
+var _collision: CollisionShape2D
 
 func _ready() -> void:
+	_collision = CollisionShape2D.new()
+	_collision.name = "CollisionShape2D"
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(64, 46)
+	_collision.shape = shape
+	_collision.disabled = true
+	add_child(_collision)
+	_visual_sprite = Sprite2D.new()
+	_visual_sprite.name = "EmberwoodSprite"
+	_visual_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_visual_sprite.scale = Vector2.ONE * 1.45
+	_visual_sprite.position = Vector2(0, -14)
+	_visual_sprite.z_index = 1
+	add_child(_visual_sprite)
+	_refresh_visual()
 	set_process(false)
 	visible = false
 
@@ -19,8 +36,10 @@ func activate(player_target: Node2D) -> bool:
 	active = true
 	target = player_target
 	visible = true
+	_collision.disabled = false
 	set_process(true)
 	storage_changed.emit(production.stored_wood, WoodProduction.STORAGE_CAPACITY)
+	_refresh_visual()
 	queue_redraw()
 	return true
 
@@ -35,6 +54,7 @@ func advance_production(delta_seconds: float) -> int:
 	var produced := production.advance(delta_seconds)
 	if produced > 0:
 		storage_changed.emit(production.stored_wood, WoodProduction.STORAGE_CAPACITY)
+		_refresh_visual()
 		queue_redraw()
 	return produced
 
@@ -45,6 +65,7 @@ func collect_if_near(player_position: Vector2) -> int:
 	if amount > 0:
 		storage_changed.emit(0, WoodProduction.STORAGE_CAPACITY)
 		wood_collected.emit(amount)
+		_refresh_visual()
 		queue_redraw()
 	return amount
 
@@ -62,17 +83,17 @@ func restore_state(is_active: bool, stored: int, player_target: Node2D) -> void:
 	target = player_target
 	production.restore(stored if is_active else 0)
 	visible = is_active
+	_collision.disabled = not is_active
 	set_process(is_active)
 	storage_changed.emit(production.stored_wood, WoodProduction.STORAGE_CAPACITY)
+	_refresh_visual()
 	queue_redraw()
+
+func _refresh_visual() -> void:
+	if is_instance_valid(_visual_sprite):
+		_visual_sprite.texture = VisualAssetLibrary.structure_texture("tidecatcher", production.stored_wood > 0)
 
 func _draw() -> void:
 	if not active:
 		return
-	draw_rect(Rect2(-26.0, -24.0, 52.0, 50.0), Color("315f68"))
-	draw_polygon(PackedVector2Array([Vector2(-35, -24), Vector2(0, -52), Vector2(35, -24)]), PackedColorArray([Color("78c9c4")]))
-	draw_rect(Rect2(-18.0, 26.0, 9.0, 25.0), Color("68452d"))
-	draw_rect(Rect2(9.0, 26.0, 9.0, 25.0), Color("68452d"))
-	for index: int in range(production.stored_wood):
-		draw_circle(Vector2(-15.0 + float(index % 3) * 15.0, 3.0 + float(index / 3) * 14.0), 5.0, Color("e2b15e"))
 	draw_arc(Vector2.ZERO, collection_radius, 0.0, TAU, 36, Color(0.55, 0.9, 0.82, 0.18), 2.0)

@@ -4,6 +4,9 @@ func run(support: TestSupport, scene_tree: SceneTree) -> void:
 	var world := (load("res://game/content/world.tscn") as PackedScene).instantiate() as FirstPlayableWorld
 	scene_tree.root.add_child(world)
 	await scene_tree.process_frame
+	var health_bar_rect := world.hud.health_bar.get_global_rect()
+	var hud_backdrop_rect := (world.hud.get_node("Backdrop") as Control).get_global_rect()
+	support.expect(health_bar_rect.size.x <= 280.0 and health_bar_rect.end.x <= hud_backdrop_rect.end.x - 8.0, "health bar must retain visible right padding inside the 1280x800 status panel")
 
 	support.expect(not world.camera.position_smoothing_enabled and bool(ProjectSettings.get_setting("rendering/2d/snap/snap_2d_transforms_to_pixel", false)) and bool(ProjectSettings.get_setting("rendering/2d/snap/snap_2d_vertices_to_pixel", false)), "pixel-art camera projection must disable fractional smoothing and snap 2D transforms/vertices without rounding gameplay state")
 	support.expect(world.camera.limit_right - world.camera.limit_left >= 1280 and world.camera.limit_bottom - world.camera.limit_top >= 800, "camera limits must contain a full 1280x800 viewport")

@@ -9,6 +9,8 @@ func run(support: TestSupport, scene_tree: SceneTree) -> void:
 	world.refresh_all_ui()
 	support.expect(world.build_tidecatcher(), "crafted heart must unlock Tidecatcher construction")
 	support.expect(world.tidecatcher.active and world.hud.is_tidecatcher_visible(), "construction must activate visible building and HUD status")
+	var collision := world.tidecatcher.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	support.expect(collision != null and not collision.disabled, "active Tidecatcher must be a solid world object")
 	support.expect(not world.build_tidecatcher(), "Tidecatcher construction must reject duplicates")
 	world.tidecatcher.advance_production(6.0)
 	support.expect(world.tidecatcher.stored_wood() == 3, "six seconds must deterministically produce three wood")

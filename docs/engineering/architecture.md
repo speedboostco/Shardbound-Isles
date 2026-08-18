@@ -2,6 +2,8 @@
 
 Features use composed Godot scenes. Scene scripts under `game/features` coordinate local behavior; pure deterministic rules live under `game/core`. Authored composition roots live under `game/content`. Definitions remain separate from runtime state. Signals decouple local outcomes such as drops and collection. UI under `game/ui` observes world state and never owns it.
 
+Presentation rasters are isolated behind semantic libraries. `VisualAssetLibrary` maps actor states/facing, resources, structures, terrain, and bounded VFX to registered Puny/Emberwood cells; `ItemIconLibrary` maps data-owned `icon_id` values. Gameplay scenes may advance presentation elapsed time, but atlas frames never own movement, hit timing, damage, rewards, interaction, collision, or persistence. Versioned atlas siblings make art replacement local and preserve previous families for rollback until visual acceptance.
+
 There are no Autoloads in the first playable. The world scene is a composition root, not a general service locator. `MovementRules`, `InteractionSelector`, `ResourceInventory`, `HealthComponent`, and weapon definition/runtime models are scene-independent contracts with targeted tests. Resource nodes share one definition-driven behavior, while player/enemy scenes compose health and presentation around it. Save data uses stable IDs, plain serializable values, and an explicit schema version.
 
 ## M2 item model
@@ -30,11 +32,15 @@ The world composition root applies successful transactions and materializes `Bas
 
 ## Visual foundation
 
-`VisualAssetLibrary` is the semantic boundary for the registered Emberwood atlas and terrain derivative. Gameplay nodes compose presentation-only `Sprite2D` children while retaining their prior collision, health, target, movement, reward, and serialization contracts. `FacingRules` is the pure deterministic direction mapping; animation reads it but never advances authoritative transforms or hit timing.
+`VisualAssetLibrary` is the semantic boundary for Shade's Puny Warrior/Orc/Archer/Mage sheets, Puny World terrain/object cells, and Emberwood interaction/VFX atlases. Hero equipment selects authored throw/sword/bow/staff columns on the same body sheet; no source filename, atlas cell, or presentation elapsed time enters a save. `PlayerCharacter.set_weapon_stats` invalidates only the cached visual region when equipment changes; attack profiles, damage, collision, and timing remain authoritative elsewhere. Gameplay nodes compose presentation-only `Sprite2D` children while retaining collision, health, target, movement, reward, and serialization contracts. `FacingRules` is the pure deterministic eight-direction mapping. `AnimationStateRules` provides shared `idle/move/attack/hit/death` priority, looping policy, and frame math; actor bindings read authoritative flags but never advance transforms, emit hits, choose targets, award loot, or decide cleanup. Solid terrain/building nodes use explicit `StaticBody2D` shapes; visual transparency never defines collision and collisions never emit damage.
+
+`ItemIconLibrary` resolves semantic 64px icon cells and owns the fallback contract. Item definitions and generated instances carry `icon_id`; the HUD and world pickups request icons from data rather than branching on item names. The animation and icon atlases are presentation dependencies and do not enter save state.
 
 `GameplayVfx` owns only a short kind/lifetime and always self-cleans. The world spawns normal hit, critical, projectile, gathering, resource-break, pickup, reward, and death presentation after authoritative events. `VfxSettings` is an injected project-settings snapshot that centralizes reduced-effects intensity and screen-shake scaling without an Autoload. The HUD consumes one shared Theme for buttons, focus, panels, and health presentation; it remains an observer of domain state.
 
-The source master is excluded from import/export. `ArtAssetValidator` checks every registered runtime raster for lowercase naming, bounded cell-aligned dimensions, lossless/no-mipmap import metadata, project nearest filtering, source isolation, and raw archive exclusion during `static-validate`.
+`LivingWorldPropRules` owns the four authored prop definitions and bounded effect/cooldown data. `LivingWorldProp` implements the existing `interactable` contract, local visual state, and cooldown before emitting an effect request. The world composition root applies authoritative resource, healing, cache, or guardian effects. Guardian references are capped and cleared on defeat; prop animation never grants rewards or spawns combatants by itself.
+
+Source masters are excluded from import/export. `ArtAssetValidator` checks every registered runtime raster for lowercase naming, bounded cell-aligned dimensions, lossless/no-mipmap import metadata, project nearest filtering, source isolation, raw archive exclusion, binary alpha, and the per-family palette ceiling during `static-validate`.
 
 ## Legendary effect runtime
 

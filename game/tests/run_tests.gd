@@ -19,6 +19,9 @@ func _run() -> void:
 		return
 	if suite in ["all", "unit"]:
 		for definition: Dictionary in [
+			{"path": "res://game/tests/unit/cohesive_art_collision_test.gd", "assertions": 12},
+			{"path": "res://game/tests/unit/living_world_animation_polish_test.gd", "assertions": 18},
+			{"path": "res://game/tests/unit/animation_icon_foundation_test.gd", "assertions": 31},
 			{"path": "res://game/tests/unit/visual_legendary_foundation_test.gd", "assertions": 36},
 			{"path": "res://game/tests/unit/tasks_16_30_conformance_test.gd", "assertions": 33},
 			{"path": "res://game/tests/unit/m4_recipe_placement_test.gd", "assertions": 18},
@@ -65,22 +68,25 @@ func _run() -> void:
 			_record_result("unit", path, assertions_before, failures_before)
 	if suite in ["all", "integration"]:
 		for definition: Dictionary in [
+			{"path": "res://game/tests/integration/world_obstacle_collision_flow_test.gd", "assertions": 6},
+			{"path": "res://game/tests/integration/living_world_animation_polish_flow_test.gd", "assertions": 17},
+			{"path": "res://game/tests/integration/animation_inventory_world_loot_flow_test.gd", "assertions": 22},
 			{"path": "res://game/tests/integration/visual_legendary_foundation_flow_test.gd", "assertions": 34},
 			{"path": "res://game/tests/integration/tasks_16_30_conformance_flow_test.gd", "assertions": 12},
 			{"path": "res://game/tests/integration/m4_base_flow_test.gd", "assertions": 28},
 			{"path": "res://game/tests/integration/m3_world_loot_flow_test.gd", "assertions": 41},
 			{"path": "res://game/tests/integration/m2_loot_flow_test.gd", "assertions": 31},
-			{"path": "res://game/tests/integration/m1_scene_contract_test.gd", "assertions": 26},
+			{"path": "res://game/tests/integration/m1_scene_contract_test.gd", "assertions": 27},
 			{"path": "res://game/tests/integration/slime_obstacle_flow_test.gd", "assertions": 4},
 			{"path": "res://game/tests/integration/gameplay_flow_test.gd", "assertions": 10},
 			{"path": "res://game/tests/integration/equipment_ui_flow_test.gd", "assertions": 19},
 			{"path": "res://game/tests/integration/workbench_flow_test.gd", "assertions": 17},
-			{"path": "res://game/tests/integration/tidecatcher_flow_test.gd", "assertions": 8},
+			{"path": "res://game/tests/integration/tidecatcher_flow_test.gd", "assertions": 9},
 			{"path": "res://game/tests/integration/save_load_flow_test.gd", "assertions": 13},
 			{"path": "res://game/tests/integration/island_shard_flow_test.gd", "assertions": 26},
 			{"path": "res://game/tests/integration/ranged_combat_flow_test.gd", "assertions": 12},
 			{"path": "res://game/tests/integration/boss_encounter_flow_test.gd", "assertions": 11},
-			{"path": "res://game/tests/integration/rift_flow_test.gd", "assertions": 13},
+			{"path": "res://game/tests/integration/rift_flow_test.gd", "assertions": 14},
 			{"path": "res://game/tests/integration/legendary_pulse_flow_test.gd", "assertions": 10},
 		]:
 			var path := String(definition.path)
@@ -95,6 +101,30 @@ func _run() -> void:
 					return
 			_record_result("integration", path, assertions_before, failures_before)
 	if suite in ["all", "simulation"]:
+		var living_world_path := "res://game/tests/simulation/living_world_density_simulation_test.gd"
+		var living_world_before := support.assertions
+		var living_world_failures_before := support.failures.size()
+		var living_world_simulation: Variant = _instantiate_test(living_world_path)
+		if living_world_simulation != null:
+			var living_world_metrics: Dictionary = await living_world_simulation.run(support, self)
+			if not support.require_assertion_count(support.assertions - living_world_before, 8, living_world_path):
+				_record_result("simulation", living_world_path, living_world_before, living_world_failures_before)
+				_finish(suite)
+				return
+			print("LIVING_WORLD_METRICS %s" % JSON.stringify(living_world_metrics))
+		_record_result("simulation", living_world_path, living_world_before, living_world_failures_before)
+		var tasks_46_60_path := "res://game/tests/simulation/tasks_46_60_world_loot_simulation_test.gd"
+		var tasks_46_60_before := support.assertions
+		var tasks_46_60_failures_before := support.failures.size()
+		var tasks_46_60_simulation: Variant = _instantiate_test(tasks_46_60_path)
+		if tasks_46_60_simulation != null:
+			var tasks_46_60_metrics: Dictionary = await tasks_46_60_simulation.run(support, self)
+			if not support.require_assertion_count(support.assertions - tasks_46_60_before, 14, tasks_46_60_path):
+				_record_result("simulation", tasks_46_60_path, tasks_46_60_before, tasks_46_60_failures_before)
+				_finish(suite)
+				return
+			print("TASKS_46_60_METRICS %s" % JSON.stringify(tasks_46_60_metrics))
+		_record_result("simulation", tasks_46_60_path, tasks_46_60_before, tasks_46_60_failures_before)
 		var visual_gate_path := "res://game/tests/simulation/visual_legendary_gate_simulation_test.gd"
 		var visual_gate_before := support.assertions
 		var visual_gate_failures_before := support.failures.size()
@@ -137,7 +167,7 @@ func _run() -> void:
 		var rift_simulation: Variant = _instantiate_test(rift_path)
 		if rift_simulation != null:
 			var rift_metrics: Dictionary = await rift_simulation.run(support, self)
-			if not support.require_assertion_count(support.assertions - rift_before, 5, rift_path):
+			if not support.require_assertion_count(support.assertions - rift_before, 6, rift_path):
 				_record_result("simulation", rift_path, rift_before, rift_failures_before)
 				_finish(suite)
 				return

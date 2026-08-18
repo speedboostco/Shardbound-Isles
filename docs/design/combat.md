@@ -2,7 +2,7 @@
 
 ## Emberwood presentation
 
-The hero has four deterministic facings with presentation-only idle/movement bob, attack emphasis, and hit flash. Slimes use separate idle/attack silhouettes and begin contact damage with a 0.22-second tell. Forest Rangers retain their 0.55-second line tell and switch to a distinct drawn-bow silhouette. Authoritative death happens before cleanup; a short death burst represents the death animation without delaying drops or allowing a dead actor to act.
+The hero resolves eight deterministic visual facings without mirroring. One Shade Puny Warrior body supplies idle, walk, hurt, death, and the complete authored throw, sword, bow, and staff actions; equipment changes the action without changing protagonist identity. The compatible Puny Orc, Archer, and Mage sheets give melee, ranged, elite, and boss roles the same 32px source grammar and eight authored directions. These bindings are presentation-only. Legacy procedural weapon lines/arcs remain removed because authored body motion, physical projectiles, and bounded impact VFX carry the action. Chasers begin contact damage with a 0.22-second directional tell; ranged roles retain the 0.55-second line tell. Authoritative death happens before presentation and remains independent from drops, saves, and cleanup.
 
 Normal hit, critical hit, projectile impact, gathering hit, resource break, death, and Legendary triggers use distinct bounded VFX. Reduced-effects mode keeps the primary glyph, suppresses secondary detail, and halves camera shake. No VFX or sprite frame emits gameplay damage.
 

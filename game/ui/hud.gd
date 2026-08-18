@@ -38,10 +38,13 @@ signal rift_requested
 @onready var loot_label: Label = $Margin/VBox/Loot
 @onready var attack_label: Label = $Margin/VBox/Attack
 @onready var equipment_panel: PanelContainer = $EquipmentPanel
-@onready var item_name_label: Label = $EquipmentPanel/Margin/VBox/ItemName
+@onready var item_name_label: Label = $EquipmentPanel/Margin/VBox/ItemIdentity/Details/ItemName
+@onready var equipment_icon: TextureRect = $EquipmentPanel/Margin/VBox/ItemIdentity/Icon
+@onready var equipment_slot_summary: Label = $EquipmentPanel/Margin/VBox/ItemIdentity/Details/SlotSummary
 @onready var equipment_previous_button: Button = $EquipmentPanel/Margin/VBox/Selection/Previous
 @onready var equipment_count_label: Label = $EquipmentPanel/Margin/VBox/Selection/Count
 @onready var equipment_next_button: Button = $EquipmentPanel/Margin/VBox/Selection/Next
+@onready var inventory_strip: HBoxContainer = $EquipmentPanel/Margin/VBox/InventoryStrip
 @onready var comparison_label: Label = $EquipmentPanel/Margin/VBox/Comparison
 @onready var equipment_tooltip_scroll: ScrollContainer = $EquipmentPanel/Margin/VBox/TooltipScroll
 @onready var affix_label: Label = $EquipmentPanel/Margin/VBox/TooltipScroll/Affix
@@ -76,6 +79,7 @@ signal rift_requested
 @onready var save_button: Button = $SystemPanel/Margin/VBox/Save
 @onready var island_panel: PanelContainer = $IslandPanel
 @onready var island_name_label: Label = $IslandPanel/Margin/VBox/ShardName
+@onready var island_icon: TextureRect = $IslandPanel/Margin/VBox/ShardIcon
 @onready var island_previous_button: Button = $IslandPanel/Margin/VBox/Selection/Previous
 @onready var island_count_label: Label = $IslandPanel/Margin/VBox/Selection/Count
 @onready var island_next_button: Button = $IslandPanel/Margin/VBox/Selection/Next
@@ -228,7 +232,7 @@ func get_displayed_stone() -> int:
 
 func set_interaction_prompt(label: String) -> void:
 	interaction_prompt.visible = not label.is_empty()
-	interaction_prompt.text = "A / E  %s" % label.to_upper() if not label.is_empty() else ""
+	interaction_prompt.text = "[A]  %s" % label.to_upper() if not label.is_empty() else ""
 
 func get_interaction_prompt() -> String:
 	return interaction_prompt.text if interaction_prompt.visible else ""
@@ -256,8 +260,11 @@ func refresh_equipment(items: Array[Dictionary], equipped_item: Dictionary, scra
 	equipped_label.text = "EQUIPPED  %s" % String(equipped_item.get("name", "Unarmed"))
 	loot_label.text = "WEAPON  %s" % String(equipped_item.get("name", "UNARMED"))
 	if not equipped_item.is_empty():
-		loot_label.text += "  |  DMG %d  |  SPEED %.2fx" % [equipped_item.get("damage", equipped_item.get("power", 0)), equipped_item.get("attack_speed", 1.0)]
+		var weapon_type := String(equipped_item.get("base_type", equipped_item.get("archetype", "weapon"))).to_upper()
+		loot_label.text = "%s  •  %s" % [weapon_type, String(equipped_item.get("name", "WEAPON"))]
 	if _items.is_empty():
+		equipment_icon.texture = ItemIconLibrary.texture("empty")
+		equipment_slot_summary.text = "PACK SLOT  •  EMPTY"
 		_selected_equipment_index = 0
 		_pending_salvage_id = ""
 	else:
@@ -268,6 +275,7 @@ func refresh_equipment(items: Array[Dictionary], equipped_item: Dictionary, scra
 	_recover_equipment_focus()
 
 func _render_selected_equipment() -> void:
+	_render_inventory_strip()
 	if _items.is_empty():
 		item_name_label.text = "NO EQUIPMENT IN PACK"
 		item_name_label.modulate = Color.WHITE
@@ -282,15 +290,20 @@ func _render_selected_equipment() -> void:
 		favorite_button.disabled = true
 	else:
 		var item := _items[_selected_equipment_index]
+		var icon_id := ItemIconLibrary.icon_id_for_item(item)
+		equipment_icon.texture = ItemIconLibrary.texture(icon_id)
 		var presentation := ItemTooltipPresenter.present(item)
 		var rarity := String(item.get("rarity", "common"))
 		var slot := String(item.get("slot", "weapon"))
+		equipment_slot_summary.text = "%s SLOT  •  %s ICON  •  %s" % [slot.to_upper(), icon_id.replace("_", " ").to_upper(), rarity.to_upper()]
 		var current := _item_by_id(String(_equipped_slots.get(slot, "")))
 		var comparison := ItemTooltipPresenter.compare(item, current)
-		item_name_label.text = "%s\nLEVEL %d  •  %s  •  %s%s" % [presentation.name, presentation.level, slot.to_upper(), rarity.to_upper(), "  •  FAVORITE" if bool(presentation.favorite) else ""]
+		item_name_label.text = "%s  •  LEVEL %d%s" % [presentation.name, presentation.level, "  •  FAVORITE" if bool(presentation.favorite) else ""]
 		item_name_label.modulate = Color(String(presentation.rarity_color))
-		var delta_text := "    ".join(comparison.deltas as Array)
-		comparison_label.text = "CANDIDATE  %s    |    EQUIPPED  %s\n%s    |    SALVAGE VALUE  %d" % [comparison.candidate_name, comparison.equipped_name, delta_text if not delta_text.is_empty() else "NO NUMERIC CHANGE", EquipmentInventory.salvage_value(item)]
+		var visible_deltas := (comparison.deltas as Array).slice(0, 3)
+		var delta_text := "    ".join(visible_deltas)
+		var decision := _decision_summary(comparison.deltas as Array)
+		comparison_label.text = "DECISION  %s\nCANDIDATE  %s  |  EQUIPPED  %s\n%s\nSALVAGE VALUE  %d" % [decision, comparison.candidate_name, comparison.equipped_name, delta_text if not delta_text.is_empty() else "NO NUMERIC CHANGE", EquipmentInventory.salvage_value(item)]
 		var tooltip_lines: Array[String] = ["CANDIDATE"]
 		tooltip_lines.append_array(presentation.base_lines as Array)
 		tooltip_lines.append_array(presentation.affix_lines as Array)
@@ -311,6 +324,44 @@ func _render_selected_equipment() -> void:
 		favorite_button.disabled = false
 		favorite_button.text = "UNFAVORITE" if bool(item.get("favorite", false)) else "KEEP"
 	unequip_button.disabled = _equipped_slots.is_empty()
+
+func _render_inventory_strip() -> void:
+	for child: Node in inventory_strip.get_children():
+		inventory_strip.remove_child(child)
+		child.queue_free()
+	for index: int in 6:
+		var frame := PanelContainer.new()
+		frame.custom_minimum_size = Vector2(52, 52)
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color("101c24")
+		style.border_color = Color("f5df9b") if index == _selected_equipment_index and index < _items.size() else Color("315e66")
+		style.set_border_width_all(4 if index == _selected_equipment_index and index < _items.size() else 2)
+		style.set_corner_radius_all(5)
+		frame.add_theme_stylebox_override("panel", style)
+		var icon := TextureRect.new()
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.texture = ItemIconLibrary.texture(ItemIconLibrary.icon_id_for_item(_items[index])) if index < _items.size() else ItemIconLibrary.texture("empty")
+		icon.custom_minimum_size = Vector2(44, 44)
+		frame.add_child(icon)
+		inventory_strip.add_child(frame)
+
+func _decision_summary(deltas: Array) -> String:
+	var gain := "NEW PLAYSTYLE"
+	var cost := "NONE"
+	for value: Variant in deltas:
+		var text_value := String(value)
+		if "-" in text_value and cost == "NONE":
+			cost = text_value
+		elif "+" in text_value and gain == "NEW PLAYSTYLE":
+			gain = text_value
+	return "GAIN %s  •  COST %s" % [gain, cost]
+
+func get_displayed_icon_id() -> String:
+	if _items.is_empty():
+		return "empty"
+	return ItemIconLibrary.icon_id_for_item(_items[_selected_equipment_index])
 
 func _item_by_id(item_id: String) -> Dictionary:
 	for item: Dictionary in _items:
@@ -379,6 +430,7 @@ func _recover_equipment_focus() -> void:
 func open_equipment_panel() -> void:
 	encounter_label.visible = false
 	rift_label.visible = false
+	interaction_prompt.visible = false
 	equipment_panel.visible = true
 	if not equip_button.disabled:
 		equip_button.grab_focus()
@@ -514,6 +566,9 @@ func open_workbench_panel() -> void:
 	equipment_panel.visible = false
 	workbench_panel.visible = true
 	base_status_label.visible = false
+	encounter_label.visible = false
+	rift_label.visible = false
+	interaction_prompt.visible = false
 	if not craft_button.disabled:
 		craft_button.grab_focus()
 	elif not tidecatcher_build_button.disabled:
@@ -612,6 +667,9 @@ func get_base_status() -> String:
 func open_system_menu() -> void:
 	equipment_panel.visible = false
 	workbench_panel.visible = false
+	encounter_label.visible = false
+	rift_label.visible = false
+	interaction_prompt.visible = false
 	island_panel.visible = false
 	system_panel.visible = true
 	save_button.grab_focus()
@@ -636,6 +694,7 @@ func refresh_islands(shards: Array[Dictionary], archipelago_data: Dictionary) ->
 	_archipelago_data = archipelago_data.duplicate(true)
 	_pending_island_action = ""
 	if _island_shards.is_empty():
+		island_icon.texture = ItemIconLibrary.texture("empty")
 		_selected_island_index = 0
 	else:
 		_selected_island_index = clampi(_selected_island_index, 0, _island_shards.size() - 1)
@@ -657,6 +716,7 @@ func _render_selected_island() -> void:
 		island_install_button.disabled = true
 	else:
 		var shard := _island_shards[_selected_island_index]
+		island_icon.texture = ItemIconLibrary.texture("island_shard")
 		island_name_label.text = String(shard.get("name", "Unknown Shard")).to_upper()
 		$IslandPanel/Margin/VBox/Biome.text = "BIOME  %s    •    LEVEL %d    •    %s    •    %s" % [String(shard.get("biome", "unknown")).to_upper(), int(shard.get("level", 1)), String(shard.get("size", "small")).to_upper(), String(shard.get("rarity", "common")).to_upper()]
 		$IslandPanel/Margin/VBox/Resources.text = "RESOURCES  %s" % _join_preview(shard.get("resources", []))
@@ -763,6 +823,9 @@ func get_island_count() -> int:
 	return _island_shards.size()
 
 func open_island_panel() -> void:
+	encounter_label.visible = false
+	rift_label.visible = false
+	interaction_prompt.visible = false
 	island_panel.visible = true
 	if not island_install_button.disabled:
 		island_install_button.grab_focus()

@@ -17,6 +17,7 @@ var encounter_reward: bool = false
 var collector: Callable
 var _retry_cooldown: float = 0.0
 var _visual_sprite: Sprite2D
+var _visual_time: float = 0.0
 
 func rarity_cue() -> String:
 	match rarity.to_lower():
@@ -40,6 +41,9 @@ func _ready() -> void:
 		create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).tween_property(_visual_sprite, "scale", target_scale, 0.2)
 
 func _physics_process(delta: float) -> void:
+	_visual_time += maxf(0.0, delta)
+	if is_instance_valid(_visual_sprite):
+		_visual_sprite.position.y = -7.0 + sin(_visual_time * 5.5 + float(spawn_order % 7)) * 3.0
 	_retry_cooldown = maxf(0.0, _retry_cooldown - delta)
 	if not is_instance_valid(target):
 		return
@@ -68,13 +72,21 @@ func merge_amount(amount: int) -> bool:
 func _ensure_visual_sprite() -> void:
 	var asset_id := "resource_drop"
 	var scale_value := 0.56
-	if kind == "stone":
-		asset_id = "stone"
-		scale_value = 0.48
-	elif kind in ["equipment", "island_shard"]:
-		asset_id = "legendary_plant" if important or kind == "island_shard" else "hit_burst"
-		scale_value = 0.5 if important or kind == "island_shard" else 0.3
-	_visual_sprite = VisualAssetLibrary.sprite(asset_id, scale_value)
+	_visual_sprite = Sprite2D.new()
+	_visual_sprite.name = "EmberwoodSprite"
+	_visual_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	if kind in ["wood", "stone", "moonleaf", "plank"]:
+		_visual_sprite.texture = VisualAssetLibrary.resource_pickup_texture(kind)
+		scale_value = 0.7
+	elif kind in ["equipment", "island_shard", "scrap"]:
+		var icon_id := kind
+		if kind == "equipment" and payload is Dictionary:
+			icon_id = ItemIconLibrary.icon_id_for_item(payload as Dictionary)
+		_visual_sprite.texture = ItemIconLibrary.texture(icon_id)
+		scale_value = 0.6 if kind in ["equipment", "island_shard"] else 0.48
+	else:
+		_visual_sprite.texture = VisualAssetLibrary.texture(asset_id)
+	_visual_sprite.scale = Vector2.ONE * scale_value
 	_visual_sprite.position = Vector2(0, -7)
 	_visual_sprite.z_index = 2
 	add_child(_visual_sprite)

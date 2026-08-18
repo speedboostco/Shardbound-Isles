@@ -20,6 +20,7 @@ static func generate(seed_value: int, context: String = "starter") -> Dictionary
 	definition.set("rarity", "magic")
 	var item: Dictionary = WeaponInstanceScript.from_definition(definition, seed_value, context).to_dictionary()
 	item["slot"] = "weapon"
+	item["icon_id"] = ["sword", "bow", "wand"][index]
 	item["item_level"] = 1
 	item["base_stats"] = {}
 	item["affixes"] = []

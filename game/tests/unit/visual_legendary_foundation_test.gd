@@ -8,7 +8,7 @@ func run(support: TestSupport) -> void:
 	support.expect(FacingRules.resolve(Vector2.UP) == "north", "facing rules must resolve north deterministically")
 	support.expect(FacingRules.resolve(Vector2.DOWN) == "south", "facing rules must resolve south deterministically")
 	support.expect(FacingRules.resolve(Vector2.ZERO, "north") == "north", "zero input must preserve the prior valid facing")
-	support.expect(FacingRules.resolve(Vector2(1, 1), "west") == "east", "diagonal ties must preserve the prior axis and use the new sign")
+	support.expect(FacingRules.resolve(Vector2(1, 1), "west") == "south_east", "diagonal input must resolve to the authored southeast hero direction")
 	support.expect(VisualAssetLibrary.validate_contract().is_empty(), "the registered atlas must satisfy its semantic 4x4 contract")
 	support.expect(VisualAssetLibrary.asset_ids().size() == 16, "the selected bootstrap family must expose exactly sixteen semantic cells")
 	support.expect(VisualAssetLibrary.region("grass") == Rect2(0, 192, 64, 64), "terrain atlas region must be stable and integer aligned")

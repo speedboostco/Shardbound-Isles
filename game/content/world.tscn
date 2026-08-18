@@ -65,7 +65,7 @@ script = ExtResource("4")
 position = Vector2(0, -190)
 script = ExtResource("6")
 
-[node name="Tidecatcher" type="Node2D" parent="."]
+[node name="Tidecatcher" type="StaticBody2D" parent="."]
 position = Vector2(220, -185)
 script = ExtResource("7")
 

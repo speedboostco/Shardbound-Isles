@@ -8,6 +8,30 @@ var shard_name: String = ""
 var shard_biome: String = ""
 var materialized: MaterializedIsland
 var reject_next_materialization: bool = false
+var _visual_sprite: Sprite2D
+var _visual_time: float = 0.0
+var _visual_installed: bool = false
+
+func _ready() -> void:
+	_visual_sprite = Sprite2D.new()
+	_visual_sprite.name = "EmberwoodSprite"
+	_visual_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_visual_sprite.scale = Vector2.ONE * 1.22
+	_visual_sprite.position = Vector2(0, -5)
+	_visual_sprite.z_index = 1
+	add_child(_visual_sprite)
+	_refresh_pedestal()
+	set_process(true)
+
+func _process(delta: float) -> void:
+	_visual_time += maxf(0.0, delta)
+	if installed != _visual_installed:
+		_refresh_pedestal()
+	if is_instance_valid(_visual_sprite):
+		var pulse := PresentationMotion.wave(_visual_time, 0.45, float(abs(slot_id.hash()) % 100) / 100.0)
+		_visual_sprite.position.y = -5.0 + pulse * (0.45 if installed else 1.0)
+		_visual_sprite.modulate = Color("d8fff2") if installed else Color.WHITE
+	queue_redraw()
 
 func configure_slot(id_value: String, coordinate_value: Vector2i) -> void:
 	slot_id = id_value
@@ -17,6 +41,7 @@ func set_installed(value: bool, display_name: String = "", biome: String = "") -
 	installed = value
 	shard_name = display_name
 	shard_biome = biome
+	_refresh_pedestal()
 	queue_redraw()
 
 func materialize(installed_data: Dictionary, effects: Dictionary, indicators: Array[String], player: Node2D) -> bool:
@@ -43,10 +68,18 @@ func clear_materialized() -> void:
 func contains_world_position(world_position: Vector2) -> bool:
 	return installed and global_position.distance_to(world_position) <= 112.0
 
-func _draw() -> void:
-	if installed:
+func uses_plus_marker() -> bool:
+	return false
+
+func _refresh_pedestal() -> void:
+	if not is_instance_valid(_visual_sprite):
 		return
-	draw_circle(Vector2.ZERO, 67.0, Color(0.2, 0.45, 0.5, 0.16))
-	draw_arc(Vector2.ZERO, 69.0, 0.0, TAU, 40, Color("5d999c"), 4.0)
-	draw_line(Vector2(-24, 0), Vector2(24, 0), Color("70aeb0"), 3.0)
-	draw_line(Vector2(0, -24), Vector2(0, 24), Color("70aeb0"), 3.0)
+	_visual_sprite.texture = VisualAssetLibrary.structure_texture("island_pedestal", installed)
+	_visual_installed = installed
+
+func _draw() -> void:
+	var pulse := 2.0 + PresentationMotion.wave(_visual_time, 0.45, float(abs(slot_id.hash()) % 100) / 100.0) * 2.0
+	draw_set_transform(Vector2(0, 18), 0.0, Vector2(1.0, 0.32))
+	draw_circle(Vector2.ZERO, 48.0 + pulse, Color(0.18, 0.52, 0.46, 0.12 if installed else 0.18))
+	draw_arc(Vector2.ZERO, 52.0 + pulse, 0.0, TAU, 40, Color("72e1a5") if installed else Color("5d999c"), 3.0)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

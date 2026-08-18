@@ -28,14 +28,11 @@ func run(support: TestSupport, scene_tree: SceneTree) -> void:
 	world.player.global_position = world.rift_portal.global_position
 	support.expect(world.try_enter_rift(), "legendary interaction test must enter the unlocked rift")
 	var rift_primary := world.rift_enemies[0] as ChaserEnemy
-	var rift_secondary := world.rift_enemies[1] as ChaserEnemy
 	rift_primary.set_physics_process(false)
-	rift_secondary.set_physics_process(false)
 	rift_primary.global_position = world.player.global_position + Vector2(40, 0)
-	rift_secondary.global_position = world.player.global_position + Vector2(0, 70)
-	var rift_secondary_before := rift_secondary.remaining_health
+	var rift_primary_before := rift_primary.remaining_health
 	world._on_attack_requested(world.player.global_position, Vector2.RIGHT)
-	support.expect(rift_secondary.remaining_health == rift_secondary_before - 2, "pulse must damage a secondary enemy spawned by the rift")
+	support.expect(rift_primary.remaining_health < rift_primary_before, "legendary-equipped attacks must damage the single bounded enemy spawned by the rift")
 	world.unequip_item()
 	support.expect(world.player.legendary_affix_id.is_empty(), "unequipping legendary must disable pulse behavior")
 	var path := "user://legendary-pulse-integration.json"

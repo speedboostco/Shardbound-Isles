@@ -2,7 +2,39 @@ class_name ArtAssetValidator
 extends RefCounted
 
 const RUNTIME_ATLAS: String = "res://assets/original/emberwood/emberwood_bootstrap_atlas.png"
-const RUNTIME_RASTERS: Array[String] = [RUNTIME_ATLAS, "res://assets/original/emberwood/forest_tiles.png"]
+const RUNTIME_RASTERS: Array[String] = [
+	RUNTIME_ATLAS,
+	"res://assets/original/emberwood/forest_tiles.png",
+	"res://assets/original/emberwood/emberwood_animation_atlas.png",
+	"res://assets/original/emberwood/emberwood_item_icons.png",
+	"res://assets/third_party/pixel_frog/tiny_swords_cc0/hero_animation_atlas.png",
+	"res://assets/third_party/hormelz/knight_cc0/hero_idle_atlas.png",
+	"res://assets/third_party/hormelz/knight_cc0/hero_move_atlas.png",
+	"res://assets/third_party/hormelz/knight_cc0/hero_unarmed_atlas.png",
+	"res://assets/third_party/hormelz/knight_cc0/hero_melee_atlas.png",
+	"res://assets/third_party/hormelz/knight_cc0/hero_ranged_atlas.png",
+	"res://assets/third_party/hormelz/knight_cc0/hero_magic_atlas.png",
+	"res://assets/third_party/hormelz/knight_cc0/hero_hit_atlas.png",
+	"res://assets/third_party/hormelz/knight_cc0/hero_death_atlas.png",
+	"res://assets/third_party/pixel_frog/tiny_swords_cc0/enemy_animation_atlas.png",
+	"res://assets/original/emberwood/emberwood_resources_v3_atlas.png",
+	"res://assets/original/emberwood/emberwood_structures_v3_atlas.png",
+	"res://assets/original/emberwood/emberwood_item_icons_v3.png",
+	"res://assets/original/emberwood/emberwood_vfx_v3_atlas.png",
+	"res://assets/original/emberwood/emberwood_terrain_v3.png",
+	"res://assets/original/emberwood/emberwood_living_world_v1_atlas.png",
+	"res://assets/third_party/pixel_frog/tiny_swords_cc0/tilemap_flat.png",
+	"res://assets/third_party/pixel_frog/tiny_swords_cc0/terrain_deco_atlas.png",
+	"res://assets/third_party/shade/puny_cc0/puny_hero.png",
+	"res://assets/third_party/shade/puny_cc0/puny_orc.png",
+	"res://assets/third_party/shade/puny_cc0/puny_archer.png",
+	"res://assets/third_party/shade/puny_cc0/puny_mage.png",
+	"res://assets/third_party/shade/puny_cc0/puny_tree.png",
+	"res://assets/third_party/shade/puny_cc0/puny_flora_1.png",
+	"res://assets/third_party/shade/puny_cc0/puny_flora_2.png",
+	"res://assets/third_party/shade/puny_cc0/puny_boulder.png",
+	"res://assets/third_party/shade/puny_cc0/puny_world.png",
+]
 const SOURCE_ARCHIVE_EXTENSIONS: Array[String] = ["zip", "7z", "rar", "psd", "aseprite"]
 
 static func validate_repository() -> Array[String]:
@@ -17,12 +49,19 @@ static func validate_repository() -> Array[String]:
 			continue
 		var image := (texture_value as Texture2D).get_image()
 		var import_options := _read_import_options(path + ".import")
-		errors.append_array(validate_metadata(path.get_file(), image.get_width(), image.get_height(), image.detect_alpha(), import_options, 64))
-		errors.append_array(validate_pixel_content(path.get_file(), image, 64, 16))
+		var is_production_hero := path.contains("/hormelz/knight_cc0/")
+		var is_puny_actor := path.contains("/shade/puny_cc0/puny_") and path.get_file() in ["puny_hero.png", "puny_orc.png", "puny_archer.png", "puny_mage.png"]
+		var is_puny_world := path.contains("/shade/puny_cc0/") and not is_puny_actor
+		var cell_size := 32 if is_puny_actor else (16 if is_puny_world else (128 if is_production_hero else 64))
+		var maximum_colors := 128 if is_production_hero else 16
+		errors.append_array(validate_metadata(path.get_file(), image.get_width(), image.get_height(), image.detect_alpha(), import_options, cell_size))
+		errors.append_array(validate_pixel_content(path.get_file(), image, cell_size, maximum_colors))
 	if int(ProjectSettings.get_setting("rendering/textures/canvas_textures/default_texture_filter", -1)) != 0:
 		errors.append("canvas texture default filter must be nearest (0)")
 	if bool(ProjectSettings.get_setting("rendering/textures/default_filters/use_nearest_mipmap_filter", true)):
 		errors.append("nearest mipmap fallback must stay disabled")
+	errors.append_array(VisualAssetLibrary.validate_contract())
+	errors.append_array(ItemIconLibrary.validate_contract())
 	if not FileAccess.file_exists("res://assets/original/emberwood/source/.gdignore"):
 		errors.append("asset source directory must contain .gdignore")
 	_scan_for_archives("res://assets", errors)

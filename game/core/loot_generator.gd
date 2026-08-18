@@ -43,6 +43,7 @@ static func generate(seed_value: int, context: String, item_level: int, forced_b
 		"item_id": instance_id,
 		"id": instance_id,
 		"definition_id": String(item_base.id),
+		"icon_id": String(item_base.icon_id),
 		"name": prefix + String(item_base.name),
 		"base_type": String(item_base.base_type),
 		"archetype": String(item_base.combat_family),

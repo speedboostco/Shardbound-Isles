@@ -5,6 +5,8 @@ const GameLoggerScript := preload("res://game/core/game_logger.gd")
 const InteractionSelectorScript := preload("res://game/core/interaction_selector.gd")
 const MovementRulesScript := preload("res://game/core/movement_rules.gd")
 const ResourceInventoryScript := preload("res://game/core/resource_inventory.gd")
+const LivingWorldPropScript := preload("res://game/features/living_world_prop.gd")
+const WorldObstacleScript := preload("res://game/features/world_obstacle.gd")
 const EQUIPMENT_SEED: int = 424242
 const DEFAULT_SAVE_PATH: String = "user://shardbound-save.json"
 const ISLAND_SHARD_SEED: int = 9001
@@ -18,6 +20,60 @@ const RANGED_LOOT_SEED: int = 424243
 const ELITE_LOOT_SEED: int = 424244
 const BASE_BOSS_PHASE_ONE_SPEED: float = 50.0
 const BASE_BOSS_PHASE_TWO_SPEED: float = 105.0
+const LIVING_WORLD_LAYOUT: Array[Dictionary] = [
+	{"id": "moonleaf_west", "type": "moonleaf_thicket", "position": Vector2(-155, -55)},
+	{"id": "moonleaf_south", "type": "moonleaf_thicket", "position": Vector2(235, 155)},
+	{"id": "moonleaf_edge", "type": "moonleaf_thicket", "position": Vector2(-690, -155)},
+	{"id": "tidewell_north", "type": "tidewell", "position": Vector2(-285, -300)},
+	{"id": "whispering_shrine_south", "type": "whispering_shrine", "position": Vector2(120, 360)},
+	{"id": "firefly_east", "type": "firefly_hollow", "position": Vector2(610, -195)},
+	{"id": "firefly_south_east", "type": "firefly_hollow", "position": Vector2(565, 205)},
+]
+const HANDDRAWN_DECO_LAYOUT: Array[Dictionary] = [
+	{"position": Vector2(-770, -440), "frame": 6}, {"position": Vector2(-610, -315), "frame": 4},
+	{"position": Vector2(-430, -220), "frame": 0}, {"position": Vector2(-260, -315), "frame": 5},
+	{"position": Vector2(205, -355), "frame": 7}, {"position": Vector2(410, -250), "frame": 2},
+	{"position": Vector2(690, -390), "frame": 4}, {"position": Vector2(755, -145), "frame": 1},
+	{"position": Vector2(-735, 135), "frame": 3}, {"position": Vector2(-560, 330), "frame": 6},
+	{"position": Vector2(-365, 205), "frame": 1}, {"position": Vector2(-185, 415), "frame": 5},
+	{"position": Vector2(235, 260), "frame": 0}, {"position": Vector2(395, 425), "frame": 7},
+	{"position": Vector2(590, 300), "frame": 4}, {"position": Vector2(760, 465), "frame": 2},
+	{"position": Vector2(-835, -120), "frame": 2}, {"position": Vector2(-655, -405), "frame": 7},
+	{"position": Vector2(-510, -455), "frame": 3}, {"position": Vector2(-335, -435), "frame": 0},
+	{"position": Vector2(-105, -485), "frame": 6}, {"position": Vector2(125, -455), "frame": 1},
+	{"position": Vector2(350, -475), "frame": 5}, {"position": Vector2(570, -465), "frame": 3},
+	{"position": Vector2(-825, 385), "frame": 7}, {"position": Vector2(-665, 470), "frame": 0},
+	{"position": Vector2(-475, 485), "frame": 4}, {"position": Vector2(-295, 505), "frame": 2},
+	{"position": Vector2(105, 505), "frame": 5}, {"position": Vector2(300, 485), "frame": 1},
+	{"position": Vector2(500, 500), "frame": 6}, {"position": Vector2(835, 120), "frame": 0},
+	{"position": Vector2(-585, -245), "frame": 0}, {"position": Vector2(-475, -155), "frame": 5},
+	{"position": Vector2(-365, -345), "frame": 1}, {"position": Vector2(-245, -205), "frame": 6},
+	{"position": Vector2(-125, -325), "frame": 2}, {"position": Vector2(135, -310), "frame": 7},
+	{"position": Vector2(255, -220), "frame": 3}, {"position": Vector2(385, -335), "frame": 4},
+	{"position": Vector2(515, -235), "frame": 1}, {"position": Vector2(625, -125), "frame": 6},
+	{"position": Vector2(-595, 185), "frame": 5}, {"position": Vector2(-455, 305), "frame": 0},
+	{"position": Vector2(-315, 175), "frame": 7}, {"position": Vector2(-155, 285), "frame": 2},
+	{"position": Vector2(155, 215), "frame": 4}, {"position": Vector2(325, 335), "frame": 1},
+	{"position": Vector2(475, 185), "frame": 6}, {"position": Vector2(615, 295), "frame": 3},
+]
+const WORLD_OBSTACLE_LAYOUT: Array[Dictionary] = [
+	{"position": Vector2(-825, -500), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(-690, -510), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(-545, -515), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(525, -510), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(680, -505), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(825, -495), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(-840, -315), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(-845, 285), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(845, -305), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(840, 315), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(-790, 510), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(-625, 515), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(610, 510), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(780, 505), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(-505, 430), "asset": "boulder", "radius": 18.0},
+	{"position": Vector2(485, -430), "asset": "boulder", "radius": 18.0},
+]
 
 @onready var player: PlayerCharacter = $Player
 @onready var tree: ResourceNode = $Tree
@@ -65,6 +121,7 @@ var archipelago := ArchipelagoModel.new(SaveService.DEFAULT_WORLD_SEED)
 var island_slots: Dictionary = {}
 var rift_controller := RiftRunController.new()
 var rift_enemies: Array[Node2D] = []
+var _rift_spawn_delay_remaining: float = 0.0
 var logger: Variant = GameLoggerScript.new(bool(ProjectSettings.get_setting("shardbound/logging/debug_enabled", false)))
 var current_interaction_target: Node
 var loot_filter := LootFilter.new()
@@ -86,6 +143,9 @@ var _building_nodes: Dictionary = {}
 var _placement_visual: BaseBuildingVisual
 var _placement_socket_index: int = 0
 var _automation_timer: Timer
+var _living_world_props: Dictionary = {}
+var _living_world_guardians: Dictionary = {}
+var _world_obstacles: Array[WorldObstacle] = []
 var _active_weapon_instance_id: String = ""
 var _resolve_player_projectiles_immediately: bool = false
 const PLACEMENT_SOCKET_IDS: Array[String] = ["west", "north", "east", "south"]
@@ -176,7 +236,105 @@ func _ready() -> void:
 	_refresh_workbench_ui()
 	_refresh_island_ui()
 	_rebuild_materialized_islands()
+	_spawn_world_obstacles()
+	_spawn_living_world_props()
 	_refresh_interaction_target()
+
+func _process(delta: float) -> void:
+	advance_rift_spawn(delta)
+
+func _spawn_living_world_props() -> void:
+	if not _living_world_props.is_empty():
+		return
+	for placement: Dictionary in LIVING_WORLD_LAYOUT:
+		var prop := LivingWorldPropScript.new() as LivingWorldProp
+		prop.name = String(placement.id).to_pascal_case()
+		prop.position = placement.position as Vector2
+		prop.configure(String(placement.type), String(placement.id), player)
+		prop.effect_requested.connect(_on_living_world_effect_requested)
+		prop.availability_changed.connect(_refresh_interaction_target)
+		add_child(prop)
+		_living_world_props[prop.stable_id] = prop
+
+func _spawn_world_obstacles() -> void:
+	if not _world_obstacles.is_empty():
+		return
+	for placement: Dictionary in WORLD_OBSTACLE_LAYOUT:
+		var obstacle := WorldObstacleScript.new() as WorldObstacle
+		obstacle.name = "WorldObstacle%d" % _world_obstacles.size()
+		obstacle.position = placement.position as Vector2
+		obstacle.configure(String(placement.asset), float(placement.radius), 4.0)
+		add_child(obstacle)
+		_world_obstacles.append(obstacle)
+
+func world_obstacle_count() -> int:
+	return _world_obstacles.size()
+
+func non_colliding_detail_count() -> int:
+	return HANDDRAWN_DECO_LAYOUT.size()
+
+func living_world_prop_count() -> int:
+	return _living_world_props.size()
+
+func living_world_prop(stable_id: String) -> LivingWorldProp:
+	return _living_world_props.get(stable_id) as LivingWorldProp
+
+func active_living_world_guardian_count() -> int:
+	var active := 0
+	for guardian_value: Variant in _living_world_guardians.values():
+		if is_instance_valid(guardian_value as Node) and not (guardian_value as Node).is_queued_for_deletion():
+			active += 1
+	return active
+
+func _on_living_world_effect_requested(source: LivingWorldProp, effect_id: String, amount: int) -> void:
+	match effect_id:
+		"resource_reward":
+			_spawn_pickup(source.global_position + Vector2(0, 24), "moonleaf", amount)
+			_spawn_gameplay_vfx(source.global_position, "reward")
+			hud.set_encounter_feedback("MOONLEAF THICKET — LUMINOUS HERBS READY")
+		"heal":
+			player.health_component.heal(amount)
+			_spawn_gameplay_vfx(source.global_position, "reward")
+			hud.set_encounter_feedback("TIDEWELL — HEALTH RESTORED")
+		"resource_cache":
+			_spawn_pickup(source.global_position + Vector2(-12, 20), "wood", amount)
+			_spawn_pickup(source.global_position + Vector2(12, 20), "stone", amount)
+			_spawn_gameplay_vfx(source.global_position, "pickup")
+			hud.set_encounter_feedback("FIREFLIES REVEALED A HIDDEN CACHE")
+		"guardian_challenge":
+			_spawn_living_world_guardian(source, amount)
+	_refresh_interaction_target()
+
+func _spawn_living_world_guardian(source: LivingWorldProp, reward_amount: int) -> RangedEnemy:
+	var existing: Node = _living_world_guardians.get(source.stable_id) as Node
+	if is_instance_valid(existing) and not existing.is_queued_for_deletion():
+		return existing as RangedEnemy
+	var guardian := RangedEnemy.new()
+	guardian.name = "%sGuardian" % source.name
+	guardian.elite = true
+	guardian.move_speed = 72.0
+	guardian.loot_seed = 730000 + abs(source.stable_id.hash() % 10000)
+	guardian.target = player
+	guardian.global_position = source.global_position + Vector2(0, 105)
+	guardian.volley_requested.connect(_on_enemy_volley_requested)
+	guardian.defeated.connect(_on_living_world_guardian_defeated.bind(source, guardian, reward_amount))
+	add_child(guardian)
+	_living_world_guardians[source.stable_id] = guardian
+	_spawn_gameplay_vfx(guardian.global_position, "rift")
+	hud.set_encounter_feedback("WHISPERING SHRINE — GUARDIAN AWAKENED")
+	return guardian
+
+func _on_living_world_guardian_defeated(drop_position: Vector2, _loot_seed: int, source: LivingWorldProp, guardian: RangedEnemy, reward_amount: int) -> void:
+	if is_instance_valid(guardian):
+		_emit_enemy_killed(guardian, drop_position)
+	_living_world_guardians.erase(source.stable_id)
+	if is_instance_valid(source):
+		source.complete_challenge()
+	enemies_defeated += 1
+	_spawn_gameplay_vfx(drop_position, "death")
+	_spawn_pickup(drop_position, "moonleaf", reward_amount)
+	hud.set_encounter_feedback("SHRINE GUARDIAN DEFEATED — MOONLEAF REWARD")
+	_check_boss_unlock()
 
 func _on_attack_requested(origin: Vector2, direction: Vector2) -> void:
 	_attack_index += 1
@@ -485,7 +643,7 @@ func _spawn_pickup(drop_position: Vector2, kind: String, payload: Variant) -> Wo
 	return pickup
 
 func _on_pickup_collected(kind: String, payload: Variant) -> bool:
-	if kind in ["wood", "stone"]:
+	if kind in ["wood", "stone", "moonleaf", "plank"]:
 		var amount := int(payload)
 		if kind == "stone" and resource_inventory.amount("smelting_charge") > 0:
 			resource_inventory.remove("smelting_charge", 1)
@@ -536,6 +694,8 @@ func _on_player_moved(_position_value: Vector2) -> void:
 	_refresh_interaction_target()
 
 func _refresh_interaction_target() -> void:
+	if is_instance_valid(current_interaction_target) and current_interaction_target.has_method("set_interaction_targeted"):
+		current_interaction_target.set_interaction_targeted(false)
 	var candidates: Array[Dictionary] = []
 	var nodes_by_id: Dictionary = {}
 	for candidate: Node in get_tree().get_nodes_in_group("interactable"):
@@ -552,6 +712,8 @@ func _refresh_interaction_target() -> void:
 		nodes_by_id[target_id] = candidate
 	var selected: Dictionary = InteractionSelectorScript.select(player.global_position, candidates, 180.0)
 	current_interaction_target = nodes_by_id.get(String(selected.get("id", ""))) as Node
+	if is_instance_valid(current_interaction_target) and current_interaction_target.has_method("set_interaction_targeted"):
+		current_interaction_target.set_interaction_targeted(true)
 	hud.set_interaction_prompt(String(selected.get("label", "")))
 
 func _on_interaction_requested() -> void:
@@ -965,6 +1127,9 @@ func _restore_gameplay_if_no_modal() -> void:
 		return
 	player.input_enabled = true
 	_set_combat_processing(true)
+	_refresh_interaction_target()
+	hud.set_encounter_feedback(hud.get_encounter_feedback())
+	hud.set_rift_feedback(hud.get_rift_feedback())
 	if tidecatcher_built:
 		tidecatcher.set_process(true)
 
@@ -1131,6 +1296,9 @@ func install_selected_shard(index: int, slot_id: String = "east") -> bool:
 		island_shards.append((prior.definition as Dictionary).duplicate(true))
 	_sync_archipelago_compatibility()
 	_rebuild_materialized_islands()
+	var materialization := IslandMaterializationVfx.new()
+	materialization.global_position = target_slot.global_position
+	add_child(materialization)
 	logger.debug(GameLoggerScript.WORLD, "island shard installed", {"id": String(shard.get("id", "")), "seed": int(shard.get("seed", 0)), "slot": slot_id})
 	_apply_island_modifiers()
 	_refresh_equipment_ui()
@@ -1295,6 +1463,7 @@ func handle_rift_action() -> void:
 		_fail_rift("RIFT FAILED — RETREATED")
 	elif rift_controller.status in [RiftRunController.Status.COMPLETE, RiftRunController.Status.FAILED]:
 		rift_controller.exit()
+		_rift_spawn_delay_remaining = 0.0
 		hud.set_rift_feedback("RIFT READY — APPROACH PORTAL FOR RUN %d" % (rift_controller.run_index + 1))
 	else:
 		try_enter_rift()
@@ -1304,6 +1473,7 @@ func try_enter_rift() -> bool:
 		return false
 	if not rift_controller.start():
 		return false
+	_rift_spawn_delay_remaining = 0.0
 	hud.set_encounter_feedback("")
 	_prepare_rift_arena()
 	_spawn_rift_wave()
@@ -1318,6 +1488,7 @@ func _prepare_rift_arena() -> void:
 	_clear_enemy_projectiles()
 
 func _spawn_rift_wave() -> void:
+	_rift_spawn_delay_remaining = 0.0
 	rift_enemies.clear()
 	for definition: Dictionary in RiftRules.wave(rift_controller.wave_index):
 		var kind := String(definition.kind)
@@ -1355,8 +1526,10 @@ func _resolve_rift_enemy(combatant: Node2D) -> void:
 	if not rift_enemies.is_empty() or rift_controller.status != RiftRunController.Status.ACTIVE:
 		return
 	if rift_controller.next_wave():
-		_spawn_rift_wave()
+		_rift_spawn_delay_remaining = RiftRules.WAVE_RESPITE_SECONDS
+		hud.set_rift_feedback("RIFT RUN %d — RESPITE %.1fs — WAVE %d INCOMING" % [rift_controller.run_index, RiftRules.WAVE_RESPITE_SECONDS, rift_controller.wave_index])
 	else:
+		_rift_spawn_delay_remaining = 0.0
 		rift_controller.complete()
 		_spawn_pickup(rift_portal.global_position, "equipment", RiftRules.reward(rift_controller.run_index))
 		hud.set_rift_feedback("RIFT COMPLETE — CACHE DROPPED — PRESS LB / K TO EXIT")
@@ -1366,6 +1539,7 @@ func _on_player_defeated() -> void:
 		_fail_rift("RIFT FAILED — SAFE RECOVERY")
 
 func _fail_rift(message: String) -> void:
+	_rift_spawn_delay_remaining = 0.0
 	rift_controller.fail()
 	_clear_rift_enemies()
 	_clear_enemy_projectiles()
@@ -1382,6 +1556,19 @@ func _clear_enemy_projectiles() -> void:
 	for child: Node in get_children():
 		if child is EnemyProjectile:
 			child.queue_free()
+
+func advance_rift_spawn(delta: float) -> void:
+	if delta <= 0.0 or _rift_spawn_delay_remaining <= 0.0:
+		return
+	if rift_controller.status != RiftRunController.Status.ACTIVE or not rift_enemies.is_empty():
+		_rift_spawn_delay_remaining = 0.0
+		return
+	_rift_spawn_delay_remaining = maxf(0.0, _rift_spawn_delay_remaining - delta)
+	if _rift_spawn_delay_remaining <= 0.0:
+		_spawn_rift_wave()
+
+func rift_spawn_delay_remaining() -> float:
+	return _rift_spawn_delay_remaining
 
 func run_scripted_smoke() -> Dictionary:
 	_set_combat_processing(false)
@@ -1457,22 +1644,53 @@ func _find_pickup(kind: String) -> WorldPickup:
 	return null
 
 func _draw() -> void:
-	draw_rect(Rect2(-900.0, -600.0, 1800.0, 1200.0), Color("172331"))
+	draw_rect(Rect2(-1024.0, -704.0, 2048.0, 1408.0), Color("193d4a"))
+	for water_y: int in range(-672, 704, 96):
+		var offset := 34.0 if posmod(water_y / 96, 2) == 0 else 0.0
+		for water_x: int in range(-992, 992, 128):
+			draw_line(Vector2(water_x + offset, water_y), Vector2(water_x + offset + 38.0, water_y), Color(0.35, 0.71, 0.72, 0.24), 3.0)
 	for x: int in range(-896, 896, 64):
 		for y: int in range(-576, 576, 64):
-			var main_path := absf(float(y)) < 64.0 and x >= -640 and x <= 704
-			var north_path := absf(float(x)) < 64.0 and y >= -448 and y <= 128
-			var asset_id := "dirt" if main_path or north_path else "grass"
-			draw_texture_rect_region(VisualAssetLibrary.FOREST_TILES, Rect2(x, y, 64, 64), VisualAssetLibrary.terrain_region(asset_id))
-			if asset_id == "grass":
-				var grid_x: int = floori(float(x) / 64.0)
-				var grid_y: int = floori(float(y) / 64.0)
-				var decoration_hash := absi(grid_x * 31 + grid_y * 17)
-				var center := Vector2(x + 32, y + 32)
-				if decoration_hash % 11 == 0:
-					draw_line(center + Vector2(0, 7), center + Vector2(-5, -5), Color("214e46"), 3.0)
-					draw_circle(center + Vector2(-6, -7), 5.0, Color("76a85b"))
-					draw_circle(center + Vector2(5, -4), 4.0, Color("4d7a4a"))
-				elif decoration_hash % 19 == 0:
-					draw_colored_polygon(PackedVector2Array([center + Vector2(-7, 5), center + Vector2(-5, -4), center + Vector2(2, -8), center + Vector2(8, -1), center + Vector2(6, 6)]), Color("637783"))
-	draw_rect(Rect2(-880.0, -580.0, 1760.0, 1160.0), Color("e8d8a8"), false, 4.0)
+			var asset_id := handdrawn_terrain_id(Vector2i(x, y))
+			draw_texture_rect_region(VisualAssetLibrary.HANDDRAWN_TERRAIN_ATLAS, Rect2(x, y, 64, 64), VisualAssetLibrary.handdrawn_terrain_region(asset_id))
+	draw_rect(Rect2(-896.0, -576.0, 1792.0, 1152.0), Color(0.03, 0.13, 0.10, 0.16))
+	for placement: Dictionary in HANDDRAWN_DECO_LAYOUT:
+		var position_value := placement.position as Vector2
+		draw_texture_rect(VisualAssetLibrary.handdrawn_deco_texture(int(placement.frame)), Rect2(position_value - Vector2(32, 32), Vector2(64, 64)), false)
+
+func handdrawn_terrain_id(tile_position: Vector2i) -> String:
+	var x := tile_position.x
+	var y := tile_position.y
+	var main_path := absf(float(y)) < 64.0 and x >= -640 and x <= 704
+	var north_path := absf(float(x)) < 64.0 and y >= -448 and y <= 128
+	if main_path and north_path:
+		return "path_cross"
+	if main_path:
+		return "path_horizontal"
+	if north_path:
+		return "path_vertical"
+	if x == -896 and y == -576:
+		return "grass_top_left"
+	if x == 832 and y == -576:
+		return "grass_top_right"
+	if x == -896 and y == 512:
+		return "grass_bottom_left"
+	if x == 832 and y == 512:
+		return "grass_bottom_right"
+	if y == -576:
+		return "grass_top"
+	if y == 512:
+		return "grass_bottom"
+	if x == -896:
+		return "grass_left"
+	if x == 832:
+		return "grass_right"
+	var variation := posmod((x / 64) * 3 + (y / 64) * 5, 11)
+	if variation == 0:
+		return "grass_b"
+	if variation == 1:
+		return "grass_c"
+	return "grass"
+
+func uses_plus_terrain_markers() -> bool:
+	return false

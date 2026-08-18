@@ -4,6 +4,7 @@ extends CharacterBody2D
 signal defeated(position_value: Vector2)
 
 const HealthComponentScript := preload("res://game/core/health_component.gd")
+const ContactShadowScript := preload("res://game/ui/contact_shadow.gd")
 
 enum State { IDLE, CHASE, ATTACK, DEAD }
 
@@ -165,9 +166,7 @@ func _spawn_death_pose() -> void:
 	tween.chain().tween_callback(pose.queue_free)
 
 func _draw() -> void:
-	draw_set_transform(Vector2(0, 14), 0.0, Vector2(1.0, 0.3))
-	draw_circle(Vector2.ZERO, 22.0, Color(0.03, 0.08, 0.09, 0.28))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	ContactShadowScript.paint(self, "enemy")
 	if is_telegraphing() and is_instance_valid(target):
 		var direction := global_position.direction_to(target.global_position)
 		draw_arc(Vector2.ZERO, 33.0, direction.angle() - 0.58, direction.angle() + 0.58, 12, Color("e9674c"), 4.0)

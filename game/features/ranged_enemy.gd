@@ -2,6 +2,7 @@ class_name RangedEnemy
 extends CharacterBody2D
 
 const HealthComponentScript := preload("res://game/core/health_component.gd")
+const ContactShadowScript := preload("res://game/ui/contact_shadow.gd")
 
 signal volley_requested(origin: Vector2, direction: Vector2, angles: Array[float], damage: int)
 signal defeated(position_value: Vector2, loot_seed: int)
@@ -149,9 +150,7 @@ func _spawn_death_pose() -> void:
 	tween.chain().tween_callback(pose.queue_free)
 
 func _draw() -> void:
-	draw_set_transform(Vector2(0, 15), 0.0, Vector2(1.0, 0.3))
-	draw_circle(Vector2.ZERO, 24.0 if elite else 20.0, Color(0.03, 0.08, 0.09, 0.3))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	ContactShadowScript.paint(self, "ranged_enemy", 17.0 if elite else 15.0)
 	if elite:
 		draw_line(Vector2(-12, -35), Vector2(0, -45), Color("e3c2ff"), 3.0)
 		draw_line(Vector2(0, -45), Vector2(12, -35), Color("e3c2ff"), 3.0)

@@ -12,8 +12,8 @@ func run(support: TestSupport) -> void:
 	var state := _state(model.to_dictionary(), [IslandShardGenerator.generate(9402, 4)])
 	var service := SaveService.new()
 	var decoded := service.decode(service.encode(state))
-	support.expect(SaveService.SCHEMA_VERSION == 6, "M4 saves must use schema version 6")
-	support.expect(bool(decoded.ok), "schema-6 archipelago state must round trip")
+	support.expect(SaveService.SCHEMA_VERSION == 7, "progression saves must use schema version 7")
+	support.expect(bool(decoded.ok), "schema-7 archipelago state must round trip")
 	var restored_archipelago := decoded.state.islands.archipelago as Dictionary
 	support.expect(int(restored_archipelago.world_seed) == 73003, "world seed must persist")
 	var restored_island := (restored_archipelago.slots.east as Dictionary).installed_island as Dictionary
@@ -35,7 +35,7 @@ func run(support: TestSupport) -> void:
 
 func _state(archipelago: Dictionary, inventory: Array[Dictionary]) -> Dictionary:
 	return {
-		"player": {"health": 10, "maximum_health": 10, "position": {"x": 0.0, "y": 0.0}},
+		"player": {"health": 10, "maximum_health": 10, "mana": 60.0, "maximum_mana": 60.0, "mana_regeneration": 6.0, "position": {"x": 0.0, "y": 0.0}},
 		"wood": 0,
 		"stone": 0,
 		"moonleaf": 0,
@@ -47,4 +47,5 @@ func _state(archipelago: Dictionary, inventory: Array[Dictionary]) -> Dictionary
 		"tidecatcher": {"built": false, "stored_wood": 0},
 		"islands": {"inventory": inventory, "installed": {}, "archipelago": archipelago},
 		"base": {"placement": BasePlacementModel.new().to_dictionary(), "storage": SharedStorage.new().to_dictionary(), "lumber_mill": LumberMillSimulation.new().to_dictionary(), "collector": CollectorSimulation.new().to_dictionary(), "crafted_kits": {"lumber_mill_kit": false, "collector_kit": false}, "saved_unix": 0},
+		"technologies": {"learned": []},
 	}

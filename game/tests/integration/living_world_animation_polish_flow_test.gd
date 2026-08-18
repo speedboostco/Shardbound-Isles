@@ -40,6 +40,10 @@ func run(support: TestSupport, scene_tree: SceneTree) -> void:
 	cache_stone.collect_immediately()
 	await scene_tree.process_frame
 	support.expect(world.wood == wood_before + 1 and world.stone == stone_before + 1, "released fireflies must reveal a bounded two-resource cache")
+	world.wood = 5
+	world.stone = 3
+	world.learn_technology("fieldcraft")
+	world.learn_technology("combat_training")
 	var shrine := world.living_world_prop("whispering_shrine_south")
 	world.player.global_position = shrine.global_position
 	support.expect(shrine.interact(world.player) and world.active_living_world_guardian_count() == 1, "Whispering Shrine must create one guardian challenge")

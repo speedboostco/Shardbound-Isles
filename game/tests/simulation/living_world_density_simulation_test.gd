@@ -26,6 +26,9 @@ func run(support: TestSupport, scene_tree: SceneTree) -> Dictionary:
 		prop.interact(world.player)
 		activation_total += prop.activation_count
 	support.expect(activation_total == 5, "cooldowns must block immediate resource duplication")
+	world.technology_tree.restore(["fieldcraft", "combat_training"])
+	world._sync_combat_phase(false)
+	world._set_combat_processing(false)
 	var shrine := world.living_world_prop("whispering_shrine_south")
 	world.player.global_position = shrine.global_position
 	shrine.interact(world.player)

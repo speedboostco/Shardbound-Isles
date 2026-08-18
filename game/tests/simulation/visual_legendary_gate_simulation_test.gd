@@ -16,7 +16,7 @@ func run(support: TestSupport, scene_tree: SceneTree) -> Dictionary:
 	await scene_tree.process_frame
 	var scripted_controller_navigation_failures := 0
 	var smoke := world.run_scripted_smoke()
-	support.expect(int(smoke.wood) == 3 and int(smoke.stone) == 2 and int(smoke.items_collected) == 1, "fixed gate route must complete gather, combat and first loot")
+	support.expect(int(smoke.gathered_wood) == 5 and int(smoke.gathered_stone) == 4 and int(smoke.items_collected) == 1, "fixed gate route must complete exploration, technology unlock, combat and first loot")
 	support.expect(world.player.get_node_or_null("EmberwoodSprite") != null and world.tree.get_node_or_null("EmberwoodSprite") != null, "no prominent player/resource geometry placeholder may remain in the core route")
 	var equipment_event := InputEventAction.new()
 	equipment_event.action = "equipment"

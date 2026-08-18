@@ -1,7 +1,9 @@
 class_name SaveService
 extends RefCounted
 
-const SCHEMA_VERSION: int = 6
+const TechnologyTreeScript := preload("res://game/core/technology_tree.gd")
+
+const SCHEMA_VERSION: int = 7
 const DEFAULT_WORLD_SEED: int = 73000
 
 func encode(state: Dictionary) -> String:
@@ -18,7 +20,7 @@ func decode(payload: String) -> Dictionary:
 	if not document.has("schema_version"):
 		return {"ok": false, "error": "missing_schema"}
 	var version := int(document.get("schema_version", -1))
-	if version not in [1, 2, 3, 4, 5, SCHEMA_VERSION]:
+	if version not in [1, 2, 3, 4, 5, 6, SCHEMA_VERSION]:
 		return {"ok": false, "error": "unsupported_schema"}
 	if not document.get("state") is Dictionary:
 		return {"ok": false, "error": "missing_state"}
@@ -50,6 +52,12 @@ func decode(payload: String) -> Dictionary:
 	if version <= 5:
 		state["plank"] = 0
 		state["base"] = _default_base_state()
+	if version <= 6:
+		state["technologies"] = {"learned": ["fieldcraft", "combat_training"]}
+		var legacy_player := state.get("player", {}) as Dictionary
+		legacy_player["mana"] = 60.0
+		legacy_player["maximum_mana"] = 60.0
+		legacy_player["mana_regeneration"] = 6.0
 	if not _is_valid_state(state):
 		return {"ok": false, "error": "invalid_state"}
 	var result := {"ok": true, "schema_version": SCHEMA_VERSION, "state": _normalize_state(state)}
@@ -94,23 +102,28 @@ func load_from_path(path: String) -> Dictionary:
 	return decode(file.get_as_text())
 
 func _is_valid_state(state: Dictionary) -> bool:
-	if not state.get("player") is Dictionary or not state.get("equipment") is Dictionary or not state.get("tidecatcher") is Dictionary or not state.get("islands") is Dictionary or not state.get("base") is Dictionary:
+	if not state.get("player") is Dictionary or not state.get("equipment") is Dictionary or not state.get("tidecatcher") is Dictionary or not state.get("islands") is Dictionary or not state.get("base") is Dictionary or not state.get("technologies") is Dictionary:
 		return false
 	var player := state.player as Dictionary
 	var equipment := state.equipment as Dictionary
 	var tidecatcher := state.tidecatcher as Dictionary
 	var islands := state.islands as Dictionary
 	var base := state.base as Dictionary
+	var technologies := state.technologies as Dictionary
 	if not player.get("position") is Dictionary or not equipment.get("items") is Array:
 		return false
 	if not islands.get("inventory") is Array or not islands.get("installed") is Dictionary or not islands.get("archipelago") is Dictionary:
 		return false
 	var position := player.position as Dictionary
-	var required_values: Array[Variant] = [player.get("health"), player.get("maximum_health"), position.get("x"), position.get("y"), state.get("wood"), state.get("stone"), state.get("moonleaf"), state.get("plank"), equipment.get("scrap"), tidecatcher.get("stored_wood"), base.get("saved_unix")]
+	var required_values: Array[Variant] = [player.get("health"), player.get("maximum_health"), player.get("mana"), player.get("maximum_mana"), player.get("mana_regeneration"), position.get("x"), position.get("y"), state.get("wood"), state.get("stone"), state.get("moonleaf"), state.get("plank"), equipment.get("scrap"), tidecatcher.get("stored_wood"), base.get("saved_unix")]
 	for value: Variant in required_values:
 		if not (value is int or value is float):
 			return false
 	if not equipment.get("equipped_id") is String or not equipment.get("equipped_slots") is Dictionary or not state.get("reinforced_heart_crafted") is bool or not state.get("runed_whetstone_crafted") is bool or not state.get("herbal_compass_crafted") is bool or not tidecatcher.get("built") is bool:
+		return false
+	if not technologies.get("learned") is Array or not TechnologyTreeScript.new().restore(technologies.learned as Array):
+		return false
+	if float(player.get("maximum_mana", 0.0)) <= 0.0 or float(player.get("mana", -1.0)) < 0.0 or float(player.get("mana", 0.0)) > float(player.get("maximum_mana", 0.0)) or float(player.get("mana_regeneration", -1.0)) < 0.0:
 		return false
 	for slot_value: Variant in (equipment.get("equipped_slots") as Dictionary):
 		if String(slot_value) not in EquipmentInventory.SLOTS or not (equipment.get("equipped_slots") as Dictionary).get(slot_value) is String:
@@ -187,6 +200,9 @@ func _normalize_state(state: Dictionary) -> Dictionary:
 		"player": {
 			"health": int(player.health),
 			"maximum_health": int(player.maximum_health),
+			"mana": float(player.mana),
+			"maximum_mana": float(player.maximum_mana),
+			"mana_regeneration": float(player.mana_regeneration),
 			"position": {"x": float(position.x), "y": float(position.y)},
 		},
 		"wood": int(state.wood),
@@ -212,6 +228,7 @@ func _normalize_state(state: Dictionary) -> Dictionary:
 			"crafted_kits": (base.crafted_kits as Dictionary).duplicate(true),
 			"saved_unix": int(base.saved_unix),
 		},
+		"technologies": {"learned": (state.technologies.learned as Array).duplicate()},
 	}
 
 func _default_base_state() -> Dictionary:

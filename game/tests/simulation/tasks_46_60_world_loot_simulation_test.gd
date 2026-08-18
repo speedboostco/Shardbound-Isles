@@ -6,7 +6,7 @@ func run(support: TestSupport, scene_tree: SceneTree) -> Dictionary:
 	scene_tree.root.add_child(world)
 	await scene_tree.process_frame
 	var opening := world.run_scripted_smoke()
-	support.expect(int(opening.wood) == 3 and int(opening.stone) == 2, "Task 60 route must begin by gathering deterministic resources")
+	support.expect(int(opening.gathered_wood) == 5 and int(opening.gathered_stone) == 4 and opening.technologies == ["fieldcraft", "combat_training"], "Task 60 route must explore two caches, gather, and invest in the deterministic exploration-to-combat opening")
 	support.expect(int(opening.enemies_defeated) == 2 and int(opening.items_collected) == 1, "Task 60 route must fight enemies and collect loot")
 	var shard_pickup := world._find_pickup("island_shard")
 	support.expect(shard_pickup != null and int((shard_pickup.payload as Dictionary).seed) == 9001, "first arena enemy must drop the fixed-seed island shard")
@@ -62,7 +62,7 @@ func run(support: TestSupport, scene_tree: SceneTree) -> Dictionary:
 	support.expect(restored.island_slot.materialized.event_marker.claimed, "save/load must not duplicate the claimed island opportunity")
 	var metrics := {
 		"seed": 9001,
-		"gathered": {"wood": opening.wood, "stone": opening.stone},
+		"gathered": {"wood": opening.gathered_wood, "stone": opening.gathered_stone},
 		"enemies_defeated": opening.enemies_defeated,
 		"shard_inspected": true,
 		"slot": "east",

@@ -1,7 +1,8 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource path="res://game/ui/hud.gd" type="Script" id="1"]
 [ext_resource path="res://game/ui/shardbound_theme.tres" type="Theme" id="2"]
+[ext_resource path="res://game/ui/technology_tree_view.gd" type="Script" id="3"]
 
 [sub_resource type="StyleBoxFlat" id="EquipmentPanelStyle"]
 bg_color = Color(0.035, 0.075, 0.09, 0.98)
@@ -51,6 +52,25 @@ corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
+[sub_resource type="StyleBoxFlat" id="ManaBackground"]
+bg_color = Color(0.025, 0.055, 0.09, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.24, 0.43, 0.58, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="ManaFill"]
+bg_color = Color(0.34, 0.48, 0.94, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
 [node name="HUD" type="CanvasLayer"]
 layer = 10
 script = ExtResource("1")
@@ -58,28 +78,23 @@ script = ExtResource("1")
 [node name="Backdrop" type="PanelContainer" parent="."]
 offset_left = 18.0
 offset_top = 18.0
-offset_right = 410.0
-offset_bottom = 304.0
+offset_right = 318.0
+offset_bottom = 142.0
 theme = ExtResource("2")
 
 [node name="Margin" type="MarginContainer" parent="."]
 offset_left = 31.0
 offset_top = 27.0
-offset_right = 400.0
-offset_bottom = 297.0
+offset_right = 306.0
+offset_bottom = 134.0
 theme = ExtResource("2")
 
 [node name="VBox" type="VBoxContainer" parent="Margin"]
 theme_override_constants/separation = 3
 
-[node name="Title" type="Label" parent="Margin/VBox"]
-theme_override_colors/font_color = Color(0.36, 0.88, 1, 1)
-theme_override_font_sizes/font_size = 20
-text = "SHARDBOUND ISLES"
-
 [node name="Health" type="Label" parent="Margin/VBox"]
 theme_override_font_sizes/font_size = 16
-text = "HEALTH  10 / 10"
+text = "HEALTH"
 
 [node name="HealthBar" type="ProgressBar" parent="Margin/VBox"]
 custom_minimum_size = Vector2(260, 20)
@@ -88,34 +103,55 @@ max_value = 10.0
 value = 10.0
 show_percentage = false
 
+[node name="Mana" type="Label" parent="Margin/VBox"]
+theme_override_colors/font_color = Color(0.68, 0.78, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "MANA"
+
+[node name="ManaBar" type="ProgressBar" parent="Margin/VBox"]
+custom_minimum_size = Vector2(260, 18)
+size_flags_horizontal = 0
+theme_override_styles/background = SubResource("ManaBackground")
+theme_override_styles/fill = SubResource("ManaFill")
+max_value = 60.0
+value = 60.0
+show_percentage = false
+
 [node name="Wood" type="Label" parent="Margin/VBox"]
+visible = false
 theme_override_font_sizes/font_size = 16
 text = "WOOD    0"
 
 [node name="Stone" type="Label" parent="Margin/VBox"]
+visible = false
 theme_override_font_sizes/font_size = 16
 text = "STONE   0"
 
 [node name="Moonleaf" type="Label" parent="Margin/VBox"]
+visible = false
 theme_override_colors/font_color = Color(0.78, 0.52, 1, 1)
 theme_override_font_sizes/font_size = 16
 text = "MOONLEAF  0"
 
 [node name="Plank" type="Label" parent="Margin/VBox"]
+visible = false
 theme_override_colors/font_color = Color(0.94, 0.7, 0.35, 1)
 theme_override_font_sizes/font_size = 16
 text = "PLANKS  0"
 
 [node name="SmeltingCharge" type="Label" parent="Margin/VBox"]
+visible = false
 theme_override_colors/font_color = Color(1, 0.49, 0.28, 1)
 theme_override_font_sizes/font_size = 16
 text = "SMELT CHARGE  0"
 
 [node name="Attack" type="Label" parent="Margin/VBox"]
+visible = false
 theme_override_font_sizes/font_size = 16
 text = "ATTACK  1"
 
 [node name="Loot" type="Label" parent="Margin/VBox"]
+visible = false
 theme_override_font_sizes/font_size = 16
 text = "EQUIPMENT  NONE"
 
@@ -142,40 +178,48 @@ theme = ExtResource("2")
 
 [node name="Margin" type="MarginContainer" parent="EquipmentPanel"]
 theme_override_constants/margin_left = 30
-theme_override_constants/margin_top = 14
+theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 30
-theme_override_constants/margin_bottom = 14
+theme_override_constants/margin_bottom = 8
 
 [node name="VBox" type="VBoxContainer" parent="EquipmentPanel/Margin"]
-theme_override_constants/separation = 7
+theme_override_constants/separation = 3
 
 [node name="Title" type="Label" parent="EquipmentPanel/Margin/VBox"]
 theme_override_colors/font_color = Color(0.36, 0.88, 1, 1)
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 20
 text = "EQUIPMENT — LB/RB SCROLL DETAILS"
 horizontal_alignment = 1
+
+[node name="StatsSummary" type="Label" parent="EquipmentPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 50)
+theme_override_colors/font_color = Color(0.68, 0.88, 0.9, 1)
+theme_override_font_sizes/font_size = 13
+text = "RESOURCES  WOOD 0  •  STONE 0  •  MOONLEAF 0  •  PLANK 0  •  SCRAP 0\nVITALS  HEALTH 10/10  •  MANA 60/60  •  REGEN 6.0/s\nCOMBAT  ATTACK 1  •  SPEED 1.00x  •  CRIT 5%  •  GATHER 1.0"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="ItemIdentity" type="HBoxContainer" parent="EquipmentPanel/Margin/VBox"]
 alignment = 1
 theme_override_constants/separation = 18
 
 [node name="Icon" type="TextureRect" parent="EquipmentPanel/Margin/VBox/ItemIdentity"]
-custom_minimum_size = Vector2(64, 64)
+custom_minimum_size = Vector2(48, 48)
 texture_filter = 1
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Details" type="VBoxContainer" parent="EquipmentPanel/Margin/VBox/ItemIdentity"]
-custom_minimum_size = Vector2(520, 64)
+custom_minimum_size = Vector2(520, 48)
 theme_override_constants/separation = 2
 
 [node name="ItemName" type="Label" parent="EquipmentPanel/Margin/VBox/ItemIdentity/Details"]
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 17
 text = "NO EQUIPMENT IN PACK"
 autowrap_mode = 2
 
 [node name="SlotSummary" type="Label" parent="EquipmentPanel/Margin/VBox/ItemIdentity/Details"]
-custom_minimum_size = Vector2(300, 28)
+custom_minimum_size = Vector2(300, 20)
 theme_override_colors/font_color = Color(0.55, 0.95, 0.83, 1)
 theme_override_font_sizes/font_size = 16
 text = "WEAPON SLOT  -  EMPTY"
@@ -186,7 +230,7 @@ alignment = 1
 theme_override_constants/separation = 18
 
 [node name="Previous" type="Button" parent="EquipmentPanel/Margin/VBox/Selection"]
-custom_minimum_size = Vector2(145, 48)
+custom_minimum_size = Vector2(145, 36)
 focus_neighbor_left = NodePath("../Next")
 focus_neighbor_right = NodePath("../Next")
 focus_neighbor_bottom = NodePath("../../Actions/Equip")
@@ -194,14 +238,14 @@ disabled = true
 text = "< PREVIOUS"
 
 [node name="Count" type="Label" parent="EquipmentPanel/Margin/VBox/Selection"]
-custom_minimum_size = Vector2(95, 48)
+custom_minimum_size = Vector2(95, 36)
 theme_override_font_sizes/font_size = 18
 text = "0 / 0"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="Next" type="Button" parent="EquipmentPanel/Margin/VBox/Selection"]
-custom_minimum_size = Vector2(145, 48)
+custom_minimum_size = Vector2(145, 36)
 focus_neighbor_left = NodePath("../Previous")
 focus_neighbor_right = NodePath("../Previous")
 focus_neighbor_bottom = NodePath("../../Actions/Equip")
@@ -209,13 +253,13 @@ disabled = true
 text = "NEXT >"
 
 [node name="InventoryStrip" type="HBoxContainer" parent="EquipmentPanel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 52)
+custom_minimum_size = Vector2(0, 40)
 alignment = 1
 theme_override_constants/separation = 8
 
 [node name="Comparison" type="Label" parent="EquipmentPanel/Margin/VBox"]
 theme_override_colors/font_color = Color(1, 0.87, 0.42, 1)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 14
 text = "Defeat enemies to find equipment."
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -235,44 +279,125 @@ horizontal_alignment = 1
 autowrap_mode = 2
 
 [node name="Equipped" type="Label" parent="EquipmentPanel/Margin/VBox"]
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 14
 text = "EQUIPPED  Unarmed"
 
 [node name="Scrap" type="Label" parent="EquipmentPanel/Margin/VBox"]
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 14
 text = "SALVAGE SCRAP  0"
+
+[node name="OpenTechnology" type="Button" parent="EquipmentPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 42)
+focus_neighbor_top = NodePath("../Actions/Equip")
+focus_neighbor_bottom = NodePath("../Close")
+text = "OPEN TECHNOLOGY TREE"
 
 [node name="Actions" type="HBoxContainer" parent="EquipmentPanel/Margin/VBox"]
 alignment = 1
 theme_override_constants/separation = 14
 
 [node name="Equip" type="Button" parent="EquipmentPanel/Margin/VBox/Actions"]
-custom_minimum_size = Vector2(120, 52)
+custom_minimum_size = Vector2(120, 44)
 focus_neighbor_top = NodePath("../../Selection/Previous")
+focus_neighbor_bottom = NodePath("../../OpenTechnology")
 disabled = true
 text = "EQUIP"
 
 [node name="Salvage" type="Button" parent="EquipmentPanel/Margin/VBox/Actions"]
-custom_minimum_size = Vector2(120, 52)
+custom_minimum_size = Vector2(120, 44)
 focus_neighbor_top = NodePath("../../Selection/Previous")
+focus_neighbor_bottom = NodePath("../../OpenTechnology")
 disabled = true
 text = "SALVAGE"
 
 [node name="Favorite" type="Button" parent="EquipmentPanel/Margin/VBox/Actions"]
-custom_minimum_size = Vector2(120, 52)
+custom_minimum_size = Vector2(120, 44)
 focus_neighbor_top = NodePath("../../Selection/Previous")
+focus_neighbor_bottom = NodePath("../../OpenTechnology")
 disabled = true
 text = "KEEP"
 
 [node name="Unequip" type="Button" parent="EquipmentPanel/Margin/VBox/Actions"]
-custom_minimum_size = Vector2(120, 52)
+custom_minimum_size = Vector2(120, 44)
 focus_neighbor_top = NodePath("../../Selection/Next")
+focus_neighbor_bottom = NodePath("../../OpenTechnology")
 disabled = true
 text = "UNEQUIP"
 
 [node name="Close" type="Button" parent="EquipmentPanel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 36)
+focus_neighbor_top = NodePath("../OpenTechnology")
 text = "CLOSE  (B / ESC)"
+
+[node name="TechnologyPage" type="MarginContainer" parent="EquipmentPanel"]
+visible = false
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 18
+
+[node name="VBox" type="VBoxContainer" parent="EquipmentPanel/TechnologyPage"]
+theme_override_constants/separation = 8
+
+[node name="Heading" type="Label" parent="EquipmentPanel/TechnologyPage/VBox"]
+theme_override_colors/font_color = Color(0.72, 0.91, 1, 1)
+theme_override_font_sizes/font_size = 24
+text = "TECHNOLOGY TREE"
+horizontal_alignment = 1
+
+[node name="Legend" type="Label" parent="EquipmentPanel/TechnologyPage/VBox"]
+theme_override_colors/font_color = Color(0.61, 0.76, 0.78, 1)
+theme_override_font_sizes/font_size = 13
+text = "GREEN LEARNED   •   GOLD GATHER   •   BRIGHT READY   •   GREY LOCKED"
+horizontal_alignment = 1
+
+[node name="TreeGraph" type="Control" parent="EquipmentPanel/TechnologyPage/VBox"]
+custom_minimum_size = Vector2(0, 352)
+clip_contents = true
+script = ExtResource("3")
+
+[node name="Details" type="Label" parent="EquipmentPanel/TechnologyPage/VBox"]
+custom_minimum_size = Vector2(0, 108)
+theme_override_colors/font_color = Color(0.91, 0.95, 0.9, 1)
+theme_override_font_sizes/font_size = 15
+text = "FIELDCRAFT\nRead the island and reveal practical disciplines.\nCOST  2 WOOD + 1 STONE\nUNLOCKS RECIPES  HARVEST CHARM • WAYFINDER BOOTS"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="Actions" type="HBoxContainer" parent="EquipmentPanel/TechnologyPage/VBox"]
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="Previous" type="Button" parent="EquipmentPanel/TechnologyPage/VBox/Actions"]
+custom_minimum_size = Vector2(110, 42)
+focus_neighbor_left = NodePath("../Back")
+focus_neighbor_right = NodePath("../Next")
+text = "< PREVIOUS"
+
+[node name="Count" type="Label" parent="EquipmentPanel/TechnologyPage/VBox/Actions"]
+custom_minimum_size = Vector2(72, 42)
+text = "1 / 7"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Next" type="Button" parent="EquipmentPanel/TechnologyPage/VBox/Actions"]
+custom_minimum_size = Vector2(110, 42)
+focus_neighbor_left = NodePath("../Previous")
+focus_neighbor_right = NodePath("../Learn")
+text = "NEXT >"
+
+[node name="Learn" type="Button" parent="EquipmentPanel/TechnologyPage/VBox/Actions"]
+custom_minimum_size = Vector2(190, 42)
+focus_neighbor_left = NodePath("../Next")
+focus_neighbor_right = NodePath("../Back")
+text = "LEARN TECHNOLOGY"
+
+[node name="Back" type="Button" parent="EquipmentPanel/TechnologyPage/VBox/Actions"]
+custom_minimum_size = Vector2(110, 42)
+focus_neighbor_left = NodePath("../Learn")
+focus_neighbor_right = NodePath("../Previous")
+text = "BACK"
 
 [node name="WorkbenchPanel" type="PanelContainer" parent="."]
 visible = false
@@ -495,7 +620,7 @@ horizontal_alignment = 1
 
 [node name="Slot" type="Label" parent="SystemPanel/Margin/VBox"]
 theme_override_font_sizes/font_size = 17
-text = "LOCAL SLOT • SCHEMA VERSION 6"
+text = "LOCAL SLOT • SCHEMA VERSION 7"
 horizontal_alignment = 1
 
 [node name="Feedback" type="Label" parent="SystemPanel/Margin/VBox"]
@@ -691,7 +816,7 @@ offset_right = 1255.0
 offset_bottom = 165.0
 theme_override_colors/font_color = Color(1, 0.55, 0.85, 1)
 theme_override_font_sizes/font_size = 18
-text = "BOSS AWAKENS — ABYSSAL WARDEN"
+text = ""
 horizontal_alignment = 1
 
 [node name="RiftStatus" type="Label" parent="."]
@@ -702,7 +827,7 @@ offset_right = 1255.0
 offset_bottom = 208.0
 theme_override_colors/font_color = Color(0.78, 0.58, 1, 1)
 theme_override_font_sizes/font_size = 21
-text = "RIFT WAVE 1 / 3"
+text = ""
 horizontal_alignment = 1
 
 [node name="InteractionPrompt" type="Label" parent="."]

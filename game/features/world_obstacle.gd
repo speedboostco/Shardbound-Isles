@@ -1,6 +1,8 @@
 class_name WorldObstacle
 extends StaticBody2D
 
+const ContactShadowScript := preload("res://game/ui/contact_shadow.gd")
+
 @export var asset_id: String = "forest_tree"
 @export var collision_radius: float = 20.0
 @export var visual_scale: float = 4.0
@@ -40,6 +42,4 @@ func _ensure_collision() -> void:
 	add_child(collision)
 
 func _draw() -> void:
-	draw_set_transform(Vector2(0, 10), 0.0, Vector2(1.0, 0.3))
-	draw_circle(Vector2.ZERO, collision_radius * 0.9, Color(0.03, 0.08, 0.09, 0.24))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	ContactShadowScript.paint(self, "obstacle", collision_radius * 0.68, maxf(12.0, collision_radius * 0.62))

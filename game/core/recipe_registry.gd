@@ -2,9 +2,9 @@ class_name RecipeRegistry
 extends RefCounted
 
 const KNOWN_RESOURCES: Array[String] = ["wood", "stone", "moonleaf", "scrap", "plank"]
-const KNOWN_OUTPUTS: Array[String] = ["reinforced_heart", "runed_whetstone", "herbal_compass", "lumber_mill_kit", "collector_kit"]
+const KNOWN_OUTPUTS: Array[String] = ["reinforced_heart", "runed_whetstone", "herbal_compass", "lumber_mill_kit", "collector_kit", "mana_vessel", "arcane_conduit", "ranger_fletching", "harvest_charm", "wayfinder_boots", "precision_quiver", "foresters_toolkit", "surveyors_lens"]
 const KNOWN_STATIONS: Array[String] = ["workbench"]
-const KNOWN_UNLOCKS: Array[String] = ["always", "reinforced_heart", "forest_island"]
+const KNOWN_UNLOCKS: Array[String] = ["always", "reinforced_heart", "forest_island", "fieldcraft", "combat_training", "mana_channeling", "arcane_mastery", "ranger_instinct", "efficient_harvest", "island_cartography"]
 
 const DEFINITIONS: Array[Dictionary] = [
 	{"id": "reinforced_heart", "name": "Reinforced Heart", "inputs": {"wood": 3, "scrap": 2}, "output": {"id": "reinforced_heart", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["always"], "unique": true, "effect_text": "Permanently gain +2 maximum health"},
@@ -12,6 +12,14 @@ const DEFINITIONS: Array[Dictionary] = [
 	{"id": "herbal_compass", "name": "Herbal Compass", "inputs": {"moonleaf": 3}, "output": {"id": "herbal_compass", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["always"], "unique": true, "effect_text": "Permanently gain +40 pickup radius"},
 	{"id": "lumber_mill_kit", "name": "Lumber Mill Kit", "inputs": {"wood": 4, "stone": 2}, "output": {"id": "lumber_mill_kit", "amount": 1, "kind": "building"}, "station": "workbench", "unlock_requirements": ["reinforced_heart"], "unique": true, "effect_text": "Processes 2 wood into 1 plank"},
 	{"id": "collector_kit", "name": "Collector Kit", "inputs": {"wood": 3, "plank": 1}, "output": {"id": "collector_kit", "amount": 1, "kind": "building"}, "station": "workbench", "unlock_requirements": ["reinforced_heart"], "unique": true, "effect_text": "Collects ordinary nearby resources in bounded batches"},
+	{"id": "mana_vessel", "name": "Moonleaf Mana Vessel", "inputs": {"moonleaf": 3, "stone": 2}, "output": {"id": "mana_vessel", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["mana_channeling"], "unique": true, "effect_text": "Permanently gain +10 maximum mana"},
+	{"id": "arcane_conduit", "name": "Arcane Conduit", "inputs": {"moonleaf": 4, "plank": 1}, "output": {"id": "arcane_conduit", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["arcane_mastery"], "unique": true, "effect_text": "Permanently gain +2 mana regeneration"},
+	{"id": "ranger_fletching", "name": "Ranger Fletching", "inputs": {"wood": 4, "moonleaf": 2}, "output": {"id": "ranger_fletching", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["combat_training"], "unique": true, "effect_text": "Permanently gain +3% critical chance"},
+	{"id": "harvest_charm", "name": "Harvest Charm", "inputs": {"wood": 3, "stone": 3}, "output": {"id": "harvest_charm", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["fieldcraft"], "unique": true, "effect_text": "Permanently gain +0.25 gathering power"},
+	{"id": "wayfinder_boots", "name": "Wayfinder Boots", "inputs": {"wood": 4, "plank": 1}, "output": {"id": "wayfinder_boots", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["fieldcraft"], "unique": true, "effect_text": "Permanently gain +15 movement speed"},
+	{"id": "precision_quiver", "name": "Precision Quiver", "inputs": {"wood": 4, "moonleaf": 3}, "output": {"id": "precision_quiver", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["ranger_instinct"], "unique": true, "effect_text": "Permanently gain +8% attack speed"},
+	{"id": "foresters_toolkit", "name": "Forester's Toolkit", "inputs": {"wood": 5, "stone": 2}, "output": {"id": "foresters_toolkit", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["efficient_harvest"], "unique": true, "effect_text": "Permanently gain +0.35 gathering power"},
+	{"id": "surveyors_lens", "name": "Surveyor's Lens", "inputs": {"moonleaf": 3, "plank": 2}, "output": {"id": "surveyors_lens", "amount": 1, "kind": "permanent_upgrade"}, "station": "workbench", "unlock_requirements": ["island_cartography"], "unique": true, "effect_text": "Permanently gain +30 pickup radius"},
 ]
 
 static func all() -> Array[Dictionary]:

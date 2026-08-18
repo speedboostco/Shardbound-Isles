@@ -5,11 +5,17 @@ signal attack_requested(origin: Vector2, direction: Vector2)
 signal interaction_requested
 signal moved(position_value: Vector2)
 signal health_changed(current: int, maximum: int)
+signal mana_changed(current: float, maximum: float)
+signal mana_spend_failed(required: float, current: float)
 signal defeated
 
 const MovementRulesScript := preload("res://game/core/movement_rules.gd")
 const HealthComponentScript := preload("res://game/core/health_component.gd")
+const ManaPoolScript := preload("res://game/core/mana_pool.gd")
+const WeaponAimIndicatorScript := preload("res://game/features/weapon_aim_indicator.gd")
+const ContactShadowScript := preload("res://game/ui/contact_shadow.gd")
 const BASE_ATTACK_INTERVAL: float = 0.28
+const MAGIC_ATTACK_MANA_COST: float = 14.0
 const VISUAL_SCALE: float = 3.4
 const VISUAL_OFFSET_Y: float = -20.0
 const VISUAL_ATTACK_DURATION: float = 0.52
@@ -18,6 +24,7 @@ const VISUAL_DEATH_DURATION: float = 0.9
 
 @export var move_speed: float = 240.0
 var health_component: Variant = HealthComponentScript.new(10, 0.45)
+var mana_pool: Variant = ManaPoolScript.new(60.0, 6.0)
 var maximum_health: int:
 	get: return health_component.maximum
 	set(value): health_component.set_maximum(value)
@@ -41,6 +48,7 @@ var _attack_flash_remaining: float = 0.0
 var _hit_flash_remaining: float = 0.0
 var _death_flash_remaining: float = 0.0
 var _visual_sprite: Sprite2D
+var _aim_indicator: Variant
 var _visual_facing: String = "east"
 var _visual_asset_id: String = ""
 var _visual_time: float = 0.0
@@ -51,13 +59,18 @@ var _animation_attack_triggers: int = 0
 func _ready() -> void:
 	health_component.changed.connect(_on_health_changed)
 	health_component.died.connect(_on_died)
+	mana_pool.changed.connect(_on_mana_changed)
+	mana_pool.spend_failed.connect(func(required: float, current: float) -> void: mana_spend_failed.emit(required, current))
 	_ensure_collision_shape()
 	_ensure_visual_sprite()
+	_ensure_aim_indicator()
 	queue_redraw()
 	health_changed.emit(health, maximum_health)
+	mana_changed.emit(mana_pool.current, mana_pool.maximum)
 
 func _physics_process(delta: float) -> void:
 	health_component.advance(delta)
+	mana_pool.regenerate(delta)
 	var attack_was_visible: bool = _attack_flash_remaining > 0.0
 	var hit_was_visible: bool = _hit_flash_remaining > 0.0 or bool(health_component.is_invulnerable())
 	_attack_cooldown = maxf(0.0, _attack_cooldown - delta)
@@ -88,6 +101,8 @@ func _physics_process(delta: float) -> void:
 
 func request_attack() -> bool:
 	if _attack_cooldown > 0.0:
+		return false
+	if weapon_base_type == "magic" and not mana_pool.spend(MAGIC_ATTACK_MANA_COST):
 		return false
 	_attack_cooldown = BASE_ATTACK_INTERVAL / maxf(0.1, attack_speed)
 	_attack_flash_remaining = VISUAL_ATTACK_DURATION
@@ -139,6 +154,7 @@ func set_weapon_stats(damage_value: int, speed_value: float, base_type_value: St
 		legendary_effect_ids.append(affix_id)
 	attack_profile = profile.duplicate(true) if not profile.is_empty() else _default_attack_profile(weapon_base_type)
 	_visual_asset_id = ""
+	_update_aim_indicator()
 	_update_visual(0.0)
 	queue_redraw()
 
@@ -172,6 +188,9 @@ func _on_health_changed(current: int, maximum: int) -> void:
 	health_changed.emit(current, maximum)
 	queue_redraw()
 
+func _on_mana_changed(current: float, maximum: float) -> void:
+	mana_changed.emit(current, maximum)
+
 func _on_died() -> void:
 	_death_flash_remaining = VISUAL_DEATH_DURATION
 	_update_visual(0.0)
@@ -201,11 +220,29 @@ func _ensure_visual_sprite() -> void:
 	_visual_sprite.z_index = 2
 	add_child(_visual_sprite)
 
+func _ensure_aim_indicator() -> void:
+	if is_instance_valid(_aim_indicator):
+		return
+	_aim_indicator = WeaponAimIndicatorScript.new() as Node2D
+	_aim_indicator.name = "WeaponAimIndicator"
+	_aim_indicator.z_index = 1
+	add_child(_aim_indicator)
+	_update_aim_indicator()
+
+func _update_aim_indicator() -> void:
+	if not is_instance_valid(_aim_indicator):
+		return
+	_aim_indicator.configure(weapon_base_type, facing, float(attack_profile.get("range", 78.0)), input_enabled)
+
+func has_weapon_aim_indicator() -> bool:
+	return is_instance_valid(_aim_indicator) and _aim_indicator.visible
+
 func _update_visual(delta: float) -> void:
 	if not is_instance_valid(_visual_sprite):
 		return
 	_visual_time += maxf(0.0, delta)
 	_visual_facing = FacingRules.resolve(facing, _visual_facing)
+	_update_aim_indicator()
 	var state_name := AnimationStateRules.resolve(_death_flash_remaining > 0.0, _hit_flash_remaining > 0.0, _attack_flash_remaining > 0.0, not velocity.is_zero_approx())
 	if state_name != _visual_state_name:
 		_visual_state_name = state_name
@@ -240,6 +277,4 @@ func _visual_frames_per_second(state_name: String, frame_count: int) -> float:
 		_: return 8.0
 
 func _draw() -> void:
-	draw_set_transform(Vector2(0, 12), 0.0, Vector2(1.0, 0.32))
-	draw_circle(Vector2.ZERO, 20.0, Color(0.03, 0.08, 0.09, 0.3))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	ContactShadowScript.paint(self, "player")

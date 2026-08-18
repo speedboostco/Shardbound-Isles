@@ -4,6 +4,7 @@ extends StaticBody2D
 signal depleted(position_value: Vector2, resource_id: String, amount: int)
 
 const DefinitionScript := preload("res://game/core/resource_node_definition.gd")
+const ContactShadowScript := preload("res://game/ui/contact_shadow.gd")
 
 @export var definition: Resource
 var remaining_hits: int
@@ -109,6 +110,4 @@ func _update_visual() -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	draw_set_transform(Vector2(0, 22), 0.0, Vector2(1.0, 0.28))
-	draw_circle(Vector2.ZERO, 31.0, Color(0.03, 0.08, 0.09, 0.28))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	ContactShadowScript.paint(self, "resource", 15.0 if definition != null and String(definition.get("visual_kind")) == "herb" else 22.0)

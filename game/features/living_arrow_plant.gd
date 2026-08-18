@@ -3,6 +3,8 @@ extends Node2D
 
 signal expired(plant_id: String)
 
+const ContactShadowScript := preload("res://game/ui/contact_shadow.gd")
+
 var plant_id: String = ""
 var lifetime: float = 6.0
 var attack_interval: float = 0.8
@@ -62,8 +64,6 @@ func is_active() -> bool:
 	return _active
 
 func _draw() -> void:
-	draw_set_transform(Vector2(0, 12), 0.0, Vector2(1.0, 0.3))
-	draw_circle(Vector2.ZERO, 22.0, Color(0.03, 0.08, 0.09, 0.28))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	ContactShadowScript.paint(self, "summon")
 	if _attack_flash_remaining > 0.0:
 		draw_line(Vector2(0, -18), Vector2(34, -34), Color("d8ffb0"), 4.0)

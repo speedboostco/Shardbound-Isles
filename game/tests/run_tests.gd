@@ -19,6 +19,8 @@ func _run() -> void:
 		return
 	if suite in ["all", "unit"]:
 		for definition: Dictionary in [
+			{"path": "res://game/tests/unit/progression_mana_test.gd", "assertions": 32},
+			{"path": "res://game/tests/unit/contact_shadow_profile_test.gd", "assertions": 23},
 			{"path": "res://game/tests/unit/cohesive_art_collision_test.gd", "assertions": 12},
 			{"path": "res://game/tests/unit/living_world_animation_polish_test.gd", "assertions": 18},
 			{"path": "res://game/tests/unit/animation_icon_foundation_test.gd", "assertions": 31},
@@ -68,6 +70,7 @@ func _run() -> void:
 			_record_result("unit", path, assertions_before, failures_before)
 	if suite in ["all", "integration"]:
 		for definition: Dictionary in [
+			{"path": "res://game/tests/integration/exploration_progression_targeting_flow_test.gd", "assertions": 23},
 			{"path": "res://game/tests/integration/world_obstacle_collision_flow_test.gd", "assertions": 6},
 			{"path": "res://game/tests/integration/living_world_animation_polish_flow_test.gd", "assertions": 17},
 			{"path": "res://game/tests/integration/animation_inventory_world_loot_flow_test.gd", "assertions": 22},

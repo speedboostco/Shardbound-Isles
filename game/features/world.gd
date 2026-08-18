@@ -7,6 +7,9 @@ const MovementRulesScript := preload("res://game/core/movement_rules.gd")
 const ResourceInventoryScript := preload("res://game/core/resource_inventory.gd")
 const LivingWorldPropScript := preload("res://game/features/living_world_prop.gd")
 const WorldObstacleScript := preload("res://game/features/world_obstacle.gd")
+const WeaponCastVisualScript := preload("res://game/features/weapon_cast_visual.gd")
+const TechnologyTreeScript := preload("res://game/core/technology_tree.gd")
+const WorldResidentScript := preload("res://game/features/world_resident.gd")
 const EQUIPMENT_SEED: int = 424242
 const DEFAULT_SAVE_PATH: String = "user://shardbound-save.json"
 const ISLAND_SHARD_SEED: int = 9001
@@ -73,6 +76,18 @@ const WORLD_OBSTACLE_LAYOUT: Array[Dictionary] = [
 	{"position": Vector2(780, 505), "asset": "forest_tree", "radius": 20.0},
 	{"position": Vector2(-505, 430), "asset": "boulder", "radius": 18.0},
 	{"position": Vector2(485, -430), "asset": "boulder", "radius": 18.0},
+	{"position": Vector2(-735, -370), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(-625, -385), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(-745, 390), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(-650, 405), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(705, -345), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(770, -250), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(690, 390), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(775, 315), "asset": "forest_tree", "radius": 20.0},
+	{"position": Vector2(-520, -365), "asset": "boulder", "radius": 18.0},
+	{"position": Vector2(430, 370), "asset": "boulder", "radius": 18.0},
+	{"position": Vector2(555, 425), "asset": "boulder", "radius": 18.0},
+	{"position": Vector2(-590, 370), "asset": "boulder", "radius": 18.0},
 ]
 
 @onready var player: PlayerCharacter = $Player
@@ -110,6 +125,7 @@ var equipment_inventory := EquipmentInventory.new()
 var equipment: Array[Dictionary] = equipment_inventory.items
 var enemies_defeated: int = 0
 var crafting_service := CraftingService.new()
+var technology_tree: Variant = TechnologyTreeScript.new()
 var reinforced_heart_crafted: bool = false
 var runed_whetstone_crafted: bool = false
 var herbal_compass_crafted: bool = false
@@ -146,6 +162,7 @@ var _automation_timer: Timer
 var _living_world_props: Dictionary = {}
 var _living_world_guardians: Dictionary = {}
 var _world_obstacles: Array[WorldObstacle] = []
+var _world_residents: Array[Node2D] = []
 var _active_weapon_instance_id: String = ""
 var _resolve_player_projectiles_immediately: bool = false
 const PLACEMENT_SOCKET_IDS: Array[String] = ["west", "north", "east", "south"]
@@ -170,6 +187,8 @@ func _ready() -> void:
 	player.interaction_requested.connect(_on_interaction_requested)
 	player.moved.connect(_on_player_moved)
 	player.health_changed.connect(hud.set_health)
+	player.mana_changed.connect(hud.set_mana)
+	player.mana_spend_failed.connect(_on_mana_spend_failed)
 	player.defeated.connect(_on_player_defeated)
 	resource_inventory.changed.connect(_on_resource_inventory_changed)
 	equipment_inventory.inventory_changed.connect(_on_equipment_inventory_changed)
@@ -201,6 +220,7 @@ func _ready() -> void:
 	hud.salvage_requested.connect(salvage_selected_item)
 	hud.favorite_requested.connect(set_item_favorite)
 	hud.unequip_requested.connect(unequip_item)
+	hud.technology_learn_requested.connect(learn_technology)
 	hud.workbench_panel_requested.connect(try_open_workbench)
 	hud.workbench_panel_closed.connect(_on_workbench_panel_closed)
 	hud.craft_requested.connect(_on_craft_requested)
@@ -238,6 +258,8 @@ func _ready() -> void:
 	_rebuild_materialized_islands()
 	_spawn_world_obstacles()
 	_spawn_living_world_props()
+	_spawn_world_residents()
+	_sync_combat_phase(false)
 	_refresh_interaction_target()
 
 func _process(delta: float) -> void:
@@ -267,11 +289,36 @@ func _spawn_world_obstacles() -> void:
 		add_child(obstacle)
 		_world_obstacles.append(obstacle)
 
+func _spawn_world_residents() -> void:
+	if not _world_residents.is_empty():
+		return
+	var definitions: Array[Dictionary] = [
+		{"id": "mira", "name": "MIRA", "role": "CARTOGRAPHER", "position": Vector2(-120, -130), "actor": "hero_unarmed", "messages": ["This island is quiet until you choose to wake it.", "Gather wood and stone, then learn Fieldcraft in your inventory.", "Every shard changes both opportunity and risk."]},
+		{"id": "orin", "name": "ORIN", "role": "ARCANIST", "position": Vector2(165, -145), "actor": "boss", "messages": ["A scepter spends mana; watch the violet range sigil before casting.", "Moonleaf unlocks deeper channeling and faster recovery.", "Power is useful only when its cost changes your decisions."]},
+	]
+	for definition: Dictionary in definitions:
+		var resident: Variant = WorldResidentScript.new()
+		resident.name = String(definition.id).to_pascal_case()
+		resident.position = definition.position as Vector2
+		resident.configure(String(definition.id), String(definition.name), String(definition.role), definition.messages as Array, String(definition.actor))
+		resident.spoken.connect(_on_resident_spoken)
+		add_child(resident)
+		_world_residents.append(resident)
+
+func _on_resident_spoken(resident_name: String, message: String) -> void:
+	hud.set_encounter_feedback("%s — %s" % [resident_name, message])
+
+func world_resident_count() -> int:
+	return _world_residents.size()
+
 func world_obstacle_count() -> int:
 	return _world_obstacles.size()
 
 func non_colliding_detail_count() -> int:
 	return HANDDRAWN_DECO_LAYOUT.size()
+
+func terrain_micro_biome_count() -> int:
+	return 4
 
 func living_world_prop_count() -> int:
 	return _living_world_props.size()
@@ -302,6 +349,9 @@ func _on_living_world_effect_requested(source: LivingWorldProp, effect_id: Strin
 			_spawn_gameplay_vfx(source.global_position, "pickup")
 			hud.set_encounter_feedback("FIREFLIES REVEALED A HIDDEN CACHE")
 		"guardian_challenge":
+			if not is_combat_unlocked():
+				hud.set_encounter_feedback("THE SHRINE IS DORMANT — LEARN COMBAT TRAINING")
+				return
 			_spawn_living_world_guardian(source, amount)
 	_refresh_interaction_target()
 
@@ -356,6 +406,7 @@ func _on_attack_requested(origin: Vector2, direction: Vector2) -> void:
 	if critical:
 		primary_damage = maxi(1, roundi(float(primary_damage) * player.critical_damage))
 	var weapon_type := _canonical_weapon_type()
+	_spawn_weapon_cast_visual(origin, direction, weapon_type, float(player.attack_profile.get("range", 90.0)))
 	for index: int in selected_ids.size():
 		var target_node: Node = targets_by_id.get(selected_ids[index])
 		if not is_instance_valid(target_node) or not target_node.has_method("receive_attack"):
@@ -376,6 +427,8 @@ func _on_attack_requested(origin: Vector2, direction: Vector2) -> void:
 		_spawn_gameplay_vfx(target_position, "gather_hit" if target_node is ResourceNode else ("critical_hit" if critical and index == 0 else "normal_hit"))
 		if _canonical_weapon_type() == "wand" and not target_node is ResourceNode:
 			_burning_targets[str(target_node.get_instance_id())] = true
+	if weapon_type == "bow" and selected_ids.is_empty():
+		_spawn_player_projectile(origin, direction, null, 1, false)
 	if is_instance_valid(primary_target) and weapon_type != "bow":
 		player.confirm_hit()
 		camera.request_shake(4.0 * vfx_settings.shake_scale(), 0.1)
@@ -383,6 +436,14 @@ func _on_attack_requested(origin: Vector2, direction: Vector2) -> void:
 			_emit_resource_hit(primary_target, primary_damage)
 	var impact_position := primary_target.global_position if is_instance_valid(primary_target) else origin + direction.normalized() * 90.0
 	legendary_event_bus.emit_attack({"origin": origin, "impact_position": impact_position, "primary_target_id": str(primary_target.get_instance_id()) if is_instance_valid(primary_target) else "", "weapon_type": _canonical_weapon_type(), "seed": _equipped_weapon_seed(), "attack_index": _attack_index})
+
+func _spawn_weapon_cast_visual(origin: Vector2, direction: Vector2, weapon_type: String, attack_range: float) -> void:
+	if weapon_type not in ["bow", "wand"]:
+		return
+	var visual: Node2D = WeaponCastVisualScript.new() as Node2D
+	visual.global_position = origin
+	visual.configure("magic" if weapon_type == "wand" else "bow", direction, attack_range)
+	add_child(visual)
 
 func _spawn_player_projectile(origin: Vector2, direction: Vector2, target_node: Node2D, damage: int, critical: bool = false) -> PlayerWeaponProjectile:
 	var projectile := PlayerWeaponProjectile.new()
@@ -689,6 +750,82 @@ func _on_resource_inventory_changed(resource_id: String, amount: int, _delta: in
 		hud.set_moonleaf(amount)
 	elif resource_id == "smelting_charge":
 		hud.set_smelting_charge(amount)
+	_refresh_progression_ui()
+
+func _on_mana_spend_failed(required: float, current: float) -> void:
+	hud.set_encounter_feedback("NOT ENOUGH MANA — NEED %.0f, HAVE %.0f" % [required, current])
+
+func _progression_resources() -> Dictionary:
+	return {"wood": wood, "stone": stone, "moonleaf": moonleaf, "plank": plank}
+
+func is_combat_unlocked() -> bool:
+	return technology_tree.is_learned("combat_training")
+
+func learn_technology(technology_id: String) -> bool:
+	var combat_was_unlocked := is_combat_unlocked()
+	var result: Dictionary = technology_tree.learn(technology_id, _progression_resources())
+	if not bool(result.get("success", false)):
+		hud.set_encounter_feedback("TECHNOLOGY NOT LEARNED — %s" % String(result.get("reason", "unavailable")).replace("_", " ").to_upper())
+		_refresh_progression_ui()
+		return false
+	var after := result.resources_after as Dictionary
+	wood = int(after.get("wood", wood))
+	stone = int(after.get("stone", stone))
+	moonleaf = int(after.get("moonleaf", moonleaf))
+	plank = int(after.get("plank", plank))
+	_apply_technology_effects()
+	if not combat_was_unlocked and is_combat_unlocked():
+		_sync_combat_phase(true)
+	else:
+		hud.set_encounter_feedback("TECHNOLOGY LEARNED — %s" % String((result.technology as Dictionary).get("name", technology_id)).to_upper())
+	_refresh_equipment_ui()
+	return true
+
+func _apply_technology_effects() -> void:
+	var maximum_mana := (80.0 if technology_tree.is_learned("mana_channeling") else 60.0) + (10.0 if bool(crafted_building_kits.get("mana_vessel", false)) else 0.0)
+	var regeneration := (9.0 if technology_tree.is_learned("arcane_mastery") else 6.0) + (2.0 if bool(crafted_building_kits.get("arcane_conduit", false)) else 0.0)
+	player.mana_pool.regeneration_per_second = regeneration
+	if not is_equal_approx(player.mana_pool.maximum, maximum_mana):
+		player.mana_pool.set_maximum(maximum_mana, true)
+	_sync_player_equipment()
+
+func _authored_opening_enemies() -> Array[Node2D]:
+	var result: Array[Node2D] = []
+	for combatant: Node2D in [enemy, second_slime, ranged_enemy, elite_ranged_enemy]:
+		if is_instance_valid(combatant):
+			result.append(combatant)
+	return result
+
+func _sync_combat_phase(show_feedback: bool) -> void:
+	var unlocked := is_combat_unlocked()
+	var gameplay_active := unlocked and not hud.is_equipment_panel_open() and not hud.is_workbench_panel_open() and not hud.is_system_menu_open() and not hud.is_island_panel_open()
+	for combatant: Node2D in _authored_opening_enemies():
+		combatant.visible = unlocked
+		combatant.set_physics_process(gameplay_active)
+		if unlocked:
+			combatant.add_to_group("attackable")
+		else:
+			combatant.remove_from_group("attackable")
+		if show_feedback and unlocked:
+			_spawn_gameplay_vfx(combatant.global_position, "rift")
+	if show_feedback and unlocked:
+		hud.set_encounter_feedback("COMBAT TRAINING COMPLETE — ISLAND THREATS AWAKENED")
+	_refresh_progression_ui()
+
+func _refresh_progression_ui() -> void:
+	if not is_instance_valid(hud) or not is_instance_valid(player):
+		return
+	hud.set_mana(player.mana_pool.current, player.mana_pool.maximum)
+	hud.refresh_inventory_stats({
+		"wood": wood, "stone": stone, "moonleaf": moonleaf, "plank": plank, "scrap": equipment_inventory.scrap,
+		"health": player.health, "maximum_health": player.maximum_health,
+		"mana": player.mana_pool.current, "maximum_mana": player.mana_pool.maximum, "mana_regeneration": player.mana_pool.regeneration_per_second,
+		"attack_damage": player.attack_damage, "attack_speed": player.attack_speed, "critical_chance": player.critical_chance,
+		"gathering_power": player.gathering_power, "pickup_radius": player.pickup_radius,
+	})
+	var phase_name := "combat awakened" if is_combat_unlocked() else "exploration phase"
+	hud.refresh_technologies(technology_tree.all_definitions(), technology_tree.learned, phase_name, _progression_resources())
+	hud.set_objective("EXPLORE • GATHER • LEARN\n[Y] INVENTORY + TECH   [A] USE   [X] HARVEST" if not is_combat_unlocked() else "BUILD • FIGHT • EXPAND\n[L] MOVE   [X] ATTACK   [A] USE   [Y] INVENTORY   [RB] ISLANDS")
 
 func _on_player_moved(_position_value: Vector2) -> void:
 	_refresh_interaction_target()
@@ -761,6 +898,7 @@ func set_item_favorite(index: int, favorite: bool) -> bool:
 
 func _refresh_equipment_ui() -> void:
 	hud.refresh_equipment(equipment_inventory.items, equipment_inventory.equipped_item("weapon"), equipment_inventory.scrap, player.attack_damage, player.attack_speed, equipment_inventory.equipped_slots)
+	_refresh_progression_ui()
 	_refresh_workbench_ui()
 
 func _sync_player_equipment() -> void:
@@ -774,6 +912,22 @@ func _sync_player_equipment() -> void:
 	var base_stats := StatBlock.default_base_stats()
 	base_stats.max_health = 10.0 + (2.0 if reinforced_heart_crafted else 0.0)
 	base_stats.pickup_radius = float(base_stats.pickup_radius) + (CraftingService.HERBAL_COMPASS_PICKUP_RADIUS_BONUS if herbal_compass_crafted else 0.0)
+	if technology_tree.is_learned("ranger_instinct"):
+		base_stats.critical_chance = float(base_stats.critical_chance) + 0.05
+	if bool(crafted_building_kits.get("ranger_fletching", false)):
+		base_stats.critical_chance = float(base_stats.critical_chance) + 0.03
+	if bool(crafted_building_kits.get("precision_quiver", false)):
+		base_stats.attack_speed = float(base_stats.attack_speed) + 0.08
+	if technology_tree.is_learned("efficient_harvest"):
+		base_stats.gathering_power = float(base_stats.gathering_power) + 0.5
+	if bool(crafted_building_kits.get("harvest_charm", false)):
+		base_stats.gathering_power = float(base_stats.gathering_power) + 0.25
+	if bool(crafted_building_kits.get("foresters_toolkit", false)):
+		base_stats.gathering_power = float(base_stats.gathering_power) + 0.35
+	if bool(crafted_building_kits.get("wayfinder_boots", false)):
+		base_stats.movement_speed = float(base_stats.movement_speed) + 15.0
+	if bool(crafted_building_kits.get("surveyors_lens", false)):
+		base_stats.pickup_radius = float(base_stats.pickup_radius) + 30.0
 	var derived := equipment_inventory.derived_stats(base_stats)
 	var desired_maximum := maxi(1, roundi(float(derived.max_health)))
 	if player.maximum_health != desired_maximum:
@@ -828,8 +982,27 @@ func _on_craft_requested(recipe_id: String) -> void:
 		craft_runed_whetstone()
 	elif recipe_id == CraftingService.HERBAL_COMPASS_RECIPE_ID:
 		craft_herbal_compass()
-	else:
+	elif recipe_id == CraftingService.RECIPE_ID:
 		craft_reinforced_heart()
+	else:
+		craft_progression_upgrade(recipe_id)
+
+func craft_progression_upgrade(recipe_id: String) -> bool:
+	var result := crafting_service.evaluate(recipe_id, _crafting_resources(), _technology_unlocks(), _crafted_recipe_state())
+	if not bool(result.get("success", false)):
+		_refresh_workbench_ui(_crafting_failure_text(result))
+		return false
+	_apply_crafting_resources(result.resources_after as Dictionary)
+	crafted_building_kits[recipe_id] = true
+	_apply_technology_effects()
+	refresh_all_ui("CRAFTED — %s" % String((result.recipe as Dictionary).get("effect_text", recipe_id)).to_upper())
+	return true
+
+func _technology_unlocks() -> Dictionary:
+	var unlocks := {"reinforced_heart": reinforced_heart_crafted, "forest_island": _has_forest_island()}
+	for technology_id: String in technology_tree.learned:
+		unlocks[technology_id] = true
+	return unlocks
 
 func craft_reinforced_heart() -> bool:
 	var result := crafting_service.evaluate(CraftingService.RECIPE_ID, _crafting_resources(), {"reinforced_heart": reinforced_heart_crafted, "forest_island": _has_forest_island()}, _crafted_recipe_state())
@@ -1063,7 +1236,9 @@ func _apply_crafting_resources(resources: Dictionary) -> void:
 	equipment_inventory.scrap = int(resources.get("scrap", equipment_inventory.scrap))
 
 func _crafted_recipe_state() -> Dictionary:
-	return {"reinforced_heart": reinforced_heart_crafted, "runed_whetstone": runed_whetstone_crafted, "herbal_compass": herbal_compass_crafted, "lumber_mill_kit": bool(crafted_building_kits.lumber_mill_kit) or has_base_building("lumber_mill"), "collector_kit": bool(crafted_building_kits.collector_kit) or has_base_building("collector"), "lumber_mill_built": has_base_building("lumber_mill"), "collector_built": has_base_building("collector"), "stored_planks": shared_storage.amount("plank")}
+	var result := {"reinforced_heart": reinforced_heart_crafted, "runed_whetstone": runed_whetstone_crafted, "herbal_compass": herbal_compass_crafted, "lumber_mill_kit": bool(crafted_building_kits.get("lumber_mill_kit", false)) or has_base_building("lumber_mill"), "collector_kit": bool(crafted_building_kits.get("collector_kit", false)) or has_base_building("collector"), "lumber_mill_built": has_base_building("lumber_mill"), "collector_built": has_base_building("collector"), "stored_planks": shared_storage.amount("plank")}
+	result.merge(crafted_building_kits, true)
+	return result
 
 func _crafting_failure_text(result: Dictionary) -> String:
 	var reason := String(result.get("reason", "invalid"))
@@ -1100,6 +1275,7 @@ func _on_tidecatcher_storage_changed(stored: int, capacity: int) -> void:
 
 func refresh_all_ui(crafting_feedback: String = "") -> void:
 	hud.set_health(player.health, player.maximum_health)
+	hud.set_mana(player.mana_pool.current, player.mana_pool.maximum)
 	hud.set_wood(wood)
 	hud.set_stone(stone)
 	hud.set_moonleaf(moonleaf)
@@ -1111,7 +1287,7 @@ func refresh_all_ui(crafting_feedback: String = "") -> void:
 	_refresh_island_ui()
 
 func _refresh_workbench_ui(feedback: String = "") -> void:
-	hud.refresh_workbench(wood, stone, moonleaf, equipment_inventory.scrap, reinforced_heart_crafted, runed_whetstone_crafted, herbal_compass_crafted, tidecatcher_built, feedback, plank, _crafted_recipe_state(), _has_forest_island())
+	hud.refresh_workbench(wood, stone, moonleaf, equipment_inventory.scrap, reinforced_heart_crafted, runed_whetstone_crafted, herbal_compass_crafted, tidecatcher_built, feedback, plank, _crafted_recipe_state(), _has_forest_island(), _technology_unlocks())
 
 func _refresh_base_ui(feedback: String = "") -> void:
 	var active := not base_placement.buildings.is_empty()
@@ -1187,6 +1363,9 @@ func snapshot_state() -> Dictionary:
 		"player": {
 			"health": player.health,
 			"maximum_health": player.maximum_health,
+			"mana": player.mana_pool.current,
+			"maximum_mana": player.mana_pool.maximum,
+			"mana_regeneration": player.mana_pool.regeneration_per_second,
 			"position": {"x": player.global_position.x, "y": player.global_position.y},
 		},
 		"wood": wood,
@@ -1205,6 +1384,7 @@ func snapshot_state() -> Dictionary:
 		"tidecatcher": {"built": tidecatcher_built, "stored_wood": tidecatcher.stored_wood()},
 		"islands": {"inventory": saved_shards, "installed": installed_shard.duplicate(true), "archipelago": archipelago.to_dictionary()},
 		"base": {"placement": base_placement.to_dictionary(), "storage": shared_storage.to_dictionary(), "lumber_mill": lumber_mill_simulation.to_dictionary(), "collector": collector_simulation.to_dictionary(), "crafted_kits": crafted_building_kits.duplicate(true), "saved_unix": int(Time.get_unix_time_from_system())},
+		"technologies": {"learned": technology_tree.learned.duplicate()},
 	}
 
 func _apply_state(state: Dictionary) -> void:
@@ -1214,6 +1394,7 @@ func _apply_state(state: Dictionary) -> void:
 	var tidecatcher_state := state.tidecatcher as Dictionary
 	var islands_state := state.islands as Dictionary
 	var base_state := state.base as Dictionary
+	var technology_state := state.technologies as Dictionary
 	player.maximum_health = int(player_state.maximum_health)
 	player.health = clampi(int(player_state.health), 0, player.maximum_health)
 	player.global_position = Vector2(float(position_state.x), float(position_state.y))
@@ -1231,6 +1412,9 @@ func _apply_state(state: Dictionary) -> void:
 	reinforced_heart_crafted = bool(state.reinforced_heart_crafted)
 	runed_whetstone_crafted = bool(state.runed_whetstone_crafted)
 	herbal_compass_crafted = bool(state.herbal_compass_crafted)
+	technology_tree.restore(technology_state.learned as Array)
+	_apply_technology_effects()
+	player.mana_pool.restore(float(player_state.mana), float(player_state.maximum_mana), float(player_state.mana_regeneration))
 	_sync_player_equipment()
 	tidecatcher_built = bool(tidecatcher_state.built)
 	tidecatcher.restore_state(tidecatcher_built, int(tidecatcher_state.stored_wood), player)
@@ -1249,12 +1433,14 @@ func _apply_state(state: Dictionary) -> void:
 	lumber_mill_simulation.restore(base_state.lumber_mill as Dictionary)
 	collector_simulation.restore(base_state.collector as Dictionary)
 	crafted_building_kits = (base_state.crafted_kits as Dictionary).duplicate(true)
+	_apply_technology_effects()
 	last_simulation_unix = int(base_state.saved_unix)
 	simulate_offline(int(Time.get_unix_time_from_system()))
 	_sync_archipelago_compatibility()
 	_rebuild_materialized_islands()
 	_materialize_base_buildings()
 	_apply_island_modifiers()
+	_sync_combat_phase(false)
 	player.health_changed.emit(player.health, player.maximum_health)
 	refresh_all_ui()
 	hud.set_automation_status(tidecatcher_built, tidecatcher.stored_wood(), WoodProduction.STORAGE_CAPACITY)
@@ -1588,6 +1774,19 @@ func run_scripted_smoke() -> Dictionary:
 	stone_node.receive_attack(1)
 	var stone_pickup := _find_pickup("stone")
 	stone_pickup.collect_immediately()
+	for cache_id: String in ["firefly_east", "firefly_south_east"]:
+		var cache := living_world_prop(cache_id)
+		movement_steps += _scripted_move_to(cache.global_position)
+		cache.interact(player)
+		var cache_wood := _find_pickup("wood")
+		var cache_stone := _find_pickup("stone")
+		cache_wood.collect_immediately()
+		cache_stone.collect_immediately()
+	var gathered_wood := wood
+	var gathered_stone := stone
+	learn_technology("fieldcraft")
+	learn_technology("combat_training")
+	_set_combat_processing(false)
 	movement_steps += _scripted_move_to(enemy.global_position + Vector2(50, 0))
 	var unarmed_damage := player.attack_damage
 	var unarmed_hits := 0
@@ -1608,6 +1807,9 @@ func run_scripted_smoke() -> Dictionary:
 		"seed": EQUIPMENT_SEED,
 		"wood": wood,
 		"stone": stone,
+		"gathered_wood": gathered_wood,
+		"gathered_stone": gathered_stone,
+		"technologies": technology_tree.learned.duplicate(),
 		"movement_steps": movement_steps,
 		"enemies_defeated": enemies_defeated,
 		"items_collected": equipment.size(),
@@ -1639,7 +1841,7 @@ func _scripted_move_to(destination: Vector2) -> int:
 
 func _find_pickup(kind: String) -> WorldPickup:
 	for child: Node in get_children():
-		if child is WorldPickup and (child as WorldPickup).kind == kind:
+		if child is WorldPickup and not child.is_queued_for_deletion() and (child as WorldPickup).kind == kind:
 			return child as WorldPickup
 	return null
 
@@ -1654,9 +1856,36 @@ func _draw() -> void:
 			var asset_id := handdrawn_terrain_id(Vector2i(x, y))
 			draw_texture_rect_region(VisualAssetLibrary.HANDDRAWN_TERRAIN_ATLAS, Rect2(x, y, 64, 64), VisualAssetLibrary.handdrawn_terrain_region(asset_id))
 	draw_rect(Rect2(-896.0, -576.0, 1792.0, 1152.0), Color(0.03, 0.13, 0.10, 0.16))
+	_draw_terrain_micro_biomes()
 	for placement: Dictionary in HANDDRAWN_DECO_LAYOUT:
 		var position_value := placement.position as Vector2
 		draw_texture_rect(VisualAssetLibrary.handdrawn_deco_texture(int(placement.frame)), Rect2(position_value - Vector2(32, 32), Vector2(64, 64)), false)
+
+func _draw_terrain_micro_biomes() -> void:
+	var grove := PackedVector2Array([Vector2(-875, -520), Vector2(-425, -520), Vector2(-385, -390), Vector2(-470, -250), Vector2(-710, -220), Vector2(-875, -315)])
+	var moonleaf_meadow := PackedVector2Array([Vector2(-835, 120), Vector2(-560, 70), Vector2(-390, 185), Vector2(-430, 470), Vector2(-760, 520), Vector2(-875, 360)])
+	var stone_rise := PackedVector2Array([Vector2(315, -525), Vector2(835, -525), Vector2(875, -305), Vector2(735, -135), Vector2(470, -190), Vector2(355, -345)])
+	var sunlit_lowland := PackedVector2Array([Vector2(315, 170), Vector2(585, 105), Vector2(855, 225), Vector2(860, 520), Vector2(405, 520), Vector2(265, 365)])
+	var zones: Array[Dictionary] = [
+		{"points": grove, "fill": Color(0.08, 0.24, 0.13, 0.28), "edge": Color(0.32, 0.57, 0.30, 0.42)},
+		{"points": moonleaf_meadow, "fill": Color(0.18, 0.13, 0.28, 0.24), "edge": Color(0.55, 0.42, 0.72, 0.38)},
+		{"points": stone_rise, "fill": Color(0.26, 0.27, 0.22, 0.25), "edge": Color(0.64, 0.62, 0.46, 0.42)},
+		{"points": sunlit_lowland, "fill": Color(0.33, 0.25, 0.08, 0.18), "edge": Color(0.84, 0.66, 0.28, 0.36)},
+	]
+	for zone: Dictionary in zones:
+		var points := zone.points as PackedVector2Array
+		draw_colored_polygon(points, zone.fill as Color)
+		var outline := points.duplicate()
+		outline.append(points[0])
+		draw_polyline(outline, Color(zone.edge, 0.2), 2.0)
+	for index: int in 28:
+		var x := -790.0 + float(posmod(index * 173, 1580))
+		var y := -490.0 + float(posmod(index * 257, 980))
+		var point := Vector2(x, y)
+		draw_colored_polygon(PackedVector2Array([point + Vector2(0, -3), point + Vector2(4, 0), point + Vector2(0, 3), point + Vector2(-4, 0)]), Color(0.64, 0.78, 0.43, 0.26))
+	for edge_y: int in range(-470, 500, 96):
+		draw_line(Vector2(-902, edge_y), Vector2(-884, edge_y + 10), Color(0.72, 0.84, 0.55, 0.42), 3.0)
+		draw_line(Vector2(902, edge_y + 24), Vector2(884, edge_y + 34), Color(0.72, 0.84, 0.55, 0.42), 3.0)
 
 func handdrawn_terrain_id(tile_position: Vector2i) -> String:
 	var x := tile_position.x

@@ -4,6 +4,8 @@ extends Node2D
 signal effect_requested(source: LivingWorldProp, effect_id: String, amount: int)
 signal availability_changed
 
+const ContactShadowScript := preload("res://game/ui/contact_shadow.gd")
+
 @export var prop_id: String = "moonleaf_thicket"
 @export var stable_id: String = "living_prop"
 @export var interaction_radius: float = 105.0
@@ -129,9 +131,7 @@ func _update_visual(delta: float) -> void:
 	_visual_sprite.modulate = Color("fff1a6") if _active_flash_remaining > 0.0 else (Color("a7b7ad") if cooldown_remaining > 0.0 else Color.WHITE)
 
 func _draw() -> void:
-	draw_set_transform(Vector2(0, 20), 0.0, Vector2(1.0, 0.28))
-	draw_circle(Vector2.ZERO, 30.0, Color(0.03, 0.08, 0.09, 0.24))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	ContactShadowScript.paint(self, "living_prop")
 	if _interaction_targeted:
 		var pulse := 2.0 + PresentationMotion.wave(_visual_time, 1.5) * 2.0
 		draw_arc(Vector2.ZERO, 39.0 + pulse, 0.0, TAU, 32, Color("8fe7ff"), 3.0)

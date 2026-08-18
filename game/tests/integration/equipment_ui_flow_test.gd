@@ -10,6 +10,10 @@ func run(support: TestSupport, scene_tree: SceneTree) -> void:
 	world._on_pickup_collected("equipment", item)
 	world._on_pickup_collected("equipment", second)
 	world._on_pickup_collected("equipment", legendary)
+	world.wood = 5
+	world.stone = 3
+	world.learn_technology("fieldcraft")
+	world.learn_technology("combat_training")
 	support.expect(world.hud.get_inventory_item_count() == 3, "all collected equipment must enter the browsable panel")
 	world.open_equipment_panel()
 	await scene_tree.process_frame

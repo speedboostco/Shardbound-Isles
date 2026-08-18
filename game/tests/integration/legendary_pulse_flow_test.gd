@@ -5,6 +5,10 @@ func run(support: TestSupport, scene_tree: SceneTree) -> void:
 	var world := scene.instantiate() as FirstPlayableWorld
 	scene_tree.root.add_child(world)
 	await scene_tree.process_frame
+	world.wood = 5
+	world.stone = 3
+	world.learn_technology("fieldcraft")
+	world.learn_technology("combat_training")
 	world._set_combat_processing(false)
 	world._on_pickup_collected("equipment", BossReward.generate())
 	support.expect(world.equip_selected_item(0) and world.player.legendary_affix_id == "riftwake_pulse", "equipping Riftwake Core must activate legendary behavior")

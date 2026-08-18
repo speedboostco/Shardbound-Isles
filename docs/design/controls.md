@@ -10,6 +10,9 @@
 | Close equipment | Escape | East face button |
 | Open workbench directly (shortcut) | C | None |
 | Browse workbench recipes | Previous/Next buttons | D-pad / left stick / face button |
+| Open inventory, statistics, and technology tree | `Y` | `Y` |
+| Browse available technologies | Previous/Next technology buttons | D-pad / left stick / face button |
+| Learn selected technology | Learn Technology | Face button |
 | Craft | Enter | South face button |
 | Choose build socket | Arrow buttons | D-pad / left stick |
 | Rotate build preview | Rotate button | D-pad to focus, South face button |

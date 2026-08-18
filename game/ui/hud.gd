@@ -7,6 +7,7 @@ signal equip_requested(index: int)
 signal salvage_requested(index: int)
 signal favorite_requested(index: int, favorite: bool)
 signal unequip_requested
+signal technology_learn_requested(technology_id: String)
 signal workbench_panel_requested
 signal workbench_panel_closed
 signal craft_requested(recipe_id: String)
@@ -30,6 +31,7 @@ signal rift_requested
 
 @onready var health_label: Label = $Margin/VBox/Health
 @onready var health_bar: ProgressBar = $Margin/VBox/HealthBar
+@onready var mana_bar: ProgressBar = $Margin/VBox/ManaBar
 @onready var wood_label: Label = $Margin/VBox/Wood
 @onready var stone_label: Label = $Margin/VBox/Stone
 @onready var moonleaf_label: Label = $Margin/VBox/Moonleaf
@@ -38,6 +40,8 @@ signal rift_requested
 @onready var loot_label: Label = $Margin/VBox/Loot
 @onready var attack_label: Label = $Margin/VBox/Attack
 @onready var equipment_panel: PanelContainer = $EquipmentPanel
+@onready var inventory_page: MarginContainer = $EquipmentPanel/Margin
+@onready var stats_summary_label: Label = $EquipmentPanel/Margin/VBox/StatsSummary
 @onready var item_name_label: Label = $EquipmentPanel/Margin/VBox/ItemIdentity/Details/ItemName
 @onready var equipment_icon: TextureRect = $EquipmentPanel/Margin/VBox/ItemIdentity/Icon
 @onready var equipment_slot_summary: Label = $EquipmentPanel/Margin/VBox/ItemIdentity/Details/SlotSummary
@@ -50,6 +54,16 @@ signal rift_requested
 @onready var affix_label: Label = $EquipmentPanel/Margin/VBox/TooltipScroll/Affix
 @onready var equipped_label: Label = $EquipmentPanel/Margin/VBox/Equipped
 @onready var scrap_label: Label = $EquipmentPanel/Margin/VBox/Scrap
+@onready var open_technology_button: Button = $EquipmentPanel/Margin/VBox/OpenTechnology
+@onready var technology_page: MarginContainer = $EquipmentPanel/TechnologyPage
+@onready var technology_heading_label: Label = $EquipmentPanel/TechnologyPage/VBox/Heading
+@onready var technology_tree_view: Variant = $EquipmentPanel/TechnologyPage/VBox/TreeGraph
+@onready var technology_details_label: Label = $EquipmentPanel/TechnologyPage/VBox/Details
+@onready var technology_previous_button: Button = $EquipmentPanel/TechnologyPage/VBox/Actions/Previous
+@onready var technology_count_label: Label = $EquipmentPanel/TechnologyPage/VBox/Actions/Count
+@onready var technology_next_button: Button = $EquipmentPanel/TechnologyPage/VBox/Actions/Next
+@onready var technology_learn_button: Button = $EquipmentPanel/TechnologyPage/VBox/Actions/Learn
+@onready var technology_back_button: Button = $EquipmentPanel/TechnologyPage/VBox/Actions/Back
 @onready var equip_button: Button = $EquipmentPanel/Margin/VBox/Actions/Equip
 @onready var salvage_button: Button = $EquipmentPanel/Margin/VBox/Actions/Salvage
 @onready var favorite_button: Button = $EquipmentPanel/Margin/VBox/Actions/Favorite
@@ -93,6 +107,7 @@ signal rift_requested
 @onready var encounter_label: Label = $EncounterStatus
 @onready var rift_label: Label = $RiftStatus
 @onready var interaction_prompt: Label = $InteractionPrompt
+@onready var objective_label: Label = $Objective
 
 var _items: Array[Dictionary] = []
 var _equipped_id: String = ""
@@ -104,6 +119,12 @@ var _displayed_attack_speed: float = 1.0
 var _displayed_scrap: int = 0
 var _pending_salvage_id: String = ""
 var _displayed_stone: int = 0
+var _inventory_stats: Dictionary = {}
+var _technology_entries: Array[Dictionary] = []
+var _selected_technology_index: int = 0
+var _learned_technology_count: int = 0
+var _learned_technology_ids: Array[String] = []
+var _technology_resources: Dictionary = {}
 var _selected_recipe_index: int = 0
 var _workbench_wood: int = 0
 var _workbench_stone: int = 0
@@ -130,6 +151,11 @@ func _ready() -> void:
 	salvage_button.pressed.connect(_on_salvage_pressed)
 	favorite_button.pressed.connect(_toggle_selected_favorite)
 	unequip_button.pressed.connect(func() -> void: unequip_requested.emit())
+	open_technology_button.pressed.connect(open_technology_page)
+	technology_previous_button.pressed.connect(func() -> void: _select_relative_technology(-1))
+	technology_next_button.pressed.connect(func() -> void: _select_relative_technology(1))
+	technology_learn_button.pressed.connect(_request_selected_technology)
+	technology_back_button.pressed.connect(close_technology_page)
 	$EquipmentPanel/Margin/VBox/Close.pressed.connect(close_equipment_panel)
 	workbench_previous_button.pressed.connect(func() -> void: _select_relative_recipe(-1))
 	workbench_next_button.pressed.connect(func() -> void: _select_relative_recipe(1))
@@ -156,10 +182,13 @@ func _ready() -> void:
 	$IslandPanel/Margin/VBox/Close.pressed.connect(close_island_panel)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if equipment_panel.visible and event.is_action_pressed("islands"):
+	if technology_page.visible and event.is_action_pressed("ui_cancel"):
+		close_technology_page()
+		get_viewport().set_input_as_handled()
+	elif equipment_panel.visible and not technology_page.visible and event.is_action_pressed("islands"):
 		scroll_equipment_details(1)
 		get_viewport().set_input_as_handled()
-	elif equipment_panel.visible and event.is_action_pressed("rift"):
+	elif equipment_panel.visible and not technology_page.visible and event.is_action_pressed("rift"):
 		scroll_equipment_details(-1)
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("pause"):
@@ -207,9 +236,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func set_health(current: int, maximum: int) -> void:
-	health_label.text = "HEALTH  %d / %d" % [current, maximum]
+	health_label.text = "HEALTH"
 	health_bar.max_value = maxf(1.0, float(maximum))
 	health_bar.value = float(current)
+	_inventory_stats["health"] = current
+	_inventory_stats["maximum_health"] = maximum
+	_render_stats_summary()
+
+func set_mana(current: float, maximum: float) -> void:
+	mana_bar.max_value = maxf(1.0, maximum)
+	mana_bar.value = current
+	_inventory_stats["mana"] = current
+	_inventory_stats["maximum_mana"] = maximum
+	_render_stats_summary()
 
 func set_wood(amount: int) -> void:
 	wood_label.text = "WOOD    %d" % amount
@@ -234,6 +273,9 @@ func set_interaction_prompt(label: String) -> void:
 	interaction_prompt.visible = not label.is_empty()
 	interaction_prompt.text = "[A]  %s" % label.to_upper() if not label.is_empty() else ""
 
+func set_objective(text_value: String) -> void:
+	objective_label.text = text_value
+
 func get_interaction_prompt() -> String:
 	return interaction_prompt.text if interaction_prompt.visible else ""
 
@@ -242,6 +284,113 @@ func get_displayed_attack_speed() -> float:
 
 func set_loot(item: Dictionary) -> void:
 	loot_label.text = "FOUND  %s  |  DMG %d  |  SPEED %.2fx" % [item.get("name", "None"), item.get("damage", item.get("power", 0)), item.get("attack_speed", 1.0)]
+
+func refresh_inventory_stats(stats: Dictionary) -> void:
+	_inventory_stats.merge(stats, true)
+	_render_stats_summary()
+
+func _render_stats_summary() -> void:
+	if not is_instance_valid(stats_summary_label):
+		return
+	stats_summary_label.text = "RESOURCES  WOOD %d  •  STONE %d  •  MOONLEAF %d  •  PLANK %d  •  SCRAP %d\nVITALS  HEALTH %d/%d  •  MANA %.0f/%.0f  •  REGEN %.1f/s\nCOMBAT  ATTACK %d  •  SPEED %.2fx  •  CRIT %.0f%%  •  GATHER %.1f  •  PICKUP %.0f" % [
+		int(_inventory_stats.get("wood", 0)), int(_inventory_stats.get("stone", 0)), int(_inventory_stats.get("moonleaf", 0)), int(_inventory_stats.get("plank", 0)), int(_inventory_stats.get("scrap", _displayed_scrap)),
+		int(_inventory_stats.get("health", 0)), int(_inventory_stats.get("maximum_health", 0)), float(_inventory_stats.get("mana", 0.0)), float(_inventory_stats.get("maximum_mana", 0.0)), float(_inventory_stats.get("mana_regeneration", 0.0)),
+		int(_inventory_stats.get("attack_damage", _displayed_attack_damage)), float(_inventory_stats.get("attack_speed", _displayed_attack_speed)), float(_inventory_stats.get("critical_chance", 0.0)) * 100.0, float(_inventory_stats.get("gathering_power", 1.0)), float(_inventory_stats.get("pickup_radius", 0.0)),
+	]
+
+func refresh_technologies(entries: Array[Dictionary], learned_ids: Array[String], phase_name: String, resources: Dictionary) -> void:
+	var selected_id := ""
+	if not _technology_entries.is_empty() and _selected_technology_index < _technology_entries.size():
+		selected_id = String(_technology_entries[_selected_technology_index].get("id", ""))
+	var selected_was_just_learned := not selected_id.is_empty() and selected_id not in _learned_technology_ids and selected_id in learned_ids
+	_technology_entries.clear()
+	for entry: Dictionary in entries:
+		_technology_entries.append(entry.duplicate(true))
+	_learned_technology_ids = learned_ids.duplicate()
+	_learned_technology_count = learned_ids.size()
+	_technology_resources = resources.duplicate(true)
+	_selected_technology_index = clampi(_selected_technology_index, 0, maxi(0, _technology_entries.size() - 1))
+	if selected_was_just_learned:
+		_select_first_ready_technology()
+	technology_heading_label.text = "TECHNOLOGY TREE  •  %s  •  %d / %d LEARNED" % [phase_name.to_upper(), learned_ids.size(), _technology_entries.size()]
+	_render_selected_technology()
+
+func _select_relative_technology(offset: int) -> void:
+	if _technology_entries.is_empty():
+		return
+	_selected_technology_index = posmod(_selected_technology_index + offset, _technology_entries.size())
+	_render_selected_technology()
+
+func _render_selected_technology() -> void:
+	if _technology_entries.is_empty():
+		technology_details_label.text = "NO TECHNOLOGIES AUTHORED\nExplore shards and build the archipelago to reveal future disciplines."
+		technology_count_label.text = "0 / 0"
+		technology_previous_button.disabled = true
+		technology_next_button.disabled = true
+		technology_learn_button.disabled = true
+		technology_learn_button.text = "NO TECHNOLOGY"
+		technology_tree_view.configure([], _learned_technology_ids, "", _technology_resources)
+		return
+	var entry := _technology_entries[_selected_technology_index]
+	var cost: Dictionary = entry.get("cost", {}) as Dictionary
+	var cost_parts: Array[String] = []
+	for resource_value: Variant in cost:
+		var resource_id := String(resource_value)
+		var amount := int(cost[resource_value])
+		cost_parts.append("%d %s" % [amount, resource_id.to_upper()])
+	var prerequisite_parts: Array[String] = []
+	for prerequisite_value: Variant in entry.get("prerequisites", []):
+		var prerequisite := _technology_definition(String(prerequisite_value))
+		prerequisite_parts.append(String(prerequisite.get("name", prerequisite_value)).to_upper())
+	var recipe_parts: Array[String] = []
+	for recipe_value: Variant in entry.get("unlocks_recipes", []):
+		var recipe := RecipeRegistry.get_definition(String(recipe_value))
+		recipe_parts.append(String(recipe.get("name", recipe_value)).to_upper())
+	var state := _technology_state(entry)
+	technology_details_label.text = "%s  •  %s\n%s\nREQUIRES  %s   •   COST  %s\nUNLOCKS RECIPES  %s" % [
+		String(entry.get("name", "Technology")).to_upper(), state.to_upper(), String(entry.get("effect", "")),
+		"ROOT DISCIPLINE" if prerequisite_parts.is_empty() else " + ".join(prerequisite_parts), " + ".join(cost_parts),
+		"NO RECIPE" if recipe_parts.is_empty() else " • ".join(recipe_parts),
+	]
+	technology_count_label.text = "%d / %d" % [_selected_technology_index + 1, _technology_entries.size()]
+	technology_previous_button.disabled = _technology_entries.size() <= 1
+	technology_next_button.disabled = _technology_entries.size() <= 1
+	technology_learn_button.disabled = state != "ready"
+	match state:
+		"learned": technology_learn_button.text = "LEARNED"
+		"locked": technology_learn_button.text = "LOCKED BY PREREQUISITE"
+		"gather": technology_learn_button.text = "GATHER RESOURCES"
+		_: technology_learn_button.text = "LEARN TECHNOLOGY"
+	technology_tree_view.configure(_technology_entries, _learned_technology_ids, String(entry.get("id", "")), _technology_resources)
+
+func _technology_state(entry: Dictionary) -> String:
+	var technology_id := String(entry.get("id", ""))
+	if technology_id in _learned_technology_ids:
+		return "learned"
+	for prerequisite_value: Variant in entry.get("prerequisites", []):
+		if String(prerequisite_value) not in _learned_technology_ids:
+			return "locked"
+	for resource_value: Variant in entry.get("cost", {}):
+		if int(_technology_resources.get(String(resource_value), 0)) < int(entry.cost[resource_value]):
+			return "gather"
+	return "ready"
+
+func _technology_definition(technology_id: String) -> Dictionary:
+	for entry: Dictionary in _technology_entries:
+		if String(entry.get("id", "")) == technology_id:
+			return entry
+	return {}
+
+func _select_first_ready_technology() -> void:
+	for index: int in _technology_entries.size():
+		if _technology_state(_technology_entries[index]) == "ready":
+			_selected_technology_index = index
+			return
+
+func _request_selected_technology() -> void:
+	if _technology_entries.is_empty() or technology_learn_button.disabled:
+		return
+	technology_learn_requested.emit(String(_technology_entries[_selected_technology_index].get("id", "")))
 
 func refresh_equipment(items: Array[Dictionary], equipped_item: Dictionary, scrap: int, attack_damage: int, attack_speed: float = 1.0, equipped_slots: Dictionary = {}) -> void:
 	_items.clear()
@@ -255,6 +404,10 @@ func refresh_equipment(items: Array[Dictionary], equipped_item: Dictionary, scra
 	_displayed_scrap = scrap
 	_displayed_attack_damage = attack_damage
 	_displayed_attack_speed = attack_speed
+	_inventory_stats["scrap"] = scrap
+	_inventory_stats["attack_damage"] = attack_damage
+	_inventory_stats["attack_speed"] = attack_speed
+	_render_stats_summary()
 	attack_label.text = "ATTACK  %d    SPEED  %.2fx" % [attack_damage, attack_speed]
 	scrap_label.text = "SALVAGE SCRAP  %d" % scrap
 	equipped_label.text = "EQUIPPED  %s" % String(equipped_item.get("name", "Unarmed"))
@@ -412,6 +565,12 @@ func _select_relative_equipment(offset: int) -> void:
 func _recover_equipment_focus() -> void:
 	if not equipment_panel.visible:
 		return
+	if technology_page.visible:
+		if not technology_learn_button.disabled:
+			technology_learn_button.grab_focus()
+		else:
+			technology_next_button.grab_focus()
+		return
 	var focused := get_viewport().gui_get_focus_owner()
 	if focused is Control and (focused as Control).is_visible_in_tree():
 		if not focused is BaseButton or not (focused as BaseButton).disabled:
@@ -432,6 +591,8 @@ func open_equipment_panel() -> void:
 	rift_label.visible = false
 	interaction_prompt.visible = false
 	equipment_panel.visible = true
+	inventory_page.visible = true
+	technology_page.visible = false
 	if not equip_button.disabled:
 		equip_button.grab_focus()
 	elif not unequip_button.disabled:
@@ -441,6 +602,8 @@ func open_equipment_panel() -> void:
 
 func close_equipment_panel() -> void:
 	_pending_salvage_id = ""
+	inventory_page.visible = true
+	technology_page.visible = false
 	equipment_panel.visible = false
 	encounter_label.visible = not encounter_label.text.is_empty()
 	rift_label.visible = not rift_label.text.is_empty()
@@ -448,6 +611,22 @@ func close_equipment_panel() -> void:
 
 func is_equipment_panel_open() -> bool:
 	return equipment_panel.visible
+
+func open_technology_page() -> void:
+	if not equipment_panel.visible:
+		return
+	inventory_page.visible = false
+	technology_page.visible = true
+	_render_selected_technology()
+	_recover_equipment_focus()
+
+func close_technology_page() -> void:
+	technology_page.visible = false
+	inventory_page.visible = true
+	open_technology_button.grab_focus()
+
+func is_technology_page_open() -> bool:
+	return equipment_panel.visible and technology_page.visible
 
 func has_valid_action_focus() -> bool:
 	return get_viewport().gui_get_focus_owner() != null
@@ -478,7 +657,7 @@ func get_displayed_scrap() -> int:
 func is_salvage_confirmation_armed() -> bool:
 	return not _pending_salvage_id.is_empty()
 
-func refresh_workbench(wood: int, stone: int, moonleaf: int, scrap: int, heart_crafted: bool, whetstone_crafted: bool, herbal_compass_crafted: bool, tidecatcher_built: bool, feedback: String = "", plank: int = 0, building_states: Dictionary = {}, forest_unlocked: bool = false) -> void:
+func refresh_workbench(wood: int, stone: int, moonleaf: int, scrap: int, heart_crafted: bool, whetstone_crafted: bool, herbal_compass_crafted: bool, tidecatcher_built: bool, feedback: String = "", plank: int = 0, building_states: Dictionary = {}, forest_unlocked: bool = false, additional_unlocks: Dictionary = {}) -> void:
 	_workbench_wood = wood
 	_workbench_stone = stone
 	_workbench_moonleaf = moonleaf
@@ -488,6 +667,7 @@ func refresh_workbench(wood: int, stone: int, moonleaf: int, scrap: int, heart_c
 	_whetstone_crafted = whetstone_crafted
 	_herbal_compass_crafted = herbal_compass_crafted
 	_workbench_unlocks = {"reinforced_heart": heart_crafted, "forest_island": forest_unlocked}
+	_workbench_unlocks.merge(additional_unlocks, true)
 	_workbench_crafted = {"reinforced_heart": heart_crafted, "runed_whetstone": whetstone_crafted, "herbal_compass": herbal_compass_crafted}
 	for key: Variant in building_states:
 		_workbench_crafted[String(key)] = bool(building_states[key])

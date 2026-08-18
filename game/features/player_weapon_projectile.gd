@@ -12,6 +12,8 @@ var _resolved: bool = false
 var critical: bool = false
 var weapon_seed: int = 0
 var attack_index: int = 0
+var maximum_distance: float = 310.0
+var _origin: Vector2
 
 func configure(target_value: Node2D, damage_value: int, direction_value: Vector2, critical_value: bool = false, weapon_seed_value: int = 0, attack_index_value: int = 0) -> void:
 	target = target_value
@@ -23,14 +25,21 @@ func configure(target_value: Node2D, damage_value: int, direction_value: Vector2
 
 func _ready() -> void:
 	add_to_group("player_weapon_projectile")
+	_origin = global_position
 	queue_redraw()
 
 func _physics_process(delta: float) -> void:
 	if _resolved:
 		return
 	lifetime -= delta
-	if lifetime <= 0.0 or not is_instance_valid(target):
+	if lifetime <= 0.0:
 		queue_free()
+		return
+	if not is_instance_valid(target):
+		global_position += direction * speed * delta
+		rotation = direction.angle()
+		if global_position.distance_to(_origin) >= maximum_distance:
+			queue_free()
 		return
 	var destination := target.global_position
 	direction = global_position.direction_to(destination)
